@@ -10,4 +10,8 @@ clothing:
   trousers: denim
 age: 35
 eyes : brown
+<<<<<<< HEAD
 beard: true
+=======
+beard: true
+>>>>>>> 8a15e5ae0190388eda04ecd97c83cddbb055456b
