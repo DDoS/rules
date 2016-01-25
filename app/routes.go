@@ -8,4 +8,25 @@ var Routes = util.Routes{
 		"/health",
 		HealthCheck,
 	},
+
+	util.Route{
+		"Evaluate Object",
+		"POST",
+		"/",
+		Evaluate,
+	},
+
+	util.Route{
+		"Get All Pipelines",
+		"GET",
+		"/",
+		GetAllPipelines,
+	},
+
+	util.Route{
+		"Get Pipeline",
+		"GET",
+		"/{PipelineName}",
+		GetPipeline,
+	},
 }
