@@ -23,16 +23,25 @@ func TestMain(m *testing.M) {
 }
 
 func TestStart(t *testing.T) {
+	var err error
+
 	assert.Equal(t, "Test", pipe.Name)
 	assert.Equal(t, "NotStarted", pipe.CurrentState)
 
-	pipe.Start()
+	err = pipe.Start()
+	assert.NoError(t, err)
+
+	err = pipe.Start()
 
 	assert.Equal(t, "Test", pipe.Name)
+	assert.NoError(t, err)
 	assert.Equal(t, "Running", pipe.CurrentState)
 }
 
 func TestDataProcessing(t *testing.T) {
+	var err error
+	err = pipe.Start()
+	assert.NoError(t, err)
 	assert.Equal(t, "Test", pipe.Name)
 	assert.Equal(t, "Running", pipe.CurrentState)
 
@@ -56,26 +65,37 @@ func TestDataProcessing(t *testing.T) {
 }
 
 func TestPauseAndStart(t *testing.T) {
+	var err error
+	err = pipe.Start()
+	assert.NoError(t, err)
 	assert.Equal(t, "Test", pipe.Name)
 	assert.Equal(t, "Running", pipe.CurrentState)
 
-	pipe.Pause()
+	err = pipe.Pause()
+	assert.NoError(t, err)
 	assert.Equal(t, "Paused", pipe.CurrentState)
 
-	pipe.Start()
+	err = pipe.Start()
+	assert.NoError(t, err)
 	assert.Equal(t, "Running", pipe.CurrentState)
 }
 
 func TestStop(t *testing.T) {
+	var err error
+	err = pipe.Start()
+	assert.NoError(t, err)
 	assert.Equal(t, "Test", pipe.Name)
 	assert.Equal(t, "Running", pipe.CurrentState)
 
-	pipe.Stop()
+	err = pipe.Stop()
+	assert.NoError(t, err)
 	assert.Equal(t, "Stopped", pipe.CurrentState)
 
-	pipe.Start()
+	err = pipe.Start()
+	assert.Error(t, err)
 	assert.Equal(t, "Stopped", pipe.CurrentState)
 
-	pipe.Pause()
+	err = pipe.Pause()
+	assert.Error(t, err)
 	assert.Equal(t, "Stopped", pipe.CurrentState)
 }
