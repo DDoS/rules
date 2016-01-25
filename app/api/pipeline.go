@@ -6,16 +6,14 @@ import (
 )
 
 type Pipeline struct {
-	Rules        []Rule
-
 	Name         string
+	CurrentState string
 
 	Ingest       chan interface{}
 	Output       chan interface{}
 
 	Process      func(interface{}) interface{}
 
-	CurrentState string
 	Wait         *sync.WaitGroup
 
 	StartChan    chan bool
@@ -23,11 +21,11 @@ type Pipeline struct {
 	StopChan     chan bool
 }
 
-func NewPipeline(Name string, Ingest chan interface{}, Output chan interface{}) *Pipeline {
+func NewPipeline(Name string, Input chan interface{}, Output chan interface{}) *Pipeline {
 	return &Pipeline{
 		Name: Name,
 
-		Ingest: Ingest,
+		Ingest: Input,
 		Output: Output,
 
 		Process: func(input interface{}) interface{} {
@@ -76,6 +74,11 @@ func (pipe *Pipeline) Run() {
 				break
 			}
 		}
+		close(pipe.Ingest)
+		close(pipe.Output)
+		close(pipe.StartChan)
+		close(pipe.PauseChan)
+		close(pipe.StopChan)
 	}()
 }
 
@@ -96,14 +99,19 @@ func (pipe *Pipeline) Pause() error {
 		pipe.PauseChan <- true
 		pipe.Wait.Wait()
 		return nil
-	} else{
+	} else {
 		log4go.Error("Tried to Pause Pipeline from Invalid State: %s", pipe.CurrentState)
 		return errors.New("Tried to Pause Pipeline from Invalid State")
 	}
 }
 func (pipe *Pipeline) Stop() error {
-	pipe.Wait.Add(1)
-	pipe.StopChan <- true
-	pipe.Wait.Wait()
-	return nil
+	if pipe.StartChan != nil {
+		pipe.Wait.Add(1)
+		pipe.StopChan <- true
+		pipe.Wait.Wait()
+		return nil
+	} else {
+		log4go.Error("Tried to Stop Pipeline from Invalid State: %s", pipe.CurrentState)
+		return errors.New("Tried to Stop Pipeline from Invalid State")
+	}
 }
