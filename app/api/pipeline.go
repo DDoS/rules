@@ -1,122 +1,49 @@
 package api
+
 import (
 	"github.com/michael-golfi/log4go"
 	"sync"
-	"errors"
 )
 
 type Pipeline struct {
-	Name         string
-	CurrentState string
+	Name, state   string
 
-	Ingest       chan interface{}
-	Output       chan interface{}
+	input, output chan interface{}
 
-	Process      func(interface{}) interface{}
-
-	Wait         *sync.WaitGroup
-
-	StartChan    chan bool
-	PauseChan    chan bool
-	StopChan     chan bool
+	process       func(interface{}) interface{}
+	stop          chan bool
+	wg            *sync.WaitGroup
 }
 
-func NewPipeline(Name string, Input chan interface{}, Output chan interface{}) *Pipeline {
+func NewPipeline(name string, input chan interface{}, output chan interface{}, process func(input interface{}) interface{}) *Pipeline {
 	return &Pipeline{
-		Name: Name,
-
-		Ingest: Input,
-		Output: Output,
-
-		Process: func(input interface{}) interface{} {
-			return input
-		},
-
-		CurrentState: "NotStarted",
-		Wait: &sync.WaitGroup{},
-
-		StartChan: make(chan bool, 1),
-		PauseChan: make(chan bool, 1),
-		StopChan: make(chan bool, 1),
+		Name: name,
+		input: input,
+		output: output,
+		process:      process,
+		stop:  make(chan bool, 1),
+		wg: new(sync.WaitGroup),
 	}
 }
 
 func (pipe *Pipeline) Run() {
-	go func(state *string, start, pause, stop chan bool, wait *sync.WaitGroup, input, output chan interface{}) {
-		defer close(start)
-		defer close(pause)
-		defer close(stop)
-		defer close(input)
-		defer close(output)
-
+	pipe.state = "Running"
+	go func(pipe *Pipeline) {
 		for {
 			select {
-
-			// Start the FSM
-			case <-start:
-				log4go.Info("Pipeline %s: Starting", pipe.Name)
-				*state = "Running"
-				wait.Done()
-
-			// Start Processing Data
-			case input := <-input:
+			case input := <-pipe.input:
 				log4go.Info("Pipeline %s: Executing Process Input:%s", pipe.Name, input)
-				output <- pipe.Process(input)
+				pipe.output <- pipe.process(input)
 
-			// Pause the FSM
-			case <-pause:
-				log4go.Info("Pipeline %s: Pausing", pipe.Name)
-				*state = "Paused"
-				wait.Done()
-
-			// Wait for Start signal
-				<-start
-				start <- true
-
-			// Stop the FSM
-			case <-stop:
+			case <-pipe.stop:
 				log4go.Info("Pipeline %s: Stopping", pipe.Name)
-				*state = "Stopped"
-				wait.Done()
-				break
+				close(pipe.stop)
+				return
 			}
 		}
-	}(&pipe.CurrentState, pipe.StartChan, pipe.PauseChan, pipe.StopChan, pipe.Wait, pipe.Ingest, pipe.Output)
+	}(pipe)
 }
 
-func (pipe *Pipeline) Start() error {
-	if pipe.CurrentState == "Running" {
-		log4go.Info("Pipeline Already Running")
-		return nil
-	} else if pipe.CurrentState == "NotStarted" || pipe.CurrentState == "Paused" {
-		pipe.Wait.Add(1)
-		pipe.StartChan <- true
-		pipe.Wait.Wait()
-		return nil
-	} else {
-		log4go.Error("Tried to Start Pipeline from Invalid State: %s", pipe.CurrentState)
-		return errors.New("Tried to Start Pipeline from Invalid State")
-	}
-}
-func (pipe *Pipeline) Pause() error {
-	if pipe.CurrentState == "Running" {
-		pipe.Wait.Add(1)
-		pipe.PauseChan <- true
-		pipe.Wait.Wait()
-		return nil
-	} else {
-		log4go.Error("Tried to Pause Pipeline from Invalid State: %s", pipe.CurrentState)
-		return errors.New("Tried to Pause Pipeline from Invalid State")
-	}
-}
-func (pipe *Pipeline) Stop() error {
-	if pipe.StartChan != nil {
-		pipe.Wait.Add(1)
-		pipe.StopChan <- true
-		pipe.Wait.Wait()
-		return nil
-	} else {
-		log4go.Error("Tried to Stop Pipeline from Invalid State: %s", pipe.CurrentState)
-		return errors.New("Tried to Stop Pipeline from Invalid State")
-	}
+func (pipe *Pipeline) Stop() {
+	pipe.stop <- true
 }
