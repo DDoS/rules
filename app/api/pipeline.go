@@ -3,12 +3,13 @@ package api
 import (
 	"github.com/michael-golfi/log4go"
 	"sync"
+	"errors"
 )
 
 type Pipeline struct {
 	Name, state   string
 
-	input, output chan interface{}
+	input, Output chan interface{}
 
 	process       func(interface{}) interface{}
 	stop          chan bool
@@ -19,7 +20,7 @@ func NewPipeline(name string, input chan interface{}, output chan interface{}, p
 	return &Pipeline{
 		Name: name,
 		input: input,
-		output: output,
+		Output: output,
 		process:      process,
 		stop:  make(chan bool, 1),
 		wg: new(sync.WaitGroup),
@@ -32,8 +33,7 @@ func (pipe *Pipeline) Run() {
 		for {
 			select {
 			case input := <-pipe.input:
-				log4go.Info("Pipeline %s: Executing Process Input:%s", pipe.Name, input)
-				pipe.output <- pipe.process(input)
+				pipe.Output <- pipe.process(input)
 
 			case <-pipe.stop:
 				log4go.Info("Pipeline %s: Stopping", pipe.Name)
@@ -44,6 +44,20 @@ func (pipe *Pipeline) Run() {
 	}(pipe)
 }
 
-func (pipe *Pipeline) Stop() {
-	pipe.stop <- true
+func (pipe *Pipeline) Input(input interface{}) error {
+	if pipe.state == "Running" {
+		pipe.input <- input
+		return nil
+	} else {
+		return errors.New("Cannot use Pipeline, it isn't running")
+	}
+}
+
+func (pipe *Pipeline) Stop() error {
+	if pipe.state == "Running" {
+		pipe.stop <- true
+		return nil
+	} else {
+		return errors.New("Pipe is already stopped")
+	}
 }
