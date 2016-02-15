@@ -1,13 +1,24 @@
 package lang;
 
 type Token interface {
-    Source() string
+    Source() []rune
 }
 
 type Identifier struct {
-    source string
+    source []rune
 }
 
-func (identifier *Identifier) Source() string {
-    return identifier.source
+func (this *Identifier) Source() []rune {
+    return this.source
+}
+
+var EOF *EndOfFile = &EndOfFile{};
+
+type EndOfFile struct {
+}
+
+var emptySource = []rune{}
+
+func (this *EndOfFile) Source() []rune {
+    return emptySource
 }

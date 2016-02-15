@@ -8,5 +8,5 @@ import (
 
 func TestLexIdentifier(t *testing.T) {
     tokenizer := lang.StringTokenizer("test")
-    assert.Equal(t, "test", tokenizer.Next().Source())
+    assert.Equal(t, "test", string(tokenizer.Next().Source()))
 }

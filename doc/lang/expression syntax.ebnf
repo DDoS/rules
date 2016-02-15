@@ -1,0 +1,203 @@
+(* Depends on the lexical syntax: all elements are taken from the token list *)
+
+(*
+    Some operators of note: are "=" instead of "==" and ":=" instead of "=", which is
+    unlike C, and less error prone.
+
+    Strict equality is done using "is", which behaves like "==" in Java. It compares
+    addresses for objects, but in our language it cannot by used for any other types.
+    The "=" operator always compares values.
+
+    There also are many type comparison operators:
+    ":" which checks if the types are the same, "<:" and ">:" for sub and super type,
+    "<<:" and ">>:" for direct sub and super type (types can't be the same) and "<:>"
+    for distinct types (neither sub or super type).
+
+    The language also has a very low precedence concatenation operator: "~". This solves
+    the issue of "a string" + 2 + 1, which in Java returns "a string21" and is order
+    dependent. Instead we have "a string" ~ 2 + 1 which gives "a string3", since "+" has
+    higher precedence.
+
+    Finally we have a range operator "..". It is a binary operator which creates a range
+    object from a starting (inclusive) and ending value (exclusive). This can be used for
+    array slices: array[2 .. 3] would return a view of the array, of size 1, where index 0
+    is index 2 in the original array. The array indexing operator supports integer and
+    slice indices.
+
+    The "++" and "--" prefix and suffix operators are omitted in favor of
+    "+= 1" and "-= 1" for readability reasons. There are also less needed when advanced
+    looping constructs are available. Here's a good argument for their omission:
+    https://github.com/apple/swift-evolution/blob/master/proposals/
+    0004-remove-pre-post-inc-decrement.md
+
+    Logical XOR "^^" is normally not part of operator sets, but is added here to fix
+    precedence, since bitwise XOR is higher precedence then any logical operator.
+
+    The conditional operator use the "trueValue if someCondition else falseValue" instead
+    of the C version "someCondition ? trueValue : falseValue" This makes it more readable.
+    The syntax also prevents nesting without using parentheses, in an attempt to improve
+    readability (just one level of nesting C like conditionals is difficult to read).
+*)
+
+unaryOperator = "+" | "-" | "!" | "~" ;
+exponentOperator = "**";
+multiplyOperator = "*" | "/" | "%" ;
+addOperator = "+" | "-" ;
+shiftOperator = "<<" | ">>" | ">>>" ;
+compareOperator = ["!"], (
+    "is" | "=" | "<" | ">" | "<=" | ">=" | ":" | "<:" | ">:" | "<<:" | ">>:" | "<:>"
+) ;
+bitwiseAndOperator = "&" ;
+bitwiseXorOperator = "^" ;
+bitwiseOrOperator = "|" ;
+logicalAndOperator = "&&" ;
+logicalXorOperator = "^^" ;
+logicalOrOperator = "||" ;
+concatenateOperator = "~";
+rangeOperator = "..";
+assignmentOperator = ( "**" | "*" | "/" | "%" | "+" | "-" | "<<" | ">>" | ">>>" | "&"
+    | "^" | "|" | "&&" | "||", "~", ":" ), "=" ;
+
+(*
+    Here are some examples of value initialization
+
+    # Initialization from a literal, nothing special
+    int i = 4;
+    # Constructors don't exist outside of ordinary functions
+    # Initialization is done using curly braces, and is always on the heap
+    Vec3 v = Vec3{i, 1, 2};
+
+    # In an assignment expression, we can omit the class name in the initializer
+    # This results in the variable type being used instead
+    Vec3 u = {i, 1, 2};
+
+    # We can also nest initializations, which works like assignment of the fields
+    Transform s := {{0, 3, 2}, {0, 0, 0, 1}, {1, 1, 2}};
+    # It's also possible to use labels so we can reorder (but can't partially label)
+    Transform t := {scale: {1, 1, 2}, rot: {0, 0, 0, 1}, pos: {x: 1, y: 1, z: 2}};
+
+    # Initializers work basically the same for arrays, but no labeling is allowed
+    int[] a := {1, 2, 3, 5};
+    int[][] b := {{1}, {}};
+
+    # To distinguish between array initialization and indexing operations
+    # we must always include the curly braces.
+    # Missing elements use the default value for the type.
+    Vec3[4] {} = {0, 0, 0, 0}
+    Vec3[2] {3, 1} = {3, 1}
+    Vec3[1][2] {{2}, {}} = {{2}, {0}}
+    Vec3[][2] {a} = {{1, 2, 3, 5} {}}
+*)
+
+(* Names are just "." separated list of identifiers. They represent packages, class type
+    names and/or field access. These need to be disambiguated by the type checker. *)
+name = identifierToken, {".", identifierToken} ;
+
+(* Field access is like: anObject.aField *)
+fieldAccess = access, ".", identifierToken ;
+(* Array access is like: anArray[anIndex] *)
+arrayAccess = access, arraySized ;
+variableAccess = name | fieldAccess | arrayAccess ;
+
+(* Assignment aren't actually expressions in this language, they return void *)
+assignment = (variableAccess, assignmentOperator, conditional)
+    | (variableAccess, ":=", (objectLiteral | arrayLiteral)) ;
+
+expressionList = expression, {",", expression} ;
+
+(* Labeled expression are like: aLabel: someValue + 1 *)
+labeledExpression = identifierToken, ":", expression;
+labeledExpressionList = labeledExpression, {",", labeledExpression} ;
+
+(* Object literals are like: {"guy", 19}, {name: "guy", age: 19} *)
+objectLiteral = "{", [labeledExpressionList | expressionList], "}" ;
+(* Array literals are like: {1, 3, 4, 3 - 5, i ** 2}, {{1}, {3, j}} *)
+arrayLiteral = "{", [expressionList], "}" ;
+
+(* Array notation is like D: reversed compared to Java.
+    int[1][2] is an array of 2 arrays of 1 integer.
+    We can also have unsized arrays which, like int[][2],
+    which means an array of 2 integer arrays. *)
+arrayUnsized = "[", "]" ;
+arraySized = "[", expression, "]" ;
+arrayInitializer = {arrayUnsized}, arraySized, {arraySized} ;
+
+callArguments = "(", [expressionList], ")" ;
+
+(* an atom is a literal, a field access, a call, an initialization
+    or an expression in "()" *)
+atom = "(", expression, ")" | literalToken | (
+    name, [callArguments | objectLiteral | (arrayInitializer, arrayLiteral)]
+) ;
+
+(*
+    Here is the full expression syntax for operators. Precedence is the following:
+    15: ".", "[]", "()"
+    14: "+", "-", "!", "~"
+    13: "**"
+    12: "*", "/", "%"
+    11: "+", "-"
+    10: "<<", ">>", ">>>"
+     9: "is", "=", "<", ">", "<=", ">=", ":", "<:", ">:", "<<:", ">>:", "<:>"
+        and the negated forms
+     8: "&"
+     7: "^"
+     6: "|"
+     5: "&&"
+     4: "^^"
+     3: "||"
+     2: "... if ... else ... "
+     1: "~"
+     0: ".."
+*)
+
+(* ".", "[]", "()" *)
+access = fieldAccess, [callArguments] | arrayAccess | atom ;
+
+(* "+", "-", "!", "~" *)
+unary = (unaryOperator, unary) | access ;
+
+(* "**" *)
+exponent = (exponent, exponentOperator, unary) | unary ;
+
+(* "*", "/", "%" *)
+multiply = (multiply, multiplyOperator, exponent) | exponent ;
+
+(* "+", "-" *)
+add = (add, addOperator, multiply) | multiply ;
+
+(* "<<", ">>", ">>>" *)
+shift = (shift, shiftOperator, add) | add ;
+
+(* "is", "=", "<", ">", "<=", ">=", ":", "<:", ">:", "<<:", ">>:", "<:>" *)
+compare = (compare, compareOperator, shift) | shift ;
+
+(* "&" *)
+bitwiseAnd = (bitwiseAnd, bitwiseAndOperator, compare) | compare ;
+
+(* "^" *)
+bitwiseXor = (bitwiseXor, bitwiseXorOperator, bitwiseAnd) | bitwiseAnd ;
+
+(* "|" *)
+bitwiseOr = (bitwiseOr, bitwiseOrOperator, bitwiseXor) | bitwiseXor ;
+
+(* "&&" *)
+logicalAnd = (logicalAnd, logicalAndOperator, bitwiseOr) | bitwiseOr ;
+
+(* "^^" *)
+logicalXor = (logicalXor, logicalXorOperator, logicalAnd) | logicalAnd ;
+
+(* "||" *)
+logicalOr = (logicalOr, logicalOrOperator, logicalXor) | logicalXor ;
+
+(* "... if ... else ... " *)
+conditional = (logicalOr, "if", logicalOr, "else", logicalOr) | logicalOr ;
+
+(* "~" *)
+concatenate = (concatenate, concatenateOperator, conditional) | conditional ;
+
+(* ".." *)
+range = (range, rangeOperator, concatenate) | concatenate ;
+
+(* Not assignment since it is not an actual expression (no return value *)
+expression = range ;

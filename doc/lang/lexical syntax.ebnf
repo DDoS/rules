@@ -1,0 +1,92 @@
+(* This language uses only a subset of ASCII for it's source *)
+letter = "A" | "B" | "C" | "D" | "E" | "F" | "G"
+    | "H" | "I" | "J" | "K" | "L" | "M" | "N"
+    | "O" | "P" | "Q" | "R" | "S" | "T" | "U"
+    | "V" | "W" | "X" | "Y" | "Z" | "a" | "b"
+    | "c" | "d" | "e" | "f" | "g" | "h" | "i"
+    | "j" | "k" | "l" | "m" | "n" | "o" | "p"
+    | "q" | "r" | "s" | "t" | "u" | "v" | "w"
+    | "x" | "y" | "z" ;
+
+binaryDigit = "0" | "1" ;
+digit = "binaryDigit | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
+hexDigit = digit | "a" | "A" | "b" | "B" | "c" | "C" | "d" | "D" | "e" | "E" | "f" | "F" ;
+
+symbolChar = "!" | "@" | "#" | "%" | "?" | "&" | "*"
+    | "(" | ")" | "-" | "=" | "+" | "/" | "^"
+    | ";" | ":" | "<" | ">" | "[" | "]" | "."
+    | "," | "~" ;
+
+keyword = "rule" | "when" | "with" | "then" | "match" | "if"
+    | "else" | "for" | "for_rev" | "while" | "do" | "try"
+    | "catch" | "finally" | "let" | "var" | "class" | "void"
+    | "break" | "continue" | "throw" | "bool" | "byte" | "char"
+    | "short" | "int" | "long" | "float" | "double" | "static"
+    | "import" | "package" | "new" | "is" | "throws" | "public"
+    | "return" | "this" | "super" | "true" | "false" ;
+
+wsChar = ?all ASCII whitespace characters? ;
+(* Excludes the backslash so we can use it for escape sequences *)
+printChar = ?all ASCII print characters? - "\" ;
+
+newLineChar = ?LF? | ?CR? | ?CR?, ?LF? ;
+lineWsChar = wsChar - newLineChar;
+
+lineComment = "#", {printChar | lineWsChar}, newLineChar ;
+(* Count of "#" as prefix and suffix needs to be the same
+    This allows comment nesting *)
+blockComment = "##", {"#"}, {printChar | wsChar}, "##", {"#"} ;
+
+(* Comments, line white space and escaped new lines are ignored by the lexer *)
+ignored = lineWsChar | lineComment | blockComment | ("\", newLineChar, {newLineChar}) ;
+
+(* Identifiers don't start with a digit, but can contain one *)
+identifierStart = "_" | letter ;
+identifierBody = identifierStart | digit ;
+identifier = identifierStart, {identifierBody} ;
+
+sign = "-" | "+" ;
+
+(* We allow underscores between digits to group numbers: 1_000_000 *)
+binaryDigitSequence = binaryDigit, {{"_"} binaryDigit} ;
+digitSequence = digit, {{"_"} digit} ;
+hexDigitSequence = hexDigit, {{"_"} hexDigit} ;
+
+(* Integers are like: 1234, -2_000, 0xab2, 0b1101 *)
+binaryInteger = "0", ("b" | "B"), binaryDigitSequence ;
+integer = [sign], digitSequence ;
+hexInteger = "0", ("x" | "X"), hexDigitSequence ;
+
+(* Decimal numbers are like: 0.4, +1.28, .5, -.3, 3.4e12, 5_000e-9 *)
+decimal = [sign], (
+    ([digitSequence], ".", digitSequence, [("e" | "E"), integer])
+    | (digitSequence, ("e" | "E"), integer)
+) ;
+
+boolean = "true" | "false" ;
+
+(* tab, new line, carriage return, backspace, form feed, double and single quote *)
+charEscape = "\t" | "\n" | "\r" | "\b" | "\f" | '\"' | "\\" ;
+(* Hexadecimal sequence to be converted to  unicode code point in the string *)
+unicodeEscape = "\u", hexDigit, [hexDigit], [hexDigit], [hexDigit],
+    [hexDigit], [hexDigit], [hexDigit], [hexDigit] ;
+(* String are any ASCII char, excluding double quotes and new line chars,
+    but with escape sequences *)
+string = '"', {(printChar - '"') | lineWsChar | charEscape | unicodeEscape}, '"' ;
+
+symbol = symbolChar, {symbolChar} ;
+
+(* These are the tokens used by the abstract syntax *)
+
+identifierToken = {ignored}, identifier ;
+literalToken = {ignored}, (
+    integer | hexInteger | binaryInteger | decimal | boolean | string
+) ;
+symbolToken = {ignored}, symbol ;
+keywordToken = {ignored}, keyword ;
+lineEndToken = {ignored}, newLineChar, {newLineChar} ;
+
+(* The final output from the lexer *)
+tokenList = {
+    identifierToken | literalToken | symbolToken | keywordToken | lineEndToken
+}, {ignored} ;
