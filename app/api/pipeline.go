@@ -2,7 +2,6 @@ package api
 
 import (
 	"github.com/michael-golfi/log4go"
-	"sync"
 	"errors"
 )
 
@@ -13,17 +12,25 @@ type Pipeline struct {
 
 	process       func(interface{}) interface{}
 	stop          chan bool
-	wg            *sync.WaitGroup
 }
 
-func NewPipeline(name string, input chan interface{}, output chan interface{}, process func(input interface{}) interface{}) *Pipeline {
+func NewPipeline(name string, process func(input interface{}) interface{}) *Pipeline {
+	return &Pipeline{
+		Name: name,
+		input: make(chan interface{}, 10),
+		Output: make(chan interface{}, 10),
+		process:      process,
+		stop:  make(chan bool, 1),
+	}
+}
+
+func NewPipelineChan(name string, input chan interface{}, output chan interface{}, process func(input interface{}) interface{}) *Pipeline {
 	return &Pipeline{
 		Name: name,
 		input: input,
 		Output: output,
 		process:      process,
 		stop:  make(chan bool, 1),
-		wg: new(sync.WaitGroup),
 	}
 }
 

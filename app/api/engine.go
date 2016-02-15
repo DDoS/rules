@@ -25,6 +25,13 @@ func (en *Engine) EvaluateData(pipelineName string, data interface{}) {
 	}
 }
 
+func (en *Engine) Create(name string) {
+	pipe := NewPipelineChan(name, make(chan interface{}), make(chan interface{}), func(input interface{}) interface{} {
+		return input
+	})
+	en.Save(pipe)
+}
+
 func (en *Engine) Save(pipe *Pipeline) {
 	en.pipelines.Set(pipe.Name, pipe)
 }

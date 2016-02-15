@@ -1,11 +1,12 @@
 package main
+
 import (
-	"github.com/spf13/viper"
-	"github.com/michael-golfi/log4go"
 	"github.com/michael-golfi/go-http-utils"
+	"github.com/michael-golfi/log4go"
 	"github.com/michael-golfi/rules/app"
-	"net/http"
+	"github.com/spf13/viper"
 	"gopkg.in/fsnotify.v1"
+	"net/http"
 )
 
 func main() {
@@ -15,12 +16,12 @@ func main() {
 	log4go.Crash(http.ListenAndServe(":8080", router))
 }
 
-func configure(){
+func configure() {
 	viper.SetConfigFile("config.yaml")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath("./config")
 	viper.WatchConfig()
-	viper.OnConfigChange(func (e fsnotify.Event){
+	viper.OnConfigChange(func(e fsnotify.Event) {
 		log4go.Info("Config Changed: %s", e.String())
 	})
 	if err := viper.ReadInConfig(); err != nil {

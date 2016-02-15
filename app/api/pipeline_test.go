@@ -28,7 +28,7 @@ func TestDataProcessing(t *testing.T) {
 	passthrough := func(input interface{}) interface{} {
 		return input
 	}
-	pipe := api.NewPipeline("Test", ingest, output, passthrough)
+	pipe := api.NewPipelineChan("Test", ingest, output, passthrough)
 	pipe.Run()
 
 	assert.Equal(t, "Test", pipe.Name)
@@ -43,7 +43,7 @@ func TestPipeNotRunning(t *testing.T) {
 	passthrough := func(input interface{}) interface{} {
 		return input
 	}
-	pipe := api.NewPipeline("Test", ingest, output, passthrough)
+	pipe := api.NewPipelineChan("Test", ingest, output, passthrough)
 
 	assert.Equal(t, "Test", pipe.Name)
 	defer pipe.Stop()

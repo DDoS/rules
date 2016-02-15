@@ -17,7 +17,7 @@ func TestCreateEngine(t *testing.T) {
 		return input
 	}
 
-	pipe := api.NewPipeline("Pipe", input, output, process)
+	pipe := api.NewPipelineChan("Pipe", input, output, process)
 	pipe.Run()
 
 	engine.Save(pipe)
@@ -54,7 +54,7 @@ func TestCreatePipelineParallel(t *testing.T) {
 	for i := 0; i < j; i++ {
 		go func(engine *api.Engine, wg *sync.WaitGroup, i int) {
 			name := fmt.Sprintf("Pipe %d", i)
-			pipe := api.NewPipeline(name, input, output, process)
+			pipe := api.NewPipelineChan(name, input, output, process)
 			pipe.Run()
 			engine.Save(pipe)
 			wg.Done()
