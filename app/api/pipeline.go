@@ -3,48 +3,51 @@ package api
 import (
 	"github.com/michael-golfi/log4go"
 	"errors"
+	"sync"
+)
+
+const (
+	UNSTARTED = 0
+	RUNNING = 1
+	STOPPED = 2
 )
 
 type Pipeline struct {
-	Name, state   string
-
-	input, Output chan interface{}
-
-	process       func(interface{}) interface{}
-	stop          chan bool
+	Name    string
+	state   int
+	input   chan interface{}
+	process func(interface{})
+	stop    chan bool
 }
 
-func NewPipeline(name string, process func(input interface{}) interface{}) *Pipeline {
+var (
+	Default = NewPipeline("Default")
+	wait sync.WaitGroup
+)
+
+func NewPipeline(name string) *Pipeline {
 	return &Pipeline{
 		Name: name,
+		state: UNSTARTED,
 		input: make(chan interface{}, 10),
-		Output: make(chan interface{}, 10),
-		process:      process,
 		stop:  make(chan bool, 1),
 	}
 }
 
-func NewPipelineChan(name string, input chan interface{}, output chan interface{}, process func(input interface{}) interface{}) *Pipeline {
-	return &Pipeline{
-		Name: name,
-		input: input,
-		Output: output,
-		process:      process,
-		stop:  make(chan bool, 1),
-	}
-}
+func (pipe *Pipeline) Run(processer func(input interface{})) {
+	pipe.state = RUNNING
+	pipe.process = processer
 
-func (pipe *Pipeline) Run() {
-	pipe.state = "Running"
 	go func(pipe *Pipeline) {
 		for {
 			select {
 			case input := <-pipe.input:
-				pipe.Output <- pipe.process(input)
+				pipe.process(input)
 
 			case <-pipe.stop:
 				log4go.Info("Pipeline %s: Stopping", pipe.Name)
-				close(pipe.stop)
+				pipe.state = STOPPED
+				wait.Done()
 				return
 			}
 		}
@@ -52,7 +55,7 @@ func (pipe *Pipeline) Run() {
 }
 
 func (pipe *Pipeline) Input(input interface{}) error {
-	if pipe.state == "Running" {
+	if pipe.state == RUNNING {
 		pipe.input <- input
 		return nil
 	} else {
@@ -60,9 +63,15 @@ func (pipe *Pipeline) Input(input interface{}) error {
 	}
 }
 
+func (pipe *Pipeline) Info() int {
+	return pipe.state
+}
+
 func (pipe *Pipeline) Stop() error {
-	if pipe.state == "Running" {
+	if pipe.state == RUNNING {
+		wait.Add(1)
 		pipe.stop <- true
+		wait.Wait()
 		return nil
 	} else {
 		return errors.New("Pipe is already stopped")
