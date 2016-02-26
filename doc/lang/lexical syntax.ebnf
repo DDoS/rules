@@ -32,7 +32,7 @@ newLineChar = ?LF? | ?CR? | ?FF? ;
 lineWsChar = " " | ?TAB?;
 wsChar = lineWsChar | newLineChar ;
 
-lineTerminator = newLineChar | ?CR?, ?LF? ;
+lineTerminator = newLineChar | ?CR?, ?LF? | EOF ;
 
 lineComment = "#", {printChar | lineWsChar}, lineTerminator ;
 (* Count of "#" as prefix and suffix needs to be the same
@@ -68,7 +68,7 @@ decimal = [sign], (
 boolean = "true" | "false" ;
 
 (* bell, backspace, horizontal tab, line feed, vertical tab, form feed,
-    caridge return, double quote and backslash *)
+    carriage return, double quote and backslash *)
 charEscape = "\a" | "\b" | "\t" | "\n" | "\v" | "\f" | "\r" | '\"' | "\\" ;
 (* Hexadecimal sequence to be converted to  unicode code point in the string *)
 unicodeEscape = "\u", hexDigit, [hexDigit], [hexDigit], [hexDigit],
