@@ -26,13 +26,13 @@ keyword = "rule" | "when" | "with" | "then" | "match" | "if"
     | "return" | "this" | "super" | "true" | "false" ;
 
 (* Excludes the backslash so we can use it for escape sequences *)
-printChar = ?all ASCII print characters? - "\" ;
+printChar = ?all ASCII print characters? ;
 
-newLineChar = ?LF? | ?CR? | ?FF? ;
+newLineChar = ?LF? | ?CR? ;
 lineWsChar = " " | ?TAB?;
 wsChar = lineWsChar | newLineChar ;
 
-lineTerminator = newLineChar | ?CR?, ?LF? | EOF ;
+lineTerminator = newLineChar | ?CR?, ?LF? | ?EOF? ;
 
 lineComment = "#", {printChar | lineWsChar}, lineTerminator ;
 (* Count of "#" as prefix and suffix needs to be the same
@@ -75,7 +75,7 @@ unicodeEscape = "\u", hexDigit, [hexDigit], [hexDigit], [hexDigit],
     [hexDigit], [hexDigit], [hexDigit], [hexDigit] ;
 (* String are any ASCII char, excluding double quotes and new line chars,
     but with escape sequences *)
-string = '"', {(printChar - '"') | lineWsChar | charEscape | unicodeEscape}, '"' ;
+string = '"', {(printChar - '"' - "\") | lineWsChar | charEscape | unicodeEscape}, '"' ;
 
 symbol = symbolChar, {symbolChar} ;
 

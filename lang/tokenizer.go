@@ -157,11 +157,11 @@ func isHexDigit(c rune) bool {
 }
 
 func isPrintChar(c rune) bool {
-    return c >= '!' && c <= '~' && c != '\\'
+    return c >= '!' && c <= '~'
 }
 
 func isNewLineChar(c rune) bool {
-    return c == '\f' || c == '\n' || c == '\r'
+    return c == '\n' || c == '\r'
 }
 
 func isLineWhiteSpace(c rune) bool {
