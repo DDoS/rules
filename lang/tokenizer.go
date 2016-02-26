@@ -29,6 +29,9 @@ func (this *Tokenizer) Advance() {
 
 func (this *Tokenizer) next() Token {
     if this.chars.Has() {
+        for consumeIgnored(this.chars) {
+            // Nothing to do here
+        }
         if isIdentifierStart(this.chars.Head()) {
             this.chars.Collect()
             return &Identifier{completeIdentifier(this.chars)}
@@ -42,6 +45,47 @@ func completeIdentifier(chars RuneStream) []rune {
         chars.Collect()
     }
     return chars.PopCollected()
+}
+
+func consumeIgnored(chars RuneStream) bool {
+    if chars.Has() {
+        if isLineWhiteSpace(chars.Head()) {
+            chars.Advance()
+            return true
+        } else if chars.Head() == '#' {
+            chars.Advance()
+            completeLineComment(chars)
+            return true
+        }
+    }
+    return false
+}
+
+func completeLineComment(chars RuneStream) {
+    for chars.Has() && (isPrintChar(chars.Head()) || isLineWhiteSpace(chars.Head())) {
+        chars.Advance()
+    }
+    if !chars.Has() || consumeLineTerminator(chars) {
+        return
+    }
+    panic("Expected end of line comment")
+}
+
+func consumeLineTerminator(chars RuneStream) bool {
+    if !chars.Has() {
+        return false
+    }
+    if chars.Head() == '\r' {
+        chars.Advance()
+        if chars.Head() == '\n' {
+            chars.Advance()
+        }
+        return true;
+    } else if chars.Head() == '\n' {
+        chars.Advance()
+        return true;
+    }
+    return false;
 }
 
 func isIdentifierStart(c rune) bool {
