@@ -24,8 +24,8 @@ func (this *StringRuneStream) Has() bool {
 }
 
 func (this *StringRuneStream) Head() rune {
-    if (!this.ahead) {
-        if (!this.Has()) {
+    if !this.ahead {
+        if !this.Has() {
             panic("Empty rune stream")
         }
         char, size := utf8.DecodeRuneInString(this.source)

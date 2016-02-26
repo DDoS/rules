@@ -2,15 +2,34 @@ package lang;
 
 type Tokenizer struct {
     chars RuneStream
+    headToken Token
+    ahead bool
 }
 
 func StringTokenizer(source string) *Tokenizer {
-    return &Tokenizer{&StringRuneStream{source: source}}
+    return &Tokenizer{chars: &StringRuneStream{source: source}}
 }
 
-func (this *Tokenizer) Next() Token {
+func (this *Tokenizer) Has() bool {
+    return this.Head() != EOF
+}
+
+func (this *Tokenizer) Head() Token {
+    if !this.ahead {
+        this.headToken = this.next()
+        this.ahead = true
+    }
+    return this.headToken
+}
+
+func (this *Tokenizer) Advance() {
+    this.Head()
+    this.ahead = false
+}
+
+func (this *Tokenizer) next() Token {
     if this.chars.Has() {
-        if (isIdentifierStart(this.chars.Head())) {
+        if isIdentifierStart(this.chars.Head()) {
             this.chars.Collect()
             return &Identifier{completeIdentifier(this.chars)}
         }
