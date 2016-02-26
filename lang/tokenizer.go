@@ -1,9 +1,5 @@
 package lang;
 
-import (
-    "fmt"
-)
-
 type Tokenizer struct {
     chars RuneStream
 }
@@ -51,6 +47,22 @@ func isDigit(c rune) bool {
 
 func isHexDigit(c rune) bool {
     return isDigit(c) || c >= 'A' && c <= 'F' || c >= 'a' && c <= 'f'
+}
+
+func isPrintChar(c rune) bool {
+    return c >= '!' && c <= '~'
+}
+
+func isNewLineChar(c rune) bool {
+    return c == '\f' || c == '\n' || c == '\r'
+}
+
+func isLineWhiteSpace(c rune) bool {
+    return c == ' ' || c == '\t'
+}
+
+func isWhiteSpace(c rune) bool {
+    return isNewLineChar(c) || isLineWhiteSpace(c)
 }
 
 var SYMBOLS = [...]rune{

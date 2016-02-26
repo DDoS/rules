@@ -25,14 +25,16 @@ keyword = "rule" | "when" | "with" | "then" | "match" | "if"
     | "import" | "package" | "new" | "is" | "throws" | "public"
     | "return" | "this" | "super" | "true" | "false" ;
 
-wsChar = ?all ASCII whitespace characters? ;
 (* Excludes the backslash so we can use it for escape sequences *)
 printChar = ?all ASCII print characters? - "\" ;
 
-newLineChar = ?LF? | ?CR? | ?CR?, ?LF? ;
-lineWsChar = wsChar - newLineChar;
+newLineChar = ?LF? | ?CR? | ?FF? ;
+lineWsChar = " " | ?TAB?;
+wsChar = lineWsChar | newLineChar ;
 
-lineComment = "#", {printChar | lineWsChar}, newLineChar ;
+lineTerminator = newLineChar | ?CR?, ?LF? ;
+
+lineComment = "#", {printChar | lineWsChar}, lineTerminator ;
 (* Count of "#" as prefix and suffix needs to be the same
     This allows comment nesting *)
 blockComment = "##", {"#"}, {printChar | wsChar}, "##", {"#"} ;
@@ -65,8 +67,9 @@ decimal = [sign], (
 
 boolean = "true" | "false" ;
 
-(* tab, new line, carriage return, backspace, form feed, double and single quote *)
-charEscape = "\t" | "\n" | "\r" | "\b" | "\f" | '\"' | "\\" ;
+(* bell, backspace, horizontal tab, line feed, vertical tab, form feed,
+    caridge return, double quote and backslash *)
+charEscape = "\a" | "\b" | "\t" | "\n" | "\v" | "\f" | "\r" | '\"' | "\\" ;
 (* Hexadecimal sequence to be converted to  unicode code point in the string *)
 unicodeEscape = "\u", hexDigit, [hexDigit], [hexDigit], [hexDigit],
     [hexDigit], [hexDigit], [hexDigit], [hexDigit] ;
@@ -84,7 +87,7 @@ literalToken = {ignored}, (
 ) ;
 symbolToken = {ignored}, symbol ;
 keywordToken = {ignored}, keyword ;
-lineEndToken = {ignored}, newLineChar, {newLineChar} ;
+lineEndToken = {ignored}, (lineTerminator | ';') ;
 
 (* The final output from the lexer *)
 tokenList = {

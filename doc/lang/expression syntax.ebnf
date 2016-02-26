@@ -100,7 +100,7 @@ arrayAccess = access, arraySized ;
 variableAccess = name | fieldAccess | arrayAccess ;
 
 (* Assignment aren't actually expressions in this language, they return void *)
-assignment = (variableAccess, assignmentOperator, conditional)
+assignment = (variableAccess, assignmentOperator, expression)
     | (variableAccess, ":=", (objectLiteral | arrayLiteral)) ;
 
 expressionList = expression, {",", expression} ;
