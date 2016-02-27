@@ -10,7 +10,8 @@ letter = "A" | "B" | "C" | "D" | "E" | "F" | "G"
 
 binaryDigit = "0" | "1" ;
 digit = "binaryDigit | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
-hexDigit = digit | "a" | "A" | "b" | "B" | "c" | "C" | "d" | "D" | "e" | "E" | "f" | "F" ;
+hexDigit = digit | "a" | "A" | "b" | "B" | "c" | "C" | "d" | "D" | "e"
+    | "E" | "f" | "F" ;
 
 symbolChar = "!" | "@" | "#" | "%" | "?" | "&" | "*"
     | "(" | ")" | "-" | "=" | "+" | "/" | "^"
@@ -32,9 +33,7 @@ newLineChar = ?LF? | ?CR? ;
 lineWsChar = " " | ?TAB?;
 wsChar = lineWsChar | newLineChar ;
 
-lineTerminator = newLineChar | ?CR?, ?LF? | ?EOT? ;
-
-lineComment = "#", {printChar | lineWsChar}, lineTerminator ;
+lineComment = "#", {printChar | lineWsChar} ;
 (* Count of "#" as prefix and suffix needs to be the same
     This allows comment nesting *)
 blockComment = "##", {"#"}, {printChar | wsChar}, "##", {"#"} ;
@@ -59,10 +58,12 @@ binaryInteger = "0", ("b" | "B"), binaryDigitSequence ;
 integer = [sign], digitSequence ;
 hexInteger = "0", ("x" | "X"), hexDigitSequence ;
 
-(* Decimal numbers are like: 0.4, +1.28, .5, -.3, 3.4e12, 5_000e-9 *)
+exponentPart = ("e" | "E"), integer ;
+(* Decimal numbers are like: 0.4, +1.28, .5, -.3e2, 2., 1.e2, 3.4e12, 5_0e-9 *)
 decimal = [sign], (
-    ([digitSequence], ".", digitSequence, [("e" | "E"), integer])
-    | (digitSequence, ("e" | "E"), integer)
+    ([digitSequence], ".", digitSequence, [exponentPart])
+    | (digitSequence, ".", [digitSequence], [exponentPart])
+    | (digitSequence, exponentPart)
 ) ;
 
 boolean = "true" | "false" ;
@@ -75,21 +76,26 @@ unicodeEscape = "\u", hexDigit, [hexDigit], [hexDigit], [hexDigit],
     [hexDigit], [hexDigit], [hexDigit], [hexDigit] ;
 (* String are any ASCII char, excluding double quotes and new line chars,
     but with escape sequences *)
-string = '"', {(printChar - '"' - "\") | lineWsChar | charEscape | unicodeEscape}, '"' ;
+string = '"', {
+    (printChar - '"' - "\") | lineWsChar | charEscape | unicodeEscape
+}, '"' ;
 
 symbol = symbolChar, {symbolChar} ;
 
+lineEnd = newLineChar | ?CR?, ?LF? | ?EOT? | ';' ;
+
 (* These are the tokens used by the abstract syntax *)
 
-identifierToken = {ignored}, identifier ;
-literalToken = {ignored}, (
+identifierToken = identifier, {ignored} ;
+literalToken = (
     integer | hexInteger | binaryInteger | decimal | boolean | string
-) ;
-symbolToken = {ignored}, symbol ;
-keywordToken = {ignored}, keyword ;
-lineEndToken = {ignored}, (lineTerminator | ';') ;
+), {ignored} ;
+symbolToken = symbol, {ignored} ;
+keywordToken = keyword, {ignored} ;
+indentationToken = lineEnd, {lineWsChar}, {ignored} ;
 
 (* The final output from the lexer *)
 tokenList = {
-    identifierToken | literalToken | symbolToken | keywordToken | lineEndToken
-}, {ignored} ;
+    identifierToken | literalToken | symbolToken | keywordToken
+    | indentationToken
+} ;
