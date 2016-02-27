@@ -32,7 +32,7 @@ newLineChar = ?LF? | ?CR? ;
 lineWsChar = " " | ?TAB?;
 wsChar = lineWsChar | newLineChar ;
 
-lineTerminator = newLineChar | ?CR?, ?LF? | ?EOF? ;
+lineTerminator = newLineChar | ?CR?, ?LF? | ?EOT? ;
 
 lineComment = "#", {printChar | lineWsChar}, lineTerminator ;
 (* Count of "#" as prefix and suffix needs to be the same

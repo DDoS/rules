@@ -25,12 +25,14 @@ func (this *StringRuneStream) Has() bool {
 
 func (this *StringRuneStream) Head() rune {
     if !this.ahead {
-        if !this.Has() {
-            panic("Empty rune stream")
+        if this.Has() {
+            char, size := utf8.DecodeRuneInString(this.source)
+            this.headRune = char
+            this.source = this.source[size:]
+        } else {
+            // EOT
+            this.headRune = 0x4
         }
-        char, size := utf8.DecodeRuneInString(this.source)
-        this.headRune = char
-        this.source = this.source[size:]
         this.ahead = true
     }
     return this.headRune

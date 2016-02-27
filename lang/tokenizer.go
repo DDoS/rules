@@ -41,41 +41,41 @@ func (this *Tokenizer) next() Token {
 }
 
 func completeIdentifier(chars RuneStream) []rune {
-    for chars.Has() && isIdentifierBody(chars.Head()) {
+    for isIdentifierBody(chars.Head()) {
         chars.Collect()
     }
     return chars.PopCollected()
 }
 
 func consumeIgnored(chars RuneStream) bool {
-    if chars.Has() {
-        if isLineWhiteSpace(chars.Head()) {
-            // Consume a line whitespace character
+    if isLineWhiteSpace(chars.Head()) {
+        // Consume a line whitespace character
+        chars.Advance()
+        return true
+    }
+    if chars.Head() == '#' {
+        // Consume a comment
+        chars.Advance()
+        if (chars.Head() == '#') {
             chars.Advance()
-            return true
-        } else if chars.Head() == '#' {
-            // Consume a comment
-            chars.Advance()
-            if (chars.Head() == '#') {
-                chars.Advance()
-                completeBlockComment(chars)
-            } else {
-                completeLineComment(chars)
-            }
-            return true
-        } else if chars.Head() == '\\' {
-            // Consume an escaped new line character
-            chars.Advance()
-            if !chars.Has() || !isNewLineChar(chars.Head()) {
-                panic("Expected new line character")
-            }
-            chars.Advance()
-            // Consume more escaped new line characters
-            for chars.Has() && isNewLineChar(chars.Head()) {
-                chars.Advance()
-            }
-            return true;
+            completeBlockComment(chars)
+        } else {
+            completeLineComment(chars)
         }
+        return true
+    }
+    if chars.Head() == '\\' {
+        // Consume an escaped new line
+        chars.Advance()
+        if !isNewLineChar(chars.Head()) {
+            panic("Expected new line character")
+        }
+        chars.Advance()
+        // Consume more escaped new lines
+        for isNewLineChar(chars.Head()) {
+            chars.Advance()
+        }
+        return true;
     }
     return false
 }
@@ -83,14 +83,14 @@ func consumeIgnored(chars RuneStream) bool {
 func completeBlockComment(chars RuneStream) {
     // Count and consume leading # symbols
     leading := 2
-    for chars.Has() && chars.Head() == '#' {
+    for chars.Head() == '#' {
         leading++
         chars.Advance()
     }
     // Consume print and white space characters
     // and look for a matching count of consecutive #
     trailing := 0
-    for chars.Has() && trailing < leading {
+    for trailing < leading {
         if chars.Head() == '#' {
             trailing++
         } else if isPrintChar(chars.Head()) || isWhiteSpace(chars.Head()) {
@@ -106,26 +106,30 @@ func completeBlockComment(chars RuneStream) {
 }
 
 func completeLineComment(chars RuneStream) {
-    for chars.Has() && (isPrintChar(chars.Head()) || isLineWhiteSpace(chars.Head())) {
+    for isPrintChar(chars.Head()) || isLineWhiteSpace(chars.Head()) {
         chars.Advance()
     }
-    if !chars.Has() || consumeLineTerminator(chars) {
-        return
+    if !consumeLineTerminator(chars) {
+        panic("Expected line terminator")
     }
-    panic("Expected line terminator")
 }
 
 func consumeLineTerminator(chars RuneStream) bool {
-    if !chars.Has() {
-        return false
+    if chars.Head() == 0x4 {
+        // EOT
+        return true
     }
     if chars.Head() == '\r' {
+        // CR
         chars.Advance()
         if chars.Head() == '\n' {
+            // CR LF
             chars.Advance()
         }
         return true;
-    } else if chars.Head() == '\n' {
+    }
+    if chars.Head() == '\n' {
+        // LF
         chars.Advance()
         return true;
     }
