@@ -1,4 +1,4 @@
-package lang;
+package lang
 
 type Tokenizer struct {
     chars RuneStream
@@ -28,16 +28,19 @@ func (this *Tokenizer) Advance() {
 }
 
 func (this *Tokenizer) next() Token {
-    if this.chars.Has() {
-        for consumeIgnored(this.chars) {
-            // Nothing to do here, skip all of it
+    for this.chars.Has() {
+        if consumeLineTerminator(this.chars) {
+            return &Indentation{consumeIndentation(this.chars)}
         }
         if isIdentifierStart(this.chars.Head()) {
             this.chars.Collect()
             return &Identifier{completeIdentifier(this.chars)}
         }
+        for consumeIgnored(this.chars) {
+            // Remove trailing comments and whitespace
+        }
     }
-    return EOF;
+    return EOF
 }
 
 func completeIdentifier(chars RuneStream) []rune {
@@ -75,7 +78,7 @@ func consumeIgnored(chars RuneStream) bool {
         for isNewLineChar(chars.Head()) {
             chars.Advance()
         }
-        return true;
+        return true
     }
     return false
 }
@@ -109,31 +112,37 @@ func completeLineComment(chars RuneStream) {
     for isPrintChar(chars.Head()) || isLineWhiteSpace(chars.Head()) {
         chars.Advance()
     }
-    if !consumeLineTerminator(chars) {
-        panic("Expected line terminator")
-    }
 }
 
 func consumeLineTerminator(chars RuneStream) bool {
-    if chars.Head() == 0x4 {
+    switch chars.Head() {
+    case ';':
+        chars.Advance()
+        return true
+    case 0x4:
         // EOT
         return true
-    }
-    if chars.Head() == '\r' {
+    case '\r':
         // CR
         chars.Advance()
         if chars.Head() == '\n' {
             // CR LF
             chars.Advance()
         }
-        return true;
-    }
-    if chars.Head() == '\n' {
+        return true
+    case '\n':
         // LF
         chars.Advance()
-        return true;
+        return true
     }
-    return false;
+    return false
+}
+
+func consumeIndentation(chars RuneStream) []rune {
+    for isLineWhiteSpace(chars.Head()) {
+        chars.Collect()
+    }
+    return chars.PopCollected()
 }
 
 func isIdentifierStart(c rune) bool {

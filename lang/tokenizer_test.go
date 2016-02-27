@@ -7,26 +7,34 @@ import (
 )
 
 func TestLexIdentifier(t *testing.T) {
-    assert.Equal(t, "test", lexOneToken("test"))
+    assertLex(t, "test", "test")
+}
+
+func TestLexIndentation(t *testing.T) {
+    assertLex(t, "\ntest", "", "test")
+    assertLex(t, "\r\ntest", "", "test")
+    assertLex(t, "\r    test", "    ", "test")
+    assertLex(t, "\r\ttest", "\t", "test")
+    assertLex(t, "test\nyou", "test", "", "you")
+    assertLex(t, "hello\n you", "hello", " ", "you")
 }
 
 func TestLexIgnored(t *testing.T) {
-    assert.Equal(t, "test", lexOneToken(" test"))
-    assert.Equal(t, "test", lexOneToken("   test"))
-    assert.Equal(t, "test", lexOneToken("\ttest"))
-    assert.Equal(t, "test", lexOneToken("\t \ttest"))
-    assert.Equal(t, "test", lexOneToken("test"))
-    assert.Equal(t, "test", lexOneToken("#A \tcomment!\ntest"))
-    assert.Equal(t, "test", lexOneToken("#A \tcomment!\r\ntest"))
-    assert.Equal(t, "test", lexOneToken("#Testing #some characters in \\comments\ntest"))
-    assert.Equal(t, "test", lexOneToken("\\\ntest"))
-    assert.Equal(t, "test", lexOneToken("\\\n\rtest"))
-    assert.Equal(t, "test", lexOneToken("## Comment\\test ##test"))
-    assert.Equal(t, "test", lexOneToken("## Two ## #Comments\n test"))
-    assert.Equal(t, "test", lexOneToken("## Hello \n World \r\t\n ##test"))
-    assert.Equal(t, "test", lexOneToken("### You\nCan ## Nest\nComments # like this ## ###test"))
+    assertLex(t, "test\\\nyou", "test", "you")
+    assertLex(t, "#A \tcomment!\ntest", "", "test")
+    assertLex(t, "#Testing #some characters in \\comments\ntest", "", "test")
+    assertLex(t, "## Comment\\test ## test", "test")
+    assertLex(t, "## Two ## #Comments\n test", " ", "test")
+    assertLex(t, "## Hello \n World \r\t\n ##test", "test")
+    assertLex(t, "### You\nCan ## Nest\nComments # like this ## ###test", "test")
 }
 
-func lexOneToken(source string) string {
-    return string(lang.StringTokenizer(source).Head().Source())
+func assertLex(t *testing.T, source string, expected ...string) {
+    tokenizer := lang.StringTokenizer(source)
+    tokens := []string{}
+    for tokenizer.Has() {
+        tokens = append(tokens, string(tokenizer.Head().Source()))
+        tokenizer.Advance()
+    }
+    assert.Equal(t, expected, tokens)
 }
