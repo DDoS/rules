@@ -34,7 +34,7 @@ func (this *Tokenizer) next() *Token {
         // First token can be indentation, which in this case
         // is not after a new line
         if isLineWhiteSpace(this.chars.Head()) {
-            token = Indentation(consumeIndentation(this.chars))
+            token = Indentation(collectIndentation(this.chars))
         }
         for consumeIgnored(this.chars) {
             // Remove trailing comments and whitespace
@@ -46,7 +46,7 @@ func (this *Tokenizer) next() *Token {
             consumeNewLine(this.chars)
             // Just after a new line, try to consume indentation
             if isLineWhiteSpace(this.chars.Head()) {
-                token = Indentation(consumeIndentation(this.chars))
+                token = Indentation(collectIndentation(this.chars))
             }
         } else if this.chars.Head() == ';' {
             // A terminator breaks a line but doesn't need indentation
@@ -54,7 +54,7 @@ func (this *Tokenizer) next() *Token {
             token = TerminatorToken
         } else if isIdentifierStart(this.chars.Head()) {
             this.chars.Collect()
-            identifier := consumeIdentifierBody(this.chars)
+            identifier := collectIdentifierBody(this.chars)
             // An indentifier can also be a keyword
             if isKeyword(identifier) {
                 token = Keyword(identifier)
@@ -64,7 +64,7 @@ func (this *Tokenizer) next() *Token {
                 token = Identifier(identifier)
             }
         } else if isSymbol(this.chars.Head()) {
-            token = Symbol(consumeSymbol(this.chars))
+            token = Symbol(collectSymbol(this.chars))
         } else if this.chars.Head() == '"' {
             token = StringLiteral(collectStringLiteral(this.chars))
         }
@@ -75,7 +75,7 @@ func (this *Tokenizer) next() *Token {
     return token
 }
 
-func consumeIdentifierBody(chars RuneStream) []rune {
+func collectIdentifierBody(chars RuneStream) []rune {
     for isIdentifierBody(chars.Head()) {
         chars.Collect()
     }
@@ -157,14 +157,14 @@ func consumeNewLine(chars RuneStream) {
     }
 }
 
-func consumeIndentation(chars RuneStream) []rune {
+func collectIndentation(chars RuneStream) []rune {
     for isLineWhiteSpace(chars.Head()) {
         chars.Collect()
     }
     return chars.PopCollected()
 }
 
-func consumeSymbol(chars RuneStream) []rune {
+func collectSymbol(chars RuneStream) []rune {
     for isSymbol(chars.Head()) {
         chars.Collect()
     }
