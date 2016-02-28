@@ -2,7 +2,7 @@ package lang
 
 type Tokenizer struct {
     chars RuneStream
-    headToken Token
+    headToken *Token
     ahead bool
 }
 
@@ -11,10 +11,10 @@ func StringTokenizer(source string) *Tokenizer {
 }
 
 func (this *Tokenizer) Has() bool {
-    return this.Head() != EOF
+    return this.Head() != EndToken
 }
 
-func (this *Tokenizer) Head() Token {
+func (this *Tokenizer) Head() *Token {
     if !this.ahead {
         this.headToken = this.next()
         this.ahead = true
@@ -27,20 +27,28 @@ func (this *Tokenizer) Advance() {
     this.ahead = false
 }
 
-func (this *Tokenizer) next() Token {
-    for this.chars.Has() {
+func (this *Tokenizer) next() *Token {
+    var token *Token = EndToken
+    for this.chars.Has() && token == EndToken {
         if consumeLineTerminator(this.chars) {
-            return &Indentation{consumeIndentation(this.chars)}
-        }
-        if isIdentifierStart(this.chars.Head()) {
+            token = Indentation(consumeIndentation(this.chars))
+        } else if isIdentifierStart(this.chars.Head()) {
             this.chars.Collect()
-            return &Identifier{completeIdentifier(this.chars)}
+            identifier := completeIdentifier(this.chars)
+            if isKeyword(identifier) {
+                token = Keyword(identifier)
+            } else {
+                token = Identifier(identifier)
+            }
+        } else if isSymbol(this.chars.Head()) {
+            this.chars.Collect()
+            token = Symbol(completeSymbol(this.chars))
         }
         for consumeIgnored(this.chars) {
             // Remove trailing comments and whitespace
         }
     }
-    return EOF
+    return token
 }
 
 func completeIdentifier(chars RuneStream) []rune {
@@ -103,9 +111,6 @@ func completeBlockComment(chars RuneStream) {
         }
         chars.Advance()
     }
-    if trailing != leading {
-        panic("Block comment is not closed")
-    }
 }
 
 func completeLineComment(chars RuneStream) {
@@ -140,6 +145,13 @@ func consumeLineTerminator(chars RuneStream) bool {
 
 func consumeIndentation(chars RuneStream) []rune {
     for isLineWhiteSpace(chars.Head()) {
+        chars.Collect()
+    }
+    return chars.PopCollected()
+}
+
+func completeSymbol(chars RuneStream) []rune {
+    for isSymbol(chars.Head()) {
         chars.Collect()
     }
     return chars.PopCollected()
@@ -186,7 +198,7 @@ func isWhiteSpace(c rune) bool {
 }
 
 var SYMBOLS = [...]rune{
-    '!', '@', '#', '%', '?', '&', '*', '(', ')', '-', '=', '+', '/', '^', ';', ':', '<', '>', '[', ']', '.', ',', '~',
+    '!', '@', '%', '?', '&', '*', '(', ')', '-', '=', '+', '/', '^', ':', '<', '>', '[', ']', '.', ',', '~',
 }
 
 func isSymbol(c rune) bool {

@@ -13,7 +13,7 @@ digit = "binaryDigit | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
 hexDigit = digit | "a" | "A" | "b" | "B" | "c" | "C" | "d" | "D" | "e"
     | "E" | "f" | "F" ;
 
-symbolChar = "!" | "@" | "#" | "%" | "?" | "&" | "*"
+symbolChar = "!" | "@" | "%" | "?" | "&" | "*"
     | "(" | ")" | "-" | "=" | "+" | "/" | "^"
     | ";" | ":" | "<" | ">" | "[" | "]" | "."
     | "," | "~" ;
@@ -44,7 +44,6 @@ ignored = lineWsChar | lineComment | blockComment | ("\", newLineChar, {newLineC
 (* Identifiers don't start with a digit, but can contain one *)
 identifierStart = "_" | letter ;
 identifierBody = identifierStart | digit ;
-identifier = identifierStart, {identifierBody} ;
 
 sign = "-" | "+" ;
 
@@ -80,22 +79,20 @@ string = '"', {
     (printChar - '"' - "\") | lineWsChar | charEscape | unicodeEscape
 }, '"' ;
 
-symbol = symbolChar, {symbolChar} ;
-
 lineEnd = newLineChar | ?CR?, ?LF? | ?EOT? | ';' ;
 
 (* These are the tokens used by the abstract syntax *)
 
-identifierToken = identifier, {ignored} ;
+identifierToken = identifierStart, {identifierBody} ;
 literalToken = (
     integer | hexInteger | binaryInteger | decimal | boolean | string
-), {ignored} ;
-symbolToken = symbol, {ignored} ;
-keywordToken = keyword, {ignored} ;
-indentationToken = lineEnd, {lineWsChar}, {ignored} ;
+) ;
+symbolToken = symbolChar, {symbolChar} ;
+keywordToken = keyword ;
+indentationToken = lineEnd, {lineWsChar} ;
 
 (* The final output from the lexer *)
-tokenList = {
-    identifierToken | literalToken | symbolToken | keywordToken
-    | indentationToken
+tokenList = {ignored}, {
+    (identifierToken | literalToken | symbolToken | keywordToken
+    | indentationToken), {ignored}
 } ;

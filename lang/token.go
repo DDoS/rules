@@ -1,30 +1,56 @@
 package lang
 
-var EOF *EndOfFile = &EndOfFile{}
+import "fmt"
 
-type Token interface {
-    Source() []rune
+type Kind uint
+
+const (
+        INDENTATION Kind = iota
+        IDENTIFIER
+        KEYWORD
+        SYMBOL
+        EOF
+)
+
+type Token struct {
+    Source []rune
+    Kind Kind
 }
 
-type Indentation struct {
-    source []rune
+func Indentation(source []rune) *Token {
+    return &Token{source, INDENTATION}
 }
 
-type Identifier struct {
-    source []rune
+func Identifier(source []rune) *Token {
+    return &Token{source, IDENTIFIER}
 }
 
-type EndOfFile struct {
+func Keyword(source []rune) *Token {
+    return &Token{source, KEYWORD}
 }
 
-func (this *Indentation) Source() []rune {
-    return this.source
+func Symbol(source []rune) *Token {
+    return &Token{source, SYMBOL}
 }
 
-func (this *Identifier) Source() []rune {
-    return this.source
+var EndToken *Token = &Token{[]rune{0x4}, EOF}
+
+func (token *Token) String() string {
+    return fmt.Sprintf("%s(%s)", token.Kind.String(), string(token.Source))
 }
 
-func (this *EndOfFile) Source() []rune {
-    return []rune{0x4}
+func (kind Kind) String() string {
+    switch kind {
+    case INDENTATION:
+        return "Indentation"
+    case IDENTIFIER:
+        return "Identifier"
+    case KEYWORD:
+        return "Keyword"
+    case SYMBOL:
+        return "Symbol"
+    case EOF:
+        return "EOF"
+    }
+    panic(fmt.Sprintf("Unknown token kind %d", kind))
 }
