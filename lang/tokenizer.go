@@ -65,6 +65,8 @@ func (this *Tokenizer) next() *Token {
             }
         } else if isSymbol(this.chars.Head()) {
             token = Symbol(consumeSymbol(this.chars))
+        } else if this.chars.Head() == '"' {
+            token = StringLiteral(collectStringLiteral(this.chars))
         }
         for consumeIgnored(this.chars) {
             // Remove trailing comments and whitespace
@@ -169,6 +171,57 @@ func consumeSymbol(chars RuneStream) []rune {
     return chars.PopCollected()
 }
 
+func collectStringLiteral(chars RuneStream) []rune {
+    // Opening "
+    if chars.Head() != '"' {
+        panic("Expected opening \"")
+    }
+    chars.Collect()
+    // String contents
+    for {
+        if isPrintChar(chars.Head()) && chars.Head() != '"' && chars.Head() != '\\' {
+            chars.Collect()
+        } else if isLineWhiteSpace(chars.Head()) {
+            chars.Collect()
+        } else if collectEscapeSequence(chars) {
+            // Nothing to do, it is already collected
+        } else {
+            // Not part of a string literal body, end here
+            break
+        }
+    }
+    // Closing "
+    if chars.Head() != '"' {
+        panic("Expected closing \"")
+    }
+    chars.Collect()
+    return chars.PopCollected()
+}
+
+func collectEscapeSequence(chars RuneStream) bool {
+    if chars.Head() != '\\' {
+        return false
+    }
+    chars.Collect()
+    if chars.Head() == 'u' {
+        chars.Collect()
+        // Unicode sequence, collect at least 1 hex digit and at most 8
+        if !isHexDigit(chars.Head()) {
+            panic("Expected at least one hexadecimal digit in Unicode sequence")
+        }
+        chars.Collect()
+        for i := 1; i < 8 && isHexDigit(chars.Head()); i++ {
+            chars.Collect()
+        }
+        return true
+    }
+    if runesContain(ESCAPE_LITERALS, chars.Head()) {
+        chars.Collect()
+        return true
+    }
+    return false
+}
+
 func isIdentifierStart(c rune) bool {
     return c == '_' || isLetter(c)
 }
@@ -209,20 +262,15 @@ func isWhiteSpace(c rune) bool {
     return isNewLineChar(c) || isLineWhiteSpace(c)
 }
 
-var SYMBOLS = [...]rune{
+var SYMBOLS = []rune{
     '!', '@', '%', '?', '&', '*', '(', ')', '-', '=', '+', '/', '^', ':', '<', '>', '[', ']', '.', ',', '~',
 }
 
 func isSymbol(c rune) bool {
-    for _, symbol := range SYMBOLS {
-        if c == symbol {
-            return true
-        }
-    }
-    return false
+    return runesContain(SYMBOLS, c)
 }
 
-var KEYWORDS = [...][]rune{
+var KEYWORDS = [][]rune{
     []rune("when"), []rune("with"), []rune("then"), []rune("match"), []rune("if"), []rune("else"), []rune("for"), []rune("for_rev"), []rune("while"),
     []rune("do"), []rune("try"), []rune("catch"), []rune("finally"), []rune("let"), []rune("var"), []rune("class"), []rune("void"), []rune("break"),
     []rune("continue"), []rune("throw"), []rune("bool"), []rune("byte"), []rune("char"), []rune("short"), []rune("int"), []rune("long"), []rune("float"),
@@ -244,6 +292,19 @@ var TRUE_LITERAL = []rune("true")
 
 func isBooleanLiteral(cs []rune) bool {
     return runesEquals(cs, FALSE_LITERAL) || runesEquals(cs, TRUE_LITERAL)
+}
+
+var ESCAPE_LITERALS = []rune{
+    'a', 'b', 't', 'n', 'v', 'f', 'r', '"', '\\',
+}
+
+func runesContain(a []rune, b rune) bool {
+    for _, r := range a {
+        if r == b {
+            return true
+        }
+    }
+    return false
 }
 
 func runesEquals(a []rune, b []rune) bool {

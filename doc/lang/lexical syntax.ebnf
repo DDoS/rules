@@ -57,10 +57,10 @@ hexDigitSequence = hexDigit, {{"_"} hexDigit} ;
 
 (* Integers are like: 1234, 2_000, 0xab2, 0b1101 *)
 binaryInteger = "0", ("b" | "B"), binaryDigitSequence ;
-integer = [sign], digitSequence ;
+integer = digitSequence ;
 hexInteger = "0", ("x" | "X"), hexDigitSequence ;
 
-exponentPart = ("e" | "E"), integer ;
+exponentPart = ("e" | "E"), [sign], integer ;
 (* Decimal numbers are like: 0.4, 1.28, .5, .3e2, 2., 1.e2, 3.4e12, 5_0e-9 *)
 decimal = ([digitSequence], ".", digitSequence, [exponentPart])
     | (digitSequence, ".", [digitSequence], [exponentPart])
@@ -72,8 +72,7 @@ boolean = "true" | "false" ;
     carriage return, double quote and backslash *)
 charEscape = "\a" | "\b" | "\t" | "\n" | "\v" | "\f" | "\r" | '\"' | "\\" ;
 (* Hexadecimal sequence to be converted to  unicode code point in the string *)
-unicodeEscape = "\u", hexDigit, [hexDigit], [hexDigit], [hexDigit],
-    [hexDigit], [hexDigit], [hexDigit], [hexDigit] ;
+unicodeEscape = "\u", hexDigit, {hexDigit} ;
 (* String are any ASCII char, excluding double quotes and new line chars,
     but with escape sequences *)
 string = '"', {

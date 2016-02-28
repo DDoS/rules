@@ -25,7 +25,7 @@ func TestLexIndentation(t *testing.T) {
     assertLex(t, " \\\ntest", "Indentation( )", "Identifier(test)")
 }
 
-func testLexTerminator(t *testing.T) {
+func TestLexTerminator(t *testing.T) {
     assertLex(t, "test;that", "Identifier(test)", "Terminator(;)", "Identifier(that)")
 }
 
@@ -39,7 +39,7 @@ func TestLexKeyword(t *testing.T) {
 func TestLexSymbol(t *testing.T) {
     for _, symbol := range lang.SYMBOLS {
         compositeSymbol := []rune{symbol}
-        length := rand.Intn(2)
+        length := rand.Intn(3)
         for i := 0; i < length; i++ {
             compositeSymbol = append(compositeSymbol, lang.SYMBOLS[rand.Intn(len(lang.SYMBOLS))])
         }
@@ -48,9 +48,23 @@ func TestLexSymbol(t *testing.T) {
     }
 }
 
-func testLexBooleanLiteral(t *testing.T) {
+func TestLexBooleanLiteral(t *testing.T) {
     assertLex(t, "false", "BooleanLiteral(false)")
     assertLex(t, "true", "BooleanLiteral(true)")
+}
+
+func TestLextStringLiteral(t *testing.T) {
+    assertLex(t, "\"test\"", "StringLiteral(\"test\")")
+    assertLex(t, "\"  \"", "StringLiteral(\"  \")")
+    assertLex(t, "\"  t  \"", "StringLiteral(\"  t  \")")
+    assertLex(t, "\"te\\nst\"", "StringLiteral(\"te\\nst\")")
+    assertLex(t, "\"te\\\"nst\"", "StringLiteral(\"te\\\"nst\")")
+    assertLex(t, "\"te\\\\st\"", "StringLiteral(\"te\\\\st\")")
+    assertLex(t, "\"te\\\\nst\"", "StringLiteral(\"te\\\\nst\")")
+    assertLex(t, "\"\\u00000000\"", "StringLiteral(\"\\u00000000\")")
+    assertLex(t, "\"\\u0\"", "StringLiteral(\"\\u0\")")
+    assertLex(t, "\"\\u214ade\"", "StringLiteral(\"\\u214ade\")")
+    assertLex(t, "\"\\u214ader\"", "StringLiteral(\"\\u214ader\")")
 }
 
 func TestLexIgnored(t *testing.T) {
