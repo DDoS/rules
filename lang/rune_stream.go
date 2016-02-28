@@ -20,7 +20,7 @@ type StringRuneStream struct {
 }
 
 func (this *StringRuneStream) Has() bool {
-    return len(this.source) > 0
+    return len(this.source) > 0 || this.ahead && this.headRune != '\u0004'
 }
 
 func (this *StringRuneStream) Head() rune {
@@ -31,7 +31,7 @@ func (this *StringRuneStream) Head() rune {
             this.source = this.source[size:]
         } else {
             // EOT
-            this.headRune = 0x4
+            this.headRune = '\u0004'
         }
         this.ahead = true
     }
