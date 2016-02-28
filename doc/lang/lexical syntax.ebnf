@@ -55,18 +55,16 @@ binaryDigitSequence = binaryDigit, {{"_"} binaryDigit} ;
 digitSequence = digit, {{"_"} digit} ;
 hexDigitSequence = hexDigit, {{"_"} hexDigit} ;
 
-(* Integers are like: 1234, -2_000, 0xab2, 0b1101 *)
+(* Integers are like: 1234, 2_000, 0xab2, 0b1101 *)
 binaryInteger = "0", ("b" | "B"), binaryDigitSequence ;
 integer = [sign], digitSequence ;
 hexInteger = "0", ("x" | "X"), hexDigitSequence ;
 
 exponentPart = ("e" | "E"), integer ;
-(* Decimal numbers are like: 0.4, +1.28, .5, -.3e2, 2., 1.e2, 3.4e12, 5_0e-9 *)
-decimal = [sign], (
-    ([digitSequence], ".", digitSequence, [exponentPart])
+(* Decimal numbers are like: 0.4, 1.28, .5, .3e2, 2., 1.e2, 3.4e12, 5_0e-9 *)
+decimal = ([digitSequence], ".", digitSequence, [exponentPart])
     | (digitSequence, ".", [digitSequence], [exponentPart])
-    | (digitSequence, exponentPart)
-) ;
+    | (digitSequence, exponentPart) ;
 
 boolean = "true" | "false" ;
 
