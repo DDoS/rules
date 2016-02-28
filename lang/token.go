@@ -6,6 +6,7 @@ type Kind uint
 
 const (
         INDENTATION Kind = iota
+        TERMINATOR
         IDENTIFIER
         KEYWORD
         SYMBOL
@@ -21,6 +22,8 @@ func Indentation(source []rune) *Token {
     return &Token{source, INDENTATION}
 }
 
+var TerminatorToken *Token = &Token{[]rune{';'}, TERMINATOR}
+
 func Identifier(source []rune) *Token {
     return &Token{source, IDENTIFIER}
 }
@@ -33,7 +36,7 @@ func Symbol(source []rune) *Token {
     return &Token{source, SYMBOL}
 }
 
-var EndToken *Token = &Token{[]rune{0x4}, EOF}
+var EofToken *Token = &Token{[]rune{0x4}, EOF}
 
 func (token *Token) String() string {
     return fmt.Sprintf("%s(%s)", token.Kind.String(), string(token.Source))
@@ -43,6 +46,8 @@ func (kind Kind) String() string {
     switch kind {
     case INDENTATION:
         return "Indentation"
+    case TERMINATOR:
+        return "Terminator"
     case IDENTIFIER:
         return "Identifier"
     case KEYWORD:

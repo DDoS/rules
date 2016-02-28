@@ -79,8 +79,6 @@ string = '"', {
     (printChar - '"' - "\") | lineWsChar | charEscape | unicodeEscape
 }, '"' ;
 
-lineEnd = newLineChar | ?CR?, ?LF? | ?EOT? | ';' ;
-
 (* These are the tokens used by the abstract syntax *)
 
 identifierToken = identifierStart, {identifierBody} ;
@@ -89,10 +87,12 @@ literalToken = (
 ) ;
 symbolToken = symbolChar, {symbolChar} ;
 keywordToken = keyword ;
-indentationToken = lineEnd, {lineWsChar} ;
+newLineToken = newLineChar | ?CR?, ?LF?;
+terminatorToken = ';' ;
+indentationToken = lineWsChar, {lineWsChar} ;
 
 (* The final output from the lexer *)
-tokenList = {ignored}, {
+tokenList = [indentationToken], {ignored}, {
     (identifierToken | literalToken | symbolToken | keywordToken
-    | indentationToken), {ignored}
+    | terminatorToken | (newLineToken, [indentationToken])), {ignored}
 } ;

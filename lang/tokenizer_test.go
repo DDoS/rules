@@ -9,17 +9,24 @@ import (
 )
 
 func TestLexIdentifier(t *testing.T) {
+    assertLex(t, "t", "Identifier(t)")
     assertLex(t, "test", "Identifier(test)")
 }
 
 func TestLexIndentation(t *testing.T) {
-    assertLex(t, "\ntest", "Indentation()", "Identifier(test)")
-    assertLex(t, "\r\ntest", "Indentation()", "Identifier(test)")
+    assertLex(t, "    test", "Indentation(    )", "Identifier(test)")
+    assertLex(t, "\ntest", "Identifier(test)")
+    assertLex(t, "\r\ntest", "Identifier(test)")
     assertLex(t, "\r    test", "Indentation(    )", "Identifier(test)")
     assertLex(t, "\r\ttest", "Indentation(\t)", "Identifier(test)")
-    assertLex(t, "test\nyou", "Identifier(test)", "Indentation()", "Identifier(you)")
-    assertLex(t, "test;that", "Identifier(test)", "Indentation()", "Identifier(that)")
+    assertLex(t, "test\nyou", "Identifier(test)", "Identifier(you)")
     assertLex(t, "hello\n you", "Identifier(hello)", "Indentation( )", "Identifier(you)")
+    assertLex(t, " hello\n you", "Indentation( )", "Identifier(hello)", "Indentation( )", "Identifier(you)")
+    assertLex(t, " \\\ntest", "Indentation( )", "Identifier(test)")
+}
+
+func testLexTerminator(t *testing.T) {
+    assertLex(t, "test;that", "Identifier(test)", "Terminator(;)", "Identifier(that)")
 }
 
 func TestLexKeyword(t *testing.T) {
@@ -43,8 +50,8 @@ func TestLexSymbol(t *testing.T) {
 
 func TestLexIgnored(t *testing.T) {
     assertLex(t, "test\\\nyou", "Identifier(test)", "Identifier(you)")
-    assertLex(t, "#A \tcomment!\ntest", "Indentation()", "Identifier(test)")
-    assertLex(t, "#Testing #some characters in \\comments\ntest", "Indentation()", "Identifier(test)")
+    assertLex(t, "#A \tcomment!\ntest", "Identifier(test)")
+    assertLex(t, "#Testing #some characters in \\comments\ntest", "Identifier(test)")
     assertLex(t, "## Comment\\test ## test", "Identifier(test)")
     assertLex(t, "## Two ## #Comments\n test", "Indentation( )", "Identifier(test)")
     assertLex(t, "## Hello \n World \r\t\n ##test", "Identifier(test)")

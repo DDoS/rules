@@ -4,14 +4,15 @@ type Tokenizer struct {
     chars RuneStream
     headToken *Token
     ahead bool
+    newLine bool
 }
 
 func StringTokenizer(source string) *Tokenizer {
-    return &Tokenizer{chars: &StringRuneStream{source: source}}
+    return &Tokenizer{chars: &StringRuneStream{source: source}, ahead:false, newLine: true}
 }
 
 func (this *Tokenizer) Has() bool {
-    return this.Head() != EndToken
+    return this.Head() != EofToken
 }
 
 func (this *Tokenizer) Head() *Token {
@@ -28,30 +29,44 @@ func (this *Tokenizer) Advance() {
 }
 
 func (this *Tokenizer) next() *Token {
-    var token *Token = EndToken
-    for this.chars.Has() && token == EndToken {
-        if consumeLineTerminator(this.chars) {
-            token = Indentation(consumeIndentation(this.chars))
+    var token *Token = EofToken
+    for this.chars.Has() && token == EofToken {
+        if this.newLine {
+            // Just after a new line, try to consume indentation
+            if isLineWhiteSpace(this.chars.Head()) {
+                token = Indentation(consumeIndentation(this.chars))
+            }
+            // Mark end of new line since we're done with indentation
+            this.newLine = false
+        } else if isNewLineChar(this.chars.Head()) {
+            // New line, mark it for start of indentation
+            consumeNewLine(this.chars)
+            this.newLine = true
+        } else if this.chars.Head() == ';' {
+            // A terminator breaks a line but doesn't need indentation
+            this.chars.Advance()
+            token = TerminatorToken
         } else if isIdentifierStart(this.chars.Head()) {
             this.chars.Collect()
-            identifier := completeIdentifier(this.chars)
+            identifier := consumeIdentifierBody(this.chars)
+            // An indentifier can also be a keyword
             if isKeyword(identifier) {
                 token = Keyword(identifier)
             } else {
                 token = Identifier(identifier)
             }
         } else if isSymbol(this.chars.Head()) {
-            this.chars.Collect()
-            token = Symbol(completeSymbol(this.chars))
+            token = Symbol(consumeSymbol(this.chars))
         }
-        for consumeIgnored(this.chars) {
+        for !this.newLine && consumeIgnored(this.chars) {
             // Remove trailing comments and whitespace
+            // but not after a new line (indentation)
         }
     }
     return token
 }
 
-func completeIdentifier(chars RuneStream) []rune {
+func consumeIdentifierBody(chars RuneStream) []rune {
     for isIdentifierBody(chars.Head()) {
         chars.Collect()
     }
@@ -119,28 +134,18 @@ func completeLineComment(chars RuneStream) {
     }
 }
 
-func consumeLineTerminator(chars RuneStream) bool {
-    switch chars.Head() {
-    case ';':
-        chars.Advance()
-        return true
-    case 0x4:
-        // EOT
-        return true
-    case '\r':
+func consumeNewLine(chars RuneStream) {
+    if chars.Head() == '\r'{
         // CR
         chars.Advance()
         if chars.Head() == '\n' {
             // CR LF
             chars.Advance()
         }
-        return true
-    case '\n':
+    } else if chars.Head() == '\n' {
         // LF
         chars.Advance()
-        return true
     }
-    return false
 }
 
 func consumeIndentation(chars RuneStream) []rune {
@@ -150,7 +155,7 @@ func consumeIndentation(chars RuneStream) []rune {
     return chars.PopCollected()
 }
 
-func completeSymbol(chars RuneStream) []rune {
+func consumeSymbol(chars RuneStream) []rune {
     for isSymbol(chars.Head()) {
         chars.Collect()
     }
