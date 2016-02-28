@@ -30,7 +30,10 @@ keyword = "rule" | "when" | "with" | "then" | "match" | "if"
 printChar = ?all ASCII print characters? ;
 
 newLineChar = ?LF? | ?CR? ;
+newLine = newLineChar | (?CR?, ?LF?);
+
 lineWsChar = " " | ?TAB?;
+
 wsChar = lineWsChar | newLineChar ;
 
 lineComment = "#", {printChar | lineWsChar} ;
@@ -87,12 +90,11 @@ literalToken = (
 ) ;
 symbolToken = symbolChar, {symbolChar} ;
 keywordToken = keyword ;
-newLineToken = newLineChar | ?CR?, ?LF?;
 terminatorToken = ';' ;
 indentationToken = lineWsChar, {lineWsChar} ;
 
 (* The final output from the lexer *)
 tokenList = [indentationToken], {ignored}, {
     (identifierToken | literalToken | symbolToken | keywordToken
-    | terminatorToken | (newLineToken, [indentationToken])), {ignored}
+    | terminatorToken | (newLine, [indentationToken])), {ignored}
 } ;

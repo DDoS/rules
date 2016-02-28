@@ -8,6 +8,7 @@ type RuneStream interface {
     Has() bool
     Head() rune
     Advance()
+    Count() uint
     Collect()
     PopCollected() []rune
 }
@@ -16,6 +17,7 @@ type StringRuneStream struct {
     source string
     headRune rune
     ahead bool
+    count uint
     collected []rune
 }
 
@@ -38,9 +40,14 @@ func (this *StringRuneStream) Head() rune {
     return this.headRune
 }
 
+func (this *StringRuneStream) Count() uint {
+    return this.count
+}
+
 func (this *StringRuneStream) Advance() {
     this.Head()
     this.ahead = false
+    this.count++
 }
 
 func (this *StringRuneStream) Collect() {

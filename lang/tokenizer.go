@@ -36,7 +36,7 @@ func (this *Tokenizer) next() *Token {
             if isLineWhiteSpace(this.chars.Head()) {
                 token = Indentation(consumeIndentation(this.chars))
             }
-            // Mark end of new line since we're done with indentation
+            // Mark end of new line since we're done with it
             this.newLine = false
         } else if isNewLineChar(this.chars.Head()) {
             // New line, mark it for start of indentation
