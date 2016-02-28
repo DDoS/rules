@@ -12,6 +12,10 @@ const (
         SYMBOL
         BOOLEAN_LITERAL
         STRING_LITERAL
+        BINARY_INTEGER_LITERAL
+        DECIMAL_INTEGER_LITERAL
+        HEXADECIMAL_INTEGER_LITERAL
+        FLOAT_LITERAL
         EOF
 )
 
@@ -46,6 +50,22 @@ func StringLiteral(source []rune) *Token {
     return &Token{source, STRING_LITERAL}
 }
 
+func BinaryIntegerLiteral(source []rune) *Token {
+    return &Token{source, BINARY_INTEGER_LITERAL}
+}
+
+func DecimalIntegerLiteral(source []rune) *Token {
+    return &Token{source, DECIMAL_INTEGER_LITERAL}
+}
+
+func HexadecimalIntegerLiteral(source []rune) *Token {
+    return &Token{source, HEXADECIMAL_INTEGER_LITERAL}
+}
+
+func FloatLiteral(source []rune) *Token {
+    return &Token{source, FLOAT_LITERAL}
+}
+
 var EofToken *Token = &Token{[]rune{0x4}, EOF}
 
 func (token *Token) String() string {
@@ -68,6 +88,14 @@ func (kind Kind) String() string {
         return "BooleanLiteral"
     case STRING_LITERAL:
         return "StringLiteral"
+    case BINARY_INTEGER_LITERAL:
+        return "BinaryIntegerLiteral"
+    case DECIMAL_INTEGER_LITERAL:
+        return "DecimalIntegerLiteral"
+    case HEXADECIMAL_INTEGER_LITERAL:
+        return "HexadecimalIntegerLiteral"
+    case FLOAT_LITERAL:
+        return "FloatLiteral"
     case EOF:
         return "EOF"
     }

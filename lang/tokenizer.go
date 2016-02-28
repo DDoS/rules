@@ -63,10 +63,20 @@ func (this *Tokenizer) next() *Token {
             } else {
                 token = Identifier(identifier)
             }
+        } else if this.chars.Head() == '.' {
+            // Could be a float starting with a decimal separator or a symbol
+            this.chars.Collect()
+            if isDecimalDigit(this.chars.Head()) {
+                token = completeFloatLiteralStartingWithDecimalSeparator(this.chars)
+            } else {
+                token = Symbol(collectSymbol(this.chars))
+            }
         } else if isSymbol(this.chars.Head()) {
             token = Symbol(collectSymbol(this.chars))
         } else if this.chars.Head() == '"' {
             token = StringLiteral(collectStringLiteral(this.chars))
+        } else if isDecimalDigit(this.chars.Head()) {
+            token = collectNumberLiteral(this.chars)
         }
         for consumeIgnored(this.chars) {
             // Remove trailing comments and whitespace
@@ -222,12 +232,101 @@ func collectEscapeSequence(chars RuneStream) bool {
     return false
 }
 
+func collectNumberLiteral(chars RuneStream) *Token {
+    // Start with non-decimal integers
+    if chars.Head() == '0' {
+        chars.Collect()
+        if chars.Head() == 'b' || chars.Head() == 'B' {
+            // Binary integer
+            chars.Collect()
+            collectDigitSequence(chars, isBinaryDigit)
+            return BinaryIntegerLiteral(chars.PopCollected())
+        }
+        if chars.Head() == 'x' || chars.Head() == 'X' {
+            // Hexadecimal integer
+            chars.Collect()
+            collectDigitSequence(chars, isHexDigit)
+            return HexadecimalIntegerLiteral(chars.PopCollected())
+        }
+        if !isDecimalDigit(chars.Head()) {
+            // Just a zero
+            return DecimalIntegerLiteral(chars.PopCollected())
+        }
+        // Anything else is either a decimal integer or float
+    }
+    // The number must have a decimal digit sequence next
+    collectDigitSequence(chars, isDecimalDigit)
+    // Now we can have a decimal separator here, making it a float
+    if chars.Head() == '.' {
+        chars.Collect()
+        // There can be more digits after the decimal separator
+        if isDecimalDigit(chars.Head()) {
+            collectDigitSequence(chars, isDecimalDigit)
+        }
+        // We can have an optional exponent
+        collectFloatLiteralExponent(chars)
+        return FloatLiteral(chars.PopCollected())
+    }
+    // Or we can have an exponent marker, again making it a float
+    if collectFloatLiteralExponent(chars) {
+        return FloatLiteral(chars.PopCollected())
+    }
+    // Else it's a decimal integer and there's nothing more to do
+    return DecimalIntegerLiteral(chars.PopCollected())
+}
+
+func completeFloatLiteralStartingWithDecimalSeparator(chars RuneStream) *Token {
+    // Must have a decimal digit sequence next after the decimal
+    collectDigitSequence(chars, isDecimalDigit)
+    // We can have an optional exponent
+    collectFloatLiteralExponent(chars)
+    return FloatLiteral(chars.PopCollected())
+}
+
+func collectFloatLiteralExponent(chars RuneStream) bool {
+    // Only collect the exponent if it exists
+    if chars.Head() != 'e' && chars.Head() != 'E' {
+        return false
+    }
+    chars.Collect()
+    // It's an optional sign
+    if chars.Head() == '-' || chars.Head() == '+' {
+        chars.Collect()
+    }
+    // Followed by a decimal digit sequence
+    collectDigitSequence(chars, isDecimalDigit)
+    return true
+}
+
+func collectDigitSequence(chars RuneStream, isDigit func(rune) bool) {
+    if !isDigit(chars.Head()) {
+        panic("Expected a digit")
+    }
+    chars.Collect()
+    for {
+        if chars.Head() == '_' {
+            chars.Collect()
+            for chars.Head() == '_' {
+                chars.Collect()
+            }
+            if !isDigit(chars.Head()) {
+                panic("Expected a digit")
+            }
+            chars.Collect()
+        } else if isDigit(chars.Head()) {
+            chars.Collect()
+        } else {
+            break
+        }
+    }
+}
+
 func isIdentifierStart(c rune) bool {
     return c == '_' || isLetter(c)
 }
 
 func isIdentifierBody(c rune) bool {
-    return isIdentifierStart(c) || isDigit(c)
+    return isIdentifierStart(c) || isDecimalDigit(c)
 }
 
 func isLetter(c rune) bool {
@@ -238,12 +337,12 @@ func isBinaryDigit(c rune) bool {
     return c == '0' || c == '1'
 }
 
-func isDigit(c rune) bool {
+func isDecimalDigit(c rune) bool {
     return isBinaryDigit(c) || c >= '2' && c <= '9'
 }
 
 func isHexDigit(c rune) bool {
-    return isDigit(c) || c >= 'A' && c <= 'F' || c >= 'a' && c <= 'f'
+    return isDecimalDigit(c) || c >= 'A' && c <= 'F' || c >= 'a' && c <= 'f'
 }
 
 func isPrintChar(c rune) bool {

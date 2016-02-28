@@ -9,8 +9,8 @@ letter = "A" | "B" | "C" | "D" | "E" | "F" | "G"
     | "x" | "y" | "z" ;
 
 binaryDigit = "0" | "1" ;
-digit = "binaryDigit | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
-hexDigit = digit | "a" | "A" | "b" | "B" | "c" | "C" | "d" | "D" | "e"
+decimalDigit = "binaryDigit | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
+hexDigit = decimalDigit | "a" | "A" | "b" | "B" | "c" | "C" | "d" | "D" | "e"
     | "E" | "f" | "F" ;
 
 symbolChar = "!" | "@" | "%" | "?" | "&" | "*"
@@ -42,29 +42,30 @@ lineComment = "#", {printChar | lineWsChar} ;
 blockComment = "##", {"#"}, {printChar | wsChar}, "##", {"#"} ;
 
 (* Comments, line white space and escaped new lines are ignored by the lexer *)
-ignored = lineWsChar | lineComment | blockComment | ("\", newLineChar, {newLineChar}) ;
+ignored = lineWsChar | lineComment | blockComment
+    | ("\", newLineChar, {newLineChar}) ;
 
-(* Identifiers don't start with a digit, but can contain one *)
+(* Identifiers don't start with a decimal digit, but can contain one *)
 identifierStart = "_" | letter ;
-identifierBody = identifierStart | digit ;
+identifierBody = identifierStart | decimalDigit ;
 
 sign = "-" | "+" ;
 
 (* We allow underscores between digits to group numbers: 1_000_000 *)
-binaryDigitSequence = binaryDigit, {{"_"} binaryDigit} ;
-digitSequence = digit, {{"_"} digit} ;
-hexDigitSequence = hexDigit, {{"_"} hexDigit} ;
+binaryDigitSequence = binaryDigit, {{"_"}, binaryDigit} ;
+decimalDigitSequence = decimalDigit, {{"_"}, decimalDigit} ;
+hexDigitSequence = hexDigit, {{"_"}, hexDigit} ;
 
 (* Integers are like: 1234, 2_000, 0xab2, 0b1101 *)
 binaryInteger = "0", ("b" | "B"), binaryDigitSequence ;
-integer = digitSequence ;
+decimalInteger = decimalDigitSequence ;
 hexInteger = "0", ("x" | "X"), hexDigitSequence ;
 
-exponentPart = ("e" | "E"), [sign], integer ;
-(* Decimal numbers are like: 0.4, 1.28, .5, .3e2, 2., 1.e2, 3.4e12, 5_0e-9 *)
-decimal = ([digitSequence], ".", digitSequence, [exponentPart])
-    | (digitSequence, ".", [digitSequence], [exponentPart])
-    | (digitSequence, exponentPart) ;
+exponentPart = ("e" | "E"), [sign], decimalDigitSequence ;
+(* Float numbers are like: 0.4, 1.28, .5, .3e2, 2., 1.e2, 3.4e12, 5_0e-9 *)
+float = ([decimalDigitSequence], ".", decimalDigitSequence, [exponentPart])
+    | (decimalDigitSequence, ".", [decimalDigitSequence], [exponentPart])
+    | (decimalDigitSequence, exponentPart) ;
 
 boolean = "true" | "false" ;
 
@@ -83,7 +84,7 @@ string = '"', {
 
 identifierToken = identifierStart, {identifierBody} ;
 literalToken = (
-    integer | hexInteger | binaryInteger | decimal | boolean | string
+    decimalInteger | hexInteger | binaryInteger | float | boolean | string
 ) ;
 symbolToken = symbolChar, {symbolChar} ;
 keywordToken = keyword ;
