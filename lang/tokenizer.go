@@ -4,11 +4,11 @@ type Tokenizer struct {
     chars RuneStream
     headToken *Token
     ahead bool
-    newLine bool
+    firstToken bool
 }
 
 func StringTokenizer(source string) *Tokenizer {
-    return &Tokenizer{chars: &StringRuneStream{source: source}, ahead:false, newLine: true}
+    return &Tokenizer{chars: &StringRuneStream{source: source}, ahead:false, firstToken: true}
 }
 
 func (this *Tokenizer) Has() bool {
@@ -30,18 +30,24 @@ func (this *Tokenizer) Advance() {
 
 func (this *Tokenizer) next() *Token {
     var token *Token = EofToken
+    if (this.firstToken) {
+        // First token can be indentation, which in this case
+        // is not after a new line
+        if isLineWhiteSpace(this.chars.Head()) {
+            token = Indentation(consumeIndentation(this.chars))
+        }
+        for consumeIgnored(this.chars) {
+            // Remove trailing comments and whitespace
+        }
+        this.firstToken = false
+    }
     for this.chars.Has() && token == EofToken {
-        if this.newLine {
+        if isNewLineChar(this.chars.Head()) {
+            consumeNewLine(this.chars)
             // Just after a new line, try to consume indentation
             if isLineWhiteSpace(this.chars.Head()) {
                 token = Indentation(consumeIndentation(this.chars))
             }
-            // Mark end of new line since we're done with it
-            this.newLine = false
-        } else if isNewLineChar(this.chars.Head()) {
-            // New line, mark it for start of indentation
-            consumeNewLine(this.chars)
-            this.newLine = true
         } else if this.chars.Head() == ';' {
             // A terminator breaks a line but doesn't need indentation
             this.chars.Advance()
@@ -58,9 +64,8 @@ func (this *Tokenizer) next() *Token {
         } else if isSymbol(this.chars.Head()) {
             token = Symbol(consumeSymbol(this.chars))
         }
-        for !this.newLine && consumeIgnored(this.chars) {
+        for consumeIgnored(this.chars) {
             // Remove trailing comments and whitespace
-            // but not after a new line (indentation)
         }
     }
     return token
