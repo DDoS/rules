@@ -10,6 +10,7 @@ const (
         IDENTIFIER
         KEYWORD
         SYMBOL
+        BOOLEAN_LITERAL
         EOF
 )
 
@@ -36,6 +37,10 @@ func Symbol(source []rune) *Token {
     return &Token{source, SYMBOL}
 }
 
+func BooleanLiteral(source []rune) *Token {
+    return &Token{source, BOOLEAN_LITERAL}
+}
+
 var EofToken *Token = &Token{[]rune{0x4}, EOF}
 
 func (token *Token) String() string {
@@ -54,6 +59,8 @@ func (kind Kind) String() string {
         return "Keyword"
     case SYMBOL:
         return "Symbol"
+    case BOOLEAN_LITERAL:
+        return "BooleanLiteral"
     case EOF:
         return "EOF"
     }

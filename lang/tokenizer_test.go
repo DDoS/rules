@@ -48,6 +48,11 @@ func TestLexSymbol(t *testing.T) {
     }
 }
 
+func testLexBooleanLiteral(t *testing.T) {
+    assertLex(t, "false", "BooleanLiteral(false)")
+    assertLex(t, "true", "BooleanLiteral(true)")
+}
+
 func TestLexIgnored(t *testing.T) {
     assertLex(t, "test\\\nyou", "Identifier(test)", "Identifier(you)")
     assertLex(t, "#A \tcomment!\ntest", "Identifier(test)")

@@ -8,7 +8,7 @@ type Tokenizer struct {
 }
 
 func StringTokenizer(source string) *Tokenizer {
-    return &Tokenizer{chars: &StringRuneStream{source: source}, ahead:false, firstToken: true}
+    return &Tokenizer{chars: &StringRuneStream{source: source}, ahead: false, firstToken: true}
 }
 
 func (this *Tokenizer) Has() bool {
@@ -58,6 +58,8 @@ func (this *Tokenizer) next() *Token {
             // An indentifier can also be a keyword
             if isKeyword(identifier) {
                 token = Keyword(identifier)
+            } else if isBooleanLiteral(identifier) {
+                token = BooleanLiteral(identifier)
             } else {
                 token = Identifier(identifier)
             }
@@ -225,21 +227,33 @@ var KEYWORDS = [...][]rune{
     []rune("do"), []rune("try"), []rune("catch"), []rune("finally"), []rune("let"), []rune("var"), []rune("class"), []rune("void"), []rune("break"),
     []rune("continue"), []rune("throw"), []rune("bool"), []rune("byte"), []rune("char"), []rune("short"), []rune("int"), []rune("long"), []rune("float"),
     []rune("double"), []rune("static"), []rune("import"), []rune("package"), []rune("new"), []rune("is"), []rune("throws"), []rune("public"), []rune("return"),
-    []rune("this"), []rune("super"), []rune("true"), []rune("false"),
+    []rune("this"), []rune("super"),
 }
 
 func isKeyword(cs []rune) bool {
-    outer:
     for _, keyword := range KEYWORDS {
-        if len(cs) != len(keyword) {
-            continue outer
+        if (runesEquals(cs, keyword)) {
+            return true
         }
-        for i := range cs {
-            if cs[i] != keyword[i] {
-                continue outer
-            }
-        }
-        return true
     }
     return false
+}
+
+var FALSE_LITERAL = []rune("false")
+var TRUE_LITERAL = []rune("true")
+
+func isBooleanLiteral(cs []rune) bool {
+    return runesEquals(cs, FALSE_LITERAL) || runesEquals(cs, TRUE_LITERAL)
+}
+
+func runesEquals(a []rune, b []rune) bool {
+    if len(a) != len(b) {
+        return false
+    }
+    for i := range a {
+        if a[i] != b[i] {
+            return false
+        }
+    }
+    return true
 }

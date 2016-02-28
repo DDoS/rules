@@ -15,8 +15,8 @@ hexDigit = digit | "a" | "A" | "b" | "B" | "c" | "C" | "d" | "D" | "e"
 
 symbolChar = "!" | "@" | "%" | "?" | "&" | "*"
     | "(" | ")" | "-" | "=" | "+" | "/" | "^"
-    | ";" | ":" | "<" | ">" | "[" | "]" | "."
-    | "," | "~" ;
+    | ":" | "<" | ">" | "[" | "]" | "." | ","
+    | "~" ;
 
 keyword = "rule" | "when" | "with" | "then" | "match" | "if"
     | "else" | "for" | "for_rev" | "while" | "do" | "try"
@@ -24,7 +24,7 @@ keyword = "rule" | "when" | "with" | "then" | "match" | "if"
     | "break" | "continue" | "throw" | "bool" | "byte" | "char"
     | "short" | "int" | "long" | "float" | "double" | "static"
     | "import" | "package" | "new" | "is" | "throws" | "public"
-    | "return" | "this" | "super" | "true" | "false" ;
+    | "return" | "this" | "super" ;
 
 (* Excludes the backslash so we can use it for escape sequences *)
 printChar = ?all ASCII print characters? ;
