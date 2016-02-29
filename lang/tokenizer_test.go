@@ -1,4 +1,4 @@
-package lang_test;
+package lang_test
 
 import (
     "fmt"
@@ -126,6 +126,25 @@ func TestLexIgnored(t *testing.T) {
     assertLex(t, "## Two ## #Comments\n test", "Indentation( )", "Identifier(test)")
     assertLex(t, "## Hello \n World \r\t\n ##test", "Identifier(test)")
     assertLex(t, "### You\nCan ## Nest\nComments # like this ## ###test", "Identifier(test)")
+}
+
+func TestLexGenericProgram(t *testing.T) {
+    // Not necessarily representative of the actual language, just to test the lexer
+    assertLex(t,
+        "# Computes and prints the factorial of n\n" +
+        "let n := 12; var fact := 1\n" +
+        "for var i := 2; i <= n; i += 1\n" +
+        "    fact *= i\n" +
+        "printfln(\"%d! is %d\", n, fact)\n" +
+        "## Random block comment ##",
+        "Keyword(let)", "Identifier(n)", "Symbol(:=)", "DecimalIntegerLiteral(12)", "Terminator(;)",
+        "Keyword(var)", "Identifier(fact)", "Symbol(:=)", "DecimalIntegerLiteral(1)",
+        "Keyword(for)", "Keyword(var)", "Identifier(i)", "Symbol(:=)", "DecimalIntegerLiteral(2)", "Terminator(;)",
+        "Identifier(i)", "Symbol(<=)", "Identifier(n)", "Terminator(;)",
+        "Identifier(i)", "Symbol(+=)", "DecimalIntegerLiteral(1)",
+        "Indentation(    )", "Identifier(fact)", "Symbol(*=)", "Identifier(i)",
+        "Identifier(printfln)", "Symbol(()", "StringLiteral(\"%d! is %d\")", "Symbol(,)", "Identifier(n)", "Symbol(,)", "Identifier(fact)", "Symbol())",
+    )
 }
 
 func assertLex(t *testing.T, source string, expected ...string) {
