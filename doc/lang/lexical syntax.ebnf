@@ -21,8 +21,8 @@ symbolChar = "!" | "@" | "%" | "?" | "&" | "*"
 keyword = "rule" | "when" | "with" | "then" | "match" | "if"
     | "else" | "for" | "for_rev" | "while" | "do" | "try"
     | "catch" | "finally" | "let" | "var" | "class" | "void"
-    | "break" | "continue" | "throw" | "bool" | "byte" | "char"
-    | "short" | "int" | "long" | "float" | "double" | "static"
+    | "break" | "continue" | "throw" | "bool" | "byte" | "short"
+    | "int" | "long" | "half" | "float" | "double" | "static"
     | "import" | "package" | "new" | "is" | "throws" | "public"
     | "return" | "this" | "super" ;
 

@@ -40,7 +40,8 @@
 *)
 
 unaryOperator = "+" | "-" | "!" | "~" ;
-exponentOperator = "**";
+exponentOperator = "**" ;
+infixOperator = identifierToken ;
 multiplyOperator = "*" | "/" | "%" ;
 addOperator = "+" | "-" ;
 shiftOperator = "<<" | ">>" | ">>>" ;
@@ -50,13 +51,16 @@ compareOperator = ["!"], (
 bitwiseAndOperator = "&" ;
 bitwiseXorOperator = "^" ;
 bitwiseOrOperator = "|" ;
-logicalAndOperator = "&&" ;
-logicalXorOperator = "^^" ;
-logicalOrOperator = "||" ;
-concatenateOperator = "~";
-rangeOperator = "..";
+logicalAndOperator = ["!"], "&&" ;
+logicalXorOperator = ["!"], "^^" ;
+logicalOrOperator = ["!"], "||" ;
+concatenateOperator = "~" ;
+rangeOperator = ".." ;
 assignmentOperator = ( "**" | "*" | "/" | "%" | "+" | "-" | "<<" | ">>" | ">>>" | "&"
-    | "^" | "|" | "&&" | "||", "~", ":" ), "=" ;
+    | "^" | "|" | "&&" | "^^" | "||", "~", ":" ), "=" ;
+
+primitiveType = "bool" | "byte" | "short" | "int" | "long" | "half" | "float"
+    | "double" ;
 
 (*
     Here are some examples of value initialization
@@ -87,6 +91,9 @@ assignmentOperator = ( "**" | "*" | "/" | "%" | "+" | "-" | "<<" | ">>" | ">>>" 
     Vec3[2] {3, 1} = {3, 1}
     Vec3[1][2] {{2}, {}} = {{2}, {0}}
     Vec3[][2] {a} = {{1, 2, 3, 5} {}}
+
+    # When no sizes are given for arrays, the initializer size is used
+    Vec3[] {1, 2, 3}.length = 3
 *)
 
 (* Names are just "." separated list of identifiers. They represent packages, class type
@@ -99,7 +106,7 @@ fieldAccess = access, ".", identifierToken ;
 arrayAccess = access, arraySized ;
 variableAccess = name | fieldAccess | arrayAccess ;
 
-(* Assignment aren't actually expressions in this language, they return void *)
+(* Assignment aren't expressions in this language *)
 assignment = (variableAccess, assignmentOperator, expression)
     | (variableAccess, ":=", (objectLiteral | arrayLiteral)) ;
 
@@ -120,21 +127,24 @@ arrayLiteral = "{", [expressionList], "}" ;
     which means an array of 2 integer arrays. *)
 arrayUnsized = "[", "]" ;
 arraySized = "[", expression, "]" ;
-arrayInitializer = {arrayUnsized}, arraySized, {arraySized} ;
+arrayInitializer = (arrayUnsized | arraySized), {arrayUnsized | arraySized} ;
 
 callArguments = "(", [expressionList], ")" ;
 
+namedType = name | primitiveType
+
 (* an atom is a literal, a field access, a call, an initialization
     or an expression in "()" *)
-atom = "(", expression, ")" | literalToken | (
-    name, [callArguments | objectLiteral | (arrayInitializer, arrayLiteral)]
+atom = ("(", expression, ")") | literalToken | name | (
+    namedType, (objectLiteral | (arrayInitializer, arrayLiteral))
 ) ;
 
 (*
     Here is the full expression syntax for operators. Precedence is the following:
-    15: ".", "[]", "()"
-    14: "+", "-", "!", "~"
-    13: "**"
+    16: ".", "[]", "()"
+    15: "+", "-", "!", "~"
+    14: "**"
+    13: identifier
     12: "*", "/", "%"
     11: "+", "-"
     10: "<<", ">>", ">>>"
@@ -143,16 +153,17 @@ atom = "(", expression, ")" | literalToken | (
      8: "&"
      7: "^"
      6: "|"
-     5: "&&"
-     4: "^^"
-     3: "||"
-     2: "... if ... else ... "
-     1: "~"
-     0: ".."
+     5: "&&", "!&&"
+     4: "^^", "!^^"
+     3: "||", "!||"
+     2: "~"
+     1: ".."
+     0: "... if ... else ... "
 *)
 
 (* ".", "[]", "()" *)
-access = fieldAccess, [callArguments] | arrayAccess | atom ;
+access = fieldAccess | (".", identifierToken) | arrayAccess
+    | (access, callArguments) | atom ;
 
 (* "+", "-", "!", "~" *)
 unary = (unaryOperator, unary) | access ;
@@ -160,8 +171,11 @@ unary = (unaryOperator, unary) | access ;
 (* "**" *)
 exponent = (exponent, exponentOperator, unary) | unary ;
 
+(* identifier *)
+infix = (infix, infixOperator, exponent) | exponent ;
+
 (* "*", "/", "%" *)
-multiply = (multiply, multiplyOperator, exponent) | exponent ;
+multiply = (multiply, multiplyOperator, infix) | infix ;
 
 (* "+", "-" *)
 add = (add, addOperator, multiply) | multiply ;
@@ -170,7 +184,7 @@ add = (add, addOperator, multiply) | multiply ;
 shift = (shift, shiftOperator, add) | add ;
 
 (* "is", "=", "<", ">", "<=", ">=", ":", "<:", ">:", "<<:", ">>:", "<:>" *)
-compare = (compare, compareOperator, shift) | shift ;
+compare = shift, {compareOperator, shift} ;
 
 (* "&" *)
 bitwiseAnd = (bitwiseAnd, bitwiseAndOperator, compare) | compare ;
@@ -190,14 +204,14 @@ logicalXor = (logicalXor, logicalXorOperator, logicalAnd) | logicalAnd ;
 (* "||" *)
 logicalOr = (logicalOr, logicalOrOperator, logicalXor) | logicalXor ;
 
-(* "... if ... else ... " *)
-conditional = (logicalOr, "if", logicalOr, "else", logicalOr) | logicalOr ;
-
 (* "~" *)
-concatenate = (concatenate, concatenateOperator, conditional) | conditional ;
+concatenate = (concatenate, concatenateOperator, logicalOr) | logicalOr ;
 
 (* ".." *)
 range = (range, rangeOperator, concatenate) | concatenate ;
 
-(* Not assignment since it is not an actual expression (no return value *)
-expression = range ;
+(* "... if ... else ... " *)
+conditional = (range, "if", range, "else", range) | range ;
+
+(* Not the usual assignment, since it is not an expression *)
+expression = conditional ;
