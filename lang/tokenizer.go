@@ -2,13 +2,14 @@ package lang
 
 type Tokenizer struct {
     chars RuneStream
-    headToken *Token
-    ahead bool
+    head []*Token
+    position int
+    savedPositions []int
     firstToken bool
 }
 
 func StringTokenizer(source string) *Tokenizer {
-    return &Tokenizer{chars: &StringRuneStream{source: source}, ahead: false, firstToken: true}
+    return &Tokenizer{chars: &StringRuneStream{source: source}, position: 0, firstToken: true}
 }
 
 func (this *Tokenizer) Has() bool {
@@ -16,16 +17,30 @@ func (this *Tokenizer) Has() bool {
 }
 
 func (this *Tokenizer) Head() *Token {
-    if !this.ahead {
-        this.headToken = this.next()
-        this.ahead = true
+    for len(this.head) <= this.position {
+        this.head = append(this.head, this.next())
     }
-    return this.headToken
+    return this.head[this.position]
 }
 
 func (this *Tokenizer) Advance() {
-    this.Head()
-    this.ahead = false
+    head := this.Head()
+    if head != EofToken {
+        this.position++
+    }
+}
+
+func (this *Tokenizer) SavePosition() {
+    this.savedPositions = append(this.savedPositions, this.position)
+}
+
+func (this *Tokenizer) RestorePosition() {
+    this.position = this.savedPositions[len(this.savedPositions) - 1]
+    this.DiscardPosition()
+}
+
+func (this *Tokenizer) DiscardPosition() {
+    this.savedPositions = this.savedPositions[:len(this.savedPositions) - 1]
 }
 
 func (this *Tokenizer) next() *Token {
@@ -71,12 +86,14 @@ func (this *Tokenizer) next() *Token {
             } else {
                 token = Symbol(collectSymbol(this.chars))
             }
-        } else if isSymbol(this.chars.Head()) {
+        } else if isSymbolChar(this.chars.Head()) {
             token = Symbol(collectSymbol(this.chars))
         } else if this.chars.Head() == '"' {
             token = StringLiteral(collectStringLiteral(this.chars))
         } else if isDecimalDigit(this.chars.Head()) {
             token = collectNumberLiteral(this.chars)
+        } else {
+            panic("Unexpected character")
         }
         for consumeIgnored(this.chars) {
             // Remove trailing comments and whitespace
@@ -175,7 +192,7 @@ func collectIndentation(chars RuneStream) []rune {
 }
 
 func collectSymbol(chars RuneStream) []rune {
-    for isSymbol(chars.Head()) {
+    for isSymbolPrefix(chars.PeekCollected(), chars.Head()) {
         chars.Collect()
     }
     return chars.PopCollected()
@@ -225,7 +242,7 @@ func collectEscapeSequence(chars RuneStream) bool {
         }
         return true
     }
-    if runesContain(ESCAPE_LITERALS, chars.Head()) {
+    if RunesContain(ESCAPE_LITERALS, chars.Head()) {
         chars.Collect()
         return true
     }
@@ -361,25 +378,56 @@ func isWhiteSpace(c rune) bool {
     return isNewLineChar(c) || isLineWhiteSpace(c)
 }
 
-var SYMBOLS = []rune{
-    '!', '@', '%', '?', '&', '*', '(', ')', '-', '=', '+', '/', '^', ':', '<', '>', '[', ']', '.', ',', '~',
+var SYMBOLS = [][]rune{
+   []rune("!"), []rune("@"), []rune("%"), []rune("?"), []rune("&"), []rune("*"), []rune("("), []rune(")"), []rune("-"), []rune("="),
+   []rune("+"), []rune("/"), []rune("^"), []rune(":"), []rune("<"), []rune(">"), []rune("["), []rune("]"), []rune("{"), []rune("}"),
+   []rune("."), []rune(","), []rune("~"), []rune("|"), []rune("<<"), []rune(">>"), []rune(">>>"), []rune("<="), []rune(">="), []rune("<:"),
+   []rune(">:"), []rune("<<:"), []rune(">>:"), []rune("<:>"), []rune("!="), []rune("!<"), []rune("!>"), []rune("!<="), []rune("!>="), []rune("!:"),
+   []rune("!<:"), []rune("!>:"), []rune("!<<:"), []rune("!>>:"), []rune("!<:>"), []rune("&&"), []rune("!&&"), []rune("^^"), []rune("!^^"),
+   []rune("||"), []rune("!||"), []rune("**="), []rune("*="), []rune("/="), []rune("%="), []rune("+="), []rune("-="), []rune("<<="),
+   []rune(">>="), []rune(">>>="), []rune("&="), []rune("^="), []rune("|="), []rune("&&="), []rune("^^="), []rune("||="), []rune("~="),
+   []rune(":="),
 }
 
-func isSymbol(c rune) bool {
-    return runesContain(SYMBOLS, c)
+func isSymbolChar(c rune) bool {
+    for _, symbol := range SYMBOLS {
+        if c == symbol[0] {
+            return true
+        }
+    }
+    return false
+}
+
+func isSymbolPrefix(cs []rune, c rune) bool {
+    prefixLength := len(cs) + 1
+    outer:
+    for _, symbol := range SYMBOLS {
+        symbolLength := len(symbol)
+        if prefixLength > symbolLength {
+            continue outer
+        }
+        for i := 0; i < prefixLength - 1; i++ {
+            if cs[i] != symbol[i] {
+                continue outer
+            }
+        }
+        if c == symbol[prefixLength - 1] {
+            return true
+        }
+    }
+    return false
 }
 
 var KEYWORDS = [][]rune{
     []rune("when"), []rune("with"), []rune("then"), []rune("match"), []rune("if"), []rune("else"), []rune("for"), []rune("for_rev"), []rune("while"),
     []rune("do"), []rune("try"), []rune("catch"), []rune("finally"), []rune("let"), []rune("var"), []rune("class"), []rune("void"), []rune("break"),
-    []rune("continue"), []rune("throw"), []rune("bool"), []rune("byte"), []rune("char"), []rune("short"), []rune("int"), []rune("long"), []rune("float"),
-    []rune("double"), []rune("static"), []rune("import"), []rune("package"), []rune("new"), []rune("is"), []rune("throws"), []rune("public"), []rune("return"),
-    []rune("this"), []rune("super"),
+    []rune("continue"), []rune("throw"), []rune("static"), []rune("import"), []rune("package"), []rune("new"), []rune("is"), []rune("isnt"),
+    []rune("throws"), []rune("public"), []rune("return"), []rune("this"), []rune("super"),
 }
 
 func isKeyword(cs []rune) bool {
     for _, keyword := range KEYWORDS {
-        if (runesEquals(cs, keyword)) {
+        if RunesEquals(cs, keyword) {
             return true
         }
     }
@@ -390,30 +438,9 @@ var FALSE_LITERAL = []rune("false")
 var TRUE_LITERAL = []rune("true")
 
 func isBooleanLiteral(cs []rune) bool {
-    return runesEquals(cs, FALSE_LITERAL) || runesEquals(cs, TRUE_LITERAL)
+    return RunesEquals(cs, FALSE_LITERAL) || RunesEquals(cs, TRUE_LITERAL)
 }
 
 var ESCAPE_LITERALS = []rune{
     'a', 'b', 't', 'n', 'v', 'f', 'r', '"', '\\',
-}
-
-func runesContain(a []rune, b rune) bool {
-    for _, r := range a {
-        if r == b {
-            return true
-        }
-    }
-    return false
-}
-
-func runesEquals(a []rune, b []rune) bool {
-    if len(a) != len(b) {
-        return false
-    }
-    for i := range a {
-        if a[i] != b[i] {
-            return false
-        }
-    }
-    return true
 }

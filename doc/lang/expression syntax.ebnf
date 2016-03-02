@@ -45,8 +45,8 @@ infixOperator = identifierToken ;
 multiplyOperator = "*" | "/" | "%" ;
 addOperator = "+" | "-" ;
 shiftOperator = "<<" | ">>" | ">>>" ;
-compareOperator = ["!"], (
-    "is" | "=" | "<" | ">" | "<=" | ">=" | ":" | "<:" | ">:" | "<<:" | ">>:" | "<:>"
+compareOperator = "is" | "isnt" | (
+    ["!"], ( "=" | "<" | ">" | "<=" | ">=" | ":" | "<:" | ">:" | "<<:" | ">>:" | "<:>")
 ) ;
 bitwiseAndOperator = "&" ;
 bitwiseXorOperator = "^" ;
@@ -131,12 +131,11 @@ arrayInitializer = (arrayUnsized | arraySized), {arrayUnsized | arraySized} ;
 
 callArguments = "(", [expressionList], ")" ;
 
-namedType = name | primitiveType
+type = name
 
-(* an atom is a literal, a field access, a call, an initialization
-    or an expression in "()" *)
+(* an atom is a literal, a name, an initialization or an expression in "()" *)
 atom = ("(", expression, ")") | literalToken | name | (
-    namedType, (objectLiteral | (arrayInitializer, arrayLiteral))
+    type, (objectLiteral | (arrayInitializer, arrayLiteral))
 ) ;
 
 (*
@@ -148,7 +147,7 @@ atom = ("(", expression, ")") | literalToken | name | (
     12: "*", "/", "%"
     11: "+", "-"
     10: "<<", ">>", ">>>"
-     9: "is", "=", "<", ">", "<=", ">=", ":", "<:", ">:", "<<:", ">>:", "<:>"
+     9: "is", "isnt", "=", "<", ">", "<=", ">=", ":", "<:", ">:", "<<:", ">>:", "<:>"
         and the negated forms
      8: "&"
      7: "^"
@@ -183,7 +182,7 @@ add = (add, addOperator, multiply) | multiply ;
 (* "<<", ">>", ">>>" *)
 shift = (shift, shiftOperator, add) | add ;
 
-(* "is", "=", "<", ">", "<=", ">=", ":", "<:", ">:", "<<:", ">>:", "<:>" *)
+(* "is", "isnt", "=", "<", ">", "<=", ">=", ":", "<:", ">:", "<<:", ">>:", "<:>" *)
 compare = shift, {compareOperator, shift} ;
 
 (* "&" *)

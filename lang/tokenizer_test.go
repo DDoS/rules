@@ -2,7 +2,6 @@ package lang_test
 
 import (
     "fmt"
-    "math/rand"
     "testing"
     "github.com/stretchr/testify/assert"
     "github.com/michael-golfi/rules/lang"
@@ -41,12 +40,7 @@ func TestLexKeyword(t *testing.T) {
 
 func TestLexSymbol(t *testing.T) {
     for _, symbol := range lang.SYMBOLS {
-        compositeSymbol := []rune{symbol}
-        length := rand.Intn(3)
-        for i := 0; i < length; i++ {
-            compositeSymbol = append(compositeSymbol, lang.SYMBOLS[rand.Intn(len(lang.SYMBOLS))])
-        }
-        stringSymbol := string(compositeSymbol)
+        stringSymbol := string(symbol)
         assertLex(t, stringSymbol, fmt.Sprintf("Symbol(%s)", stringSymbol))
     }
 }
@@ -151,7 +145,7 @@ func assertLex(t *testing.T, source string, expected ...string) {
     tokenizer := lang.StringTokenizer(source)
     tokens := []string{}
     for tokenizer.Has() {
-        tokens = append(tokens, string(tokenizer.Head().String()))
+        tokens = append(tokens, tokenizer.Head().String())
         tokenizer.Advance()
     }
     assert.Equal(t, expected, tokens)

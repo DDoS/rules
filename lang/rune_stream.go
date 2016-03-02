@@ -10,6 +10,7 @@ type RuneStream interface {
     Advance()
     Count() uint
     Collect()
+    PeekCollected() []rune
     PopCollected() []rune
 }
 
@@ -55,9 +56,34 @@ func (this *StringRuneStream) Collect() {
     this.collected = append(this.collected, this.headRune)
 }
 
+func (this *StringRuneStream) PeekCollected() []rune {
+    return this.collected
+}
+
 func (this *StringRuneStream) PopCollected() []rune {
     collected := make([]rune, len(this.collected))
     copy(collected, this.collected)
     this.collected = nil
     return collected
+}
+
+func RunesContain(a []rune, b rune) bool {
+    for _, r := range a {
+        if r == b {
+            return true
+        }
+    }
+    return false
+}
+
+func RunesEquals(a []rune, b []rune) bool {
+    if len(a) != len(b) {
+        return false
+    }
+    for i := range a {
+        if a[i] != b[i] {
+            return false
+        }
+    }
+    return true
 }
