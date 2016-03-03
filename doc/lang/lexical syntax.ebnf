@@ -64,9 +64,8 @@ decimalInteger = decimalDigitSequence ;
 hexInteger = "0", ("x" | "X"), hexDigitSequence ;
 
 exponentPart = ("e" | "E"), [sign], decimalDigitSequence ;
-(* Float numbers are like: 0.4, 1.28, .5, .3e2, 2., 1.e2, 3.4e12, 5_0e-9 *)
+(* Float numbers are like: 0.4, 1.28, .5, .3e2, 1.5e2, 3.4e12, 5_0e-9 *)
 float = ([decimalDigitSequence], ".", decimalDigitSequence, [exponentPart])
-    | (decimalDigitSequence, ".", [decimalDigitSequence], [exponentPart])
     | (decimalDigitSequence, exponentPart) ;
 
 boolean = "true" | "false" ;

@@ -276,10 +276,8 @@ func collectNumberLiteral(chars RuneStream) *Token {
     // Now we can have a decimal separator here, making it a float
     if chars.Head() == '.' {
         chars.Collect()
-        // There can be more digits after the decimal separator
-        if isDecimalDigit(chars.Head()) {
-            collectDigitSequence(chars, isDecimalDigit)
-        }
+        // Must have a decimal digit sequence next after the decimal
+        collectDigitSequence(chars, isDecimalDigit)
         // We can have an optional exponent
         collectFloatLiteralExponent(chars)
         return FloatLiteral(chars.PopCollected())
