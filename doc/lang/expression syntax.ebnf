@@ -45,15 +45,14 @@ infixOperator = identifierToken ;
 multiplyOperator = "*" | "/" | "%" ;
 addOperator = "+" | "-" ;
 shiftOperator = "<<" | ">>" | ">>>" ;
-compareOperator = "is" | "isnt" | (
-    ["!"], ( "=" | "<" | ">" | "<=" | ">=" | ":" | "<:" | ">:" | "<<:" | ">>:" | "<:>")
-) ;
+compareOperator = "is" | "isnt" |  "=" | "!=" | "<" | ">" | "<=" | ">=" | "::"
+    | "!:" | "<:" | ">:" | "<<:" | ">>:" | "<:>";
 bitwiseAndOperator = "&" ;
 bitwiseXorOperator = "^" ;
 bitwiseOrOperator = "|" ;
-logicalAndOperator = ["!"], "&&" ;
-logicalXorOperator = ["!"], "^^" ;
-logicalOrOperator = ["!"], "||" ;
+logicalAndOperator = "&&" ;
+logicalXorOperator = "^^" ;
+logicalOrOperator = "||" ;
 concatenateOperator = "~" ;
 rangeOperator = ".." ;
 assignmentOperator = ( "**" | "*" | "/" | "%" | "+" | "-" | "<<" | ">>" | ">>>" | "&"
@@ -96,47 +95,47 @@ primitiveType = "bool" | "byte" | "short" | "int" | "long" | "half" | "float"
     Vec3[] {1, 2, 3}.length = 3
 *)
 
-(* Names are just "." separated list of identifiers. They represent packages, class type
-    names and/or field access. These need to be disambiguated by the type checker. *)
-name = identifierToken, {".", identifierToken} ;
-
 (* Field access is like: anObject.aField *)
 fieldAccess = access, ".", identifierToken ;
 (* Array access is like: anArray[anIndex] *)
-arrayAccess = access, arraySized ;
+arrayAccess = access, arraySize ;
 variableAccess = name | fieldAccess | arrayAccess ;
 
 (* Assignment aren't expressions in this language *)
 assignment = (variableAccess, assignmentOperator, expression)
-    | (variableAccess, ":=", (objectLiteral | arrayLiteral)) ;
+    | (variableAccess, ":=", compositeLiteral) ;
 
 expressionList = expression, {",", expression} ;
 
-(* Labeled expression are like: aLabel: someValue + 1 *)
-labeledExpression = identifierToken, ":", expression;
-labeledExpressionList = labeledExpression, {",", labeledExpression} ;
+callArguments = "(", [expressionList], ")" ;
 
-(* Object literals are like: {"guy", 19}, {name: "guy", age: 19} *)
-objectLiteral = "{", [labeledExpressionList | expressionList], "}" ;
-(* Array literals are like: {1, 3, 4, 3 - 5, i ** 2}, {{1}, {3, j}} *)
-arrayLiteral = "{", [expressionList], "}" ;
+(* Composite literal can be made up of expressions or other composite literals,
+    with optional labels *)
+compositeLiteralPart = identifierToken, ":", (compositeLiteral | expression) ;
+compositeLiteralBody = compositeLiteralPart, {",", compositeLiteralPart} ;
 
-(* Array notation is like D: reversed compared to Java.
+(* Composite literals are like: {"guy", 19}, {name: "guy", age: 19} *)
+compositeLiteral = "{", [compositeLiteralBody], "}" ;
+
+(* Array notation is like D and reversed compared to Java.
     int[1][2] is an array of 2 arrays of 1 integer.
     We can also have unsized arrays which, like int[][2],
     which means an array of 2 integer arrays. *)
 arrayUnsized = "[", "]" ;
 arraySized = "[", expression, "]" ;
-arrayInitializer = (arrayUnsized | arraySized), {arrayUnsized | arraySized} ;
+arrayDimension = arrayUnsized | arraySized ;
 
-callArguments = "(", [expressionList], ")" ;
+(* Names are just "." separated list of identifiers. They represent packages, class
+    names, fields and/or variables. These need to be disambiguated later. *)
+name = identifierToken, {".", identifierToken} ;
 
-type = name
+(* Named types are names with optional array dimensions *)
+namedType = name, {arrayDimension} ;
 
-(* an atom is a literal, a name, an initialization or an expression in "()" *)
-atom = ("(", expression, ")") | literalToken | name | (
-    type, (objectLiteral | (arrayInitializer, arrayLiteral))
-) ;
+initializer = namedType, compositeLiteral ;
+
+(* an atom is a literal, a name, an initializer or an expression in "()" *)
+atom = ("(", expression, ")") | literalToken | name | initializer ;
 
 (*
     Here is the full expression syntax for operators. Precedence is the following:
@@ -147,14 +146,14 @@ atom = ("(", expression, ")") | literalToken | name | (
     12: "*", "/", "%"
     11: "+", "-"
     10: "<<", ">>", ">>>"
-     9: "is", "isnt", "=", "<", ">", "<=", ">=", ":", "<:", ">:", "<<:", ">>:", "<:>"
-        and the negated forms
+     9: "is", "isnt",  "=", "!=", "<", ">", "<=", ">=", "::",
+         "!:", "<:", ">:", "<<:", ">>:", "<:>"
      8: "&"
      7: "^"
      6: "|"
-     5: "&&", "!&&"
-     4: "^^", "!^^"
-     3: "||", "!||"
+     5: "&&"
+     4: "^^"
+     3: "||"
      2: "~"
      1: ".."
      0: "... if ... else ... "
@@ -182,7 +181,8 @@ add = (add, addOperator, multiply) | multiply ;
 (* "<<", ">>", ">>>" *)
 shift = (shift, shiftOperator, add) | add ;
 
-(* "is", "isnt", "=", "<", ">", "<=", ">=", ":", "<:", ">:", "<<:", ">>:", "<:>" *)
+(* "is", "isnt",  "=", "!=", "<", ">", "<=", ">=", "::",
+    "!:", "<:", ">:", "<<:", ">>:", "<:>" *)
 compare = shift, {compareOperator, shift} ;
 
 (* "&" *)

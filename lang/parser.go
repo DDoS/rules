@@ -17,51 +17,80 @@ func parseName(tokens *Tokenizer) []*Token {
     return name
 }
 
-func parseArrayInitializer(tokens *Tokenizer) []Expression {
+func parseArrayDimension(tokens *Tokenizer) Expression {
     if !tokens.Head().Is("[") {
         panic("Expected '['")
     }
-    sizes := []Expression{}
-    for tokens.Head().Is("[") {
+    tokens.Advance()
+    if tokens.Head().Is("]") {
         tokens.Advance()
-        if tokens.Head().Is("]") {
+        return nil
+    }
+    size := ParseExpression(tokens)
+    if !tokens.Head().Is("]") {
+        panic("Expected ']'")
+    }
+    tokens.Advance()
+    return size
+}
+
+func parseNamedType(tokens *Tokenizer) *NamedType {
+    name := parseName(tokens)
+    dimensions := []Expression{}
+    for tokens.Head().Is("[") {
+        dimensions = append(dimensions, parseArrayDimension(tokens))
+    }
+    return &NamedType{name, dimensions}
+}
+
+func parseCompositeLiteralPart(tokens *Tokenizer) *LabeledExpression {
+    var label *Token = nil
+    if tokens.Head().Kind == IDENTIFIER {
+        label = tokens.Head()
+        tokens.SavePosition()
+        tokens.Advance()
+        if tokens.Head().Is(":") {
             tokens.Advance()
-            sizes = append(sizes, nil)
+            tokens.DiscardPosition()
         } else {
-            sizes = append(sizes, ParseExpression(tokens))
-            if !tokens.Head().Is("]") {
-                panic("Expected ']'")
-            }
-            tokens.Advance()
+            tokens.RestorePosition()
+            label = nil
         }
     }
-    return sizes
+    var value Expression
+    if tokens.Head().Is("{") {
+        value = parseCompositeLiteral(tokens)
+    } else {
+        value = ParseExpression(tokens)
+    }
+    return &LabeledExpression{label, value}
 }
 
-func ParseExpressionList(tokens *Tokenizer) []Expression {
-    expressions := []Expression{ParseExpression(tokens)}
+func parseCompositeLiteralBody(tokens *Tokenizer) []*LabeledExpression {
+    body := []*LabeledExpression{parseCompositeLiteralPart(tokens)}
     for tokens.Head().Is(",") {
         tokens.Advance()
-        expressions = append(expressions, ParseExpression(tokens))
+        body = append(body, parseCompositeLiteralPart(tokens))
     }
-    return expressions
+    return body
 }
 
-func parseArrayLiteral(tokens *Tokenizer) []Expression {
+func parseCompositeLiteral(tokens *Tokenizer) *CompositeLiteral {
     if !tokens.Head().Is("{") {
         panic("Expected '{'")
     }
     tokens.Advance()
+    var body []*LabeledExpression
     if tokens.Head().Is("}") {
         tokens.Advance()
-        return []Expression{}
+        body = []*LabeledExpression{}
+    } else {
+        body = parseCompositeLiteralBody(tokens)
+        if !tokens.Head().Is("}") {
+            panic("Expected '}'")
+        }
     }
-    expressions := ParseExpressionList(tokens)
-    if !tokens.Head().Is("}") {
-        panic("Expected '}'")
-    }
-    tokens.Advance()
-    return expressions
+    return &CompositeLiteral{body}
 }
 
 func parseAtom(tokens *Tokenizer) Expression {
@@ -72,26 +101,18 @@ func parseAtom(tokens *Tokenizer) Expression {
         return literal
     }
     if tokens.Head().Kind == IDENTIFIER {
-        // Name, array access, or array or object literal
-        name := parseName(tokens)
-        if tokens.Head().Is("[") {
-            tokens.SavePosition()
-            arrayInitializer := parseArrayInitializer(tokens)
-            if !tokens.Head().Is("{") {
-                // Name
-                tokens.RestorePosition()
-                return &NameReference{name}
-            }
-            tokens.DiscardPosition()
-            // Array literal
-            literal := parseArrayLiteral(tokens)
-            return &ArrayLiteral{NamedType{name}, arrayInitializer, literal}
+        // Name, or initializer
+        tokens.SavePosition()
+        namedType := parseNamedType(tokens)
+        if !tokens.Head().Is("{") {
+            // Name
+            tokens.RestorePosition()
+            name := parseName(tokens)
+            return &NameReference{name}
         }
-        if tokens.Head().Is("{") {
-            // Object literal
-        }
-        // Name
-        return &NameReference{name}
+        tokens.DiscardPosition()
+        value := parseCompositeLiteral(tokens)
+        return &Initializer{namedType, value}
     }
     if tokens.Head().Is("(") {
         // Parenthesis operator
@@ -108,4 +129,13 @@ func parseAtom(tokens *Tokenizer) Expression {
 
 func ParseExpression(tokens *Tokenizer) Expression {
     return parseAtom(tokens)
+}
+
+func parseExpressionList(tokens *Tokenizer) []Expression {
+    expressions := []Expression{ParseExpression(tokens)}
+    for tokens.Head().Is(",") {
+        tokens.Advance()
+        expressions = append(expressions, ParseExpression(tokens))
+    }
+    return expressions
 }
