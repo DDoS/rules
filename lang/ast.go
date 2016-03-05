@@ -114,6 +114,9 @@ func join(things interface{}, joiner string, stringer string, function bool) str
     values := reflect.ValueOf(things)
     s := ""
     length :=  values.Len() - 1
+    if length < 0 {
+        return s
+    }
     for i := 0; i < length; i++ {
         s += getString(values.Index(i), stringer, function) + joiner
     }

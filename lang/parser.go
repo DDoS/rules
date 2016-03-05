@@ -174,6 +174,18 @@ func parseAccessOn(tokens *Tokenizer, object Expression) Expression {
         }
         return parseAccessOn(tokens, &FunctionCall{object, arguments})
     }
+    // Disambiguate between a float without decimal digits
+    // and an integer with a field access
+    token, ok := object.(*Token)
+    if ok && token.Kind == FLOAT_LITERAL && tokens.Head().Kind == IDENTIFIER &&
+            token.Source[len(token.Source) - 1] == '.' {
+        name := tokens.Head()
+        tokens.Advance()
+        // The form decimalInt.identifier is lexed as float(numberSeq.)identifier
+        // We detect it and convert it to first form here
+        decimalInt := &Token{token.Source[:len(token.Source) - 1], DECIMAL_INTEGER_LITERAL}
+        return parseAccessOn(tokens, &FieldAccess{decimalInt, name})
+    }
     return object
 }
 

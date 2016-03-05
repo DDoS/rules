@@ -35,12 +35,24 @@ func TestParseAccess(t *testing.T) {
         lang.ParseExpression(lang.StringTokenizer("\"test\".length")).String(),
     )
     assert.Equal(t,
-        "FieldAccess(FieldAccess(FloatLiteral(5.0).ucc).test)",
-        lang.ParseExpression(lang.StringTokenizer("5.0.ucc.test")).String(),
+        "FieldAccess(FieldAccess(DecimalIntegerLiteral(5).ucc).test)",
+        lang.ParseExpression(lang.StringTokenizer("5.ucc.test")).String(),
+    )
+    assert.Equal(t,
+        "FieldAccess(FieldAccess(HexadecimalIntegerLiteral(0xf).ucc).test)",
+        lang.ParseExpression(lang.StringTokenizer("0xf.ucc.test")).String(),
+    )
+    assert.Equal(t,
+        "FieldAccess(FieldAccess(FloatLiteral(5.).ucc).test)",
+        lang.ParseExpression(lang.StringTokenizer("5..ucc.test")).String(),
     )
     assert.Equal(t,
         "ArrayAccess(StringLiteral(\"test\")[DecimalIntegerLiteral(2)])",
         lang.ParseExpression(lang.StringTokenizer("\"test\"[2]")).String(),
+    )
+    assert.Equal(t,
+        "FunctionCall(FieldAccess(StringLiteral(\"test\").len)())",
+        lang.ParseExpression(lang.StringTokenizer("\"test\".len()")).String(),
     )
     assert.Equal(t,
         "FunctionCall(FieldAccess(StringLiteral(\"test\").substring)(DecimalIntegerLiteral(1), DecimalIntegerLiteral(3)))",
