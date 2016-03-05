@@ -35,6 +35,10 @@ type Initializer struct {
     Value *CompositeLiteral
 }
 
+type ContextFieldAccess struct {
+    Name *Token
+}
+
 func (this *NamedType) String() string {
     dimensionsString := ""
     for _, dimension := range this.Dimensions {
@@ -65,6 +69,10 @@ func (this *CompositeLiteral) String() string {
 
 func (this *Initializer) String() string {
     return fmt.Sprintf("Initializer(%s{%s})", this.Type.String(), joinString(this.Value.Values, ", "))
+}
+
+func (this *ContextFieldAccess) String() string {
+    return fmt.Sprintf("ContextFieldAccess(.%s)", this.Name.Source)
 }
 
 func joinString(things interface{}, joiner string) string {

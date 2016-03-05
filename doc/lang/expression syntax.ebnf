@@ -135,7 +135,8 @@ namedType = name, {arrayDimension} ;
 initializer = namedType, compositeLiteral ;
 
 (* an atom is a literal, a name, an initializer or an expression in "()" *)
-atom = ("(", expression, ")") | literalToken | name | initializer ;
+atom = ("(", expression, ")") | literalToken | name
+    | (".", identifierToken) | initializer ;
 
 (*
     Here is the full expression syntax for operators. Precedence is the following:
@@ -160,8 +161,7 @@ atom = ("(", expression, ")") | literalToken | name | initializer ;
 *)
 
 (* ".", "[]", "()" *)
-access = fieldAccess | (".", identifierToken) | arrayAccess
-    | (access, callArguments) | atom ;
+access = fieldAccess | arrayAccess | (access, callArguments) | atom ;
 
 (* "+", "-", "!", "~" *)
 unary = (unaryOperator, unary) | access ;

@@ -92,13 +92,22 @@ func parseCompositeLiteral(tokens *Tokenizer) *CompositeLiteral {
     }
     return &CompositeLiteral{body}
 }
-
+// TODO: use usual asignment and equal operators?
 func parseAtom(tokens *Tokenizer) Expression {
     if tokens.Head().Kind.IsLiteral() {
         // Literal
         literal := tokens.Head()
         tokens.Advance()
         return literal
+    }
+    if tokens.Head().Is(".") {
+        tokens.Advance()
+        if tokens.Head().Kind != IDENTIFIER {
+            panic("Expected an identifier")
+        }
+        identifier := tokens.Head()
+        tokens.Advance()
+        return &ContextFieldAccess{identifier}
     }
     if tokens.Head().Kind == IDENTIFIER {
         // Name, or initializer

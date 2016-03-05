@@ -8,6 +8,14 @@ import (
 
 func TestParseAtom(t *testing.T) {
     assert.Equal(t,
+        "test",
+        lang.ParseExpression(lang.StringTokenizer("test")).String(),
+    )
+    assert.Equal(t,
+        "ContextFieldAccess(.test)",
+        lang.ParseExpression(lang.StringTokenizer(".test")).String(),
+    )
+    assert.Equal(t,
         "test.name",
         lang.ParseExpression(lang.StringTokenizer("(test.name)")).String(),
     )
