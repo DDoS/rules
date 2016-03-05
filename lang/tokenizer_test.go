@@ -95,15 +95,18 @@ func TestLexHexadecimalIntegerLiteral(t *testing.T) {
 }
 
 func TestLexFloatLiteral(t *testing.T) {
-    assertLex(t, "1_000.0", "FloatLiteral(1_000.0)");
+    assertLex(t, "1.", "FloatLiteral(1.)");
+    assertLex(t, "12_345_689.", "FloatLiteral(12_345_689.)");
+    assertLex(t, "1.0", "FloatLiteral(1.0)");
     assertLex(t, ".1", "FloatLiteral(.1)");
-    assertLex(t, ".143_21", "FloatLiteral(.143_21)");
+    assertLex(t, ".14321", "FloatLiteral(.14321)");
     assertLex(t, "1e2", "FloatLiteral(1e2)");
+    assertLex(t, "1.e2", "FloatLiteral(1.e2)");
     assertLex(t, "1.0e2", "FloatLiteral(1.0e2)");
     assertLex(t, "113.211e21", "FloatLiteral(113.211e21)");
     assertLex(t, ".1e2", "FloatLiteral(.1e2)");
     assertLex(t, "1e-2", "FloatLiteral(1e-2)");
-    assertLex(t, "1.65e+2", "FloatLiteral(1.65e+2)");
+    assertLex(t, "1.e+2", "FloatLiteral(1.e+2)");
     assertLex(t, "1.0e-2", "FloatLiteral(1.0e-2)");
     assertLex(t, ".1e+2", "FloatLiteral(.1e+2)");
     assertLex(t, "1_113.291_121e9", "FloatLiteral(1_113.291_121e9)");
