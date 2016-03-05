@@ -15,17 +15,17 @@ hexDigit = decimalDigit | "a" | "A" | "b" | "B" | "c" | "C" | "d" | "D" | "e"
 
 symbol = "!" | "@" | "%" | "?" | "&" | "*" | "(" | ")" | "-" | "=" | "+"
     | "/" | "^" | ":" | "<" | ">" | "[" | "]" | "{" | "}" | "." | "," | "~"
-    | "<<" | ">>" | ">>>" | "!=" | "<=" | ">=" | "::" | "!:" | "<:" | ">:"
-    | "<<:" | ">>:" | "<:>" | "&&" | "^^" | "||" | "**=" | "*=" | "/=" | "%="
-    | "+=" | "-=" | "<<=" | ">>=" | ">>>=" | "&=" | "^=" | "|=" | "&&=" | "^^="
-    | "||=" | "~=" | ":=" ;
+    | "<<" | ">>" | ">>>" | "===", "!==", "==" | "!=" | "<=" | ">=" | "::"
+    | "!:" | "<:" | ">:" | "<<:" | ">>:" | "<:>" | "&&" | "^^" | "||" | "**="
+    | "*=" | "/=" | "%=" | "+=" | "-=" | "<<=" | ">>=" | ">>>=" | "&=" | "^="
+    | "|=" | "&&=" | "^^=" | "||=" | "~=" ;
 
 keyword = "rule" | "when" | "with" | "then" | "match" | "if"
     | "else" | "for" | "for_rev" | "while" | "do" | "try"
     | "catch" | "finally" | "let" | "var" | "class" | "void"
     | "break" | "continue" | "throw" | "static" | "import"
-    | "package" | "new" | "is" | "isnt" | "throws" | "public"
-    | "return" | "this" | "super" ;
+    | "package" | "new" | "throws" | "public" | "return"
+    | "this" | "super" ;
 
 (* Excludes the backslash so we can use it for escape sequences *)
 printChar = ?all ASCII print characters? ;

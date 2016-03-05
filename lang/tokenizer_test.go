@@ -126,14 +126,14 @@ func TestLexGenericProgram(t *testing.T) {
     // Not necessarily representative of the actual language, just to test the lexer
     assertLex(t,
         "# Computes and prints the factorial of n\n" +
-        "let n := 12; var fact := 1\n" +
-        "for var i := 2; i <= n; i += 1\n" +
+        "let n = 12; var fact = 1\n" +
+        "for var i = 2; i <= n; i += 1\n" +
         "    fact *= i\n" +
         "printfln(\"%d! is %d\", n, fact)\n" +
         "## Random block comment ##",
-        "Keyword(let)", "Identifier(n)", "Symbol(:=)", "DecimalIntegerLiteral(12)", "Terminator(;)",
-        "Keyword(var)", "Identifier(fact)", "Symbol(:=)", "DecimalIntegerLiteral(1)",
-        "Keyword(for)", "Keyword(var)", "Identifier(i)", "Symbol(:=)", "DecimalIntegerLiteral(2)", "Terminator(;)",
+        "Keyword(let)", "Identifier(n)", "Symbol(=)", "DecimalIntegerLiteral(12)", "Terminator(;)",
+        "Keyword(var)", "Identifier(fact)", "Symbol(=)", "DecimalIntegerLiteral(1)",
+        "Keyword(for)", "Keyword(var)", "Identifier(i)", "Symbol(=)", "DecimalIntegerLiteral(2)", "Terminator(;)",
         "Identifier(i)", "Symbol(<=)", "Identifier(n)", "Terminator(;)",
         "Identifier(i)", "Symbol(+=)", "DecimalIntegerLiteral(1)",
         "Indentation(    )", "Identifier(fact)", "Symbol(*=)", "Identifier(i)",

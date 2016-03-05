@@ -384,7 +384,8 @@ var SYMBOLS = [][]rune{
    []rune("."), []rune(","), []rune("~"), []rune("|"), []rune("<<"), []rune(">>"), []rune(">>>"), []rune("<="), []rune(">="), []rune("<:"),
    []rune(">:"), []rune("<<:"), []rune(">>:"), []rune("<:>"), []rune("!="), []rune("::"), []rune("!:"), []rune("&&"), []rune("^^"),
    []rune("||"), []rune("**="), []rune("*="), []rune("/="), []rune("%="), []rune("+="),[]rune("-="), []rune("<<="), []rune(">>="),
-   []rune(">>>="), []rune("&="), []rune("^="), []rune("|="), []rune("&&="), []rune("^^="),[]rune("||="), []rune("~="), []rune(":="),
+   []rune(">>>="), []rune("&="), []rune("^="), []rune("|="), []rune("&&="), []rune("^^="),[]rune("||="), []rune("~="), []rune("="),
+   []rune("=="), []rune("==="), []rune("!=="),
 }
 
 func isSymbolChar(c rune) bool {
@@ -419,8 +420,8 @@ func isSymbolPrefix(cs []rune, c rune) bool {
 var KEYWORDS = [][]rune{
     []rune("when"), []rune("with"), []rune("then"), []rune("match"), []rune("if"), []rune("else"), []rune("for"), []rune("for_rev"), []rune("while"),
     []rune("do"), []rune("try"), []rune("catch"), []rune("finally"), []rune("let"), []rune("var"), []rune("class"), []rune("void"), []rune("break"),
-    []rune("continue"), []rune("throw"), []rune("static"), []rune("import"), []rune("package"), []rune("new"), []rune("is"), []rune("isnt"),
-    []rune("throws"), []rune("public"), []rune("return"), []rune("this"), []rune("super"),
+    []rune("continue"), []rune("throw"), []rune("static"), []rune("import"), []rune("package"), []rune("new"), []rune("throws"), []rune("public"),
+    []rune("return"), []rune("this"), []rune("super"),
 }
 
 func isKeyword(cs []rune) bool {

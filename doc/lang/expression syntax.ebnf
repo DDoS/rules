@@ -1,15 +1,12 @@
 (* Depends on the lexical syntax: all elements are taken from the token list *)
 
 (*
-    Some operators of note: are "=" instead of "==" and ":=" instead of "=", which is
-    unlike C, and less error prone.
-
-    Strict equality is done using "is", which behaves like "==" in Java. It compares
+    Strict equality is done using "===", which behaves like "==" in Java. It compares
     addresses for objects, but in our language it cannot by used for any other types.
-    The "=" operator always compares values.
+    The "==" operator always compares values.
 
     There also are many type comparison operators:
-    ":" which checks if the types are the same, "<:" and ">:" for sub and super type,
+    "::" which checks if the types are the same, "<:" and ">:" for sub and super type,
     "<<:" and ">>:" for direct sub and super type (types can't be the same) and "<:>"
     for distinct types (neither sub or super type).
 
@@ -45,7 +42,7 @@ infixOperator = identifierToken ;
 multiplyOperator = "*" | "/" | "%" ;
 addOperator = "+" | "-" ;
 shiftOperator = "<<" | ">>" | ">>>" ;
-compareOperator = "is" | "isnt" |  "=" | "!=" | "<" | ">" | "<=" | ">=" | "::"
+compareOperator = "===", "!==", "==" | "!=" | "<" | ">" | "<=" | ">=" | "::"
     | "!:" | "<:" | ">:" | "<<:" | ">>:" | "<:>";
 bitwiseAndOperator = "&" ;
 bitwiseXorOperator = "^" ;
@@ -55,11 +52,8 @@ logicalXorOperator = "^^" ;
 logicalOrOperator = "||" ;
 concatenateOperator = "~" ;
 rangeOperator = ".." ;
-assignmentOperator = ( "**" | "*" | "/" | "%" | "+" | "-" | "<<" | ">>" | ">>>" | "&"
-    | "^" | "|" | "&&" | "^^" | "||", "~", ":" ), "=" ;
-
-primitiveType = "bool" | "byte" | "short" | "int" | "long" | "half" | "float"
-    | "double" ;
+assignmentOperator = "**=" | "*=" | "/=" | "%=" | "+=" | "-=" | "<<=" | ">>="
+    | ">>>=" | "&=" | "^=" | "|=" | "&&=" | "^^=" | "||=" | "~=" | "="  ;
 
 (*
     Here are some examples of value initialization
@@ -75,24 +69,24 @@ primitiveType = "bool" | "byte" | "short" | "int" | "long" | "half" | "float"
     Vec3 u = {i, 1, 2};
 
     # We can also nest initializations, which works like assignment of the fields
-    Transform s := {{0, 3, 2}, {0, 0, 0, 1}, {1, 1, 2}};
+    Transform s = {{0, 3, 2}, {0, 0, 0, 1}, {1, 1, 2}};
     # It's also possible to use labels so we can reorder (but can't partially label)
-    Transform t := {scale: {1, 1, 2}, rot: {0, 0, 0, 1}, pos: {x: 1, y: 1, z: 2}};
+    Transform t = {scale: {1, 1, 2}, rot: {0, 0, 0, 1}, pos: {x: 1, y: 1, z: 2}};
 
     # Initializers work basically the same for arrays, but no labeling is allowed
-    int[] a := {1, 2, 3, 5};
-    int[][] b := {{1}, {}};
+    int[] a = {1, 2, 3, 5};
+    int[][] b = {{1}, {}};
 
     # To distinguish between array initialization and indexing operations
     # we must always include the curly braces.
     # Missing elements use the default value for the type.
-    Vec3[4] {} = {0, 0, 0, 0}
-    Vec3[2] {3, 1} = {3, 1}
-    Vec3[1][2] {{2}, {}} = {{2}, {0}}
-    Vec3[][2] {a} = {{1, 2, 3, 5} {}}
+    Vec3[4] {} == {0, 0, 0, 0}
+    Vec3[2] {3, 1} == {3, 1}
+    Vec3[1][2] {{2}, {}} == {{2}, {0}}
+    Vec3[][2] {a} == {{1, 2, 3, 5} {}}
 
     # When no sizes are given for arrays, the initializer size is used
-    Vec3[] {1, 2, 3}.length = 3
+    Vec3[] {1, 2, 3}.length == 3
 *)
 
 (* Field access is like: anObject.aField *)
@@ -102,8 +96,8 @@ arrayAccess = access, arraySize ;
 variableAccess = name | fieldAccess | arrayAccess ;
 
 (* Assignment aren't expressions in this language *)
-assignment = (variableAccess, assignmentOperator, expression)
-    | (variableAccess, ":=", compositeLiteral) ;
+assignment = variableAccess,
+    ((assignmentOperator, expression) | ("=", compositeLiteral)) ;
 
 expressionList = expression, {",", expression} ;
 
@@ -147,7 +141,7 @@ atom = ("(", expression, ")") | literalToken | name
     12: "*", "/", "%"
     11: "+", "-"
     10: "<<", ">>", ">>>"
-     9: "is", "isnt",  "=", "!=", "<", ">", "<=", ">=", "::",
+     9: "===", "!==", "==", "!=", "<", ">", "<=", ">=", "::",
          "!:", "<:", ">:", "<<:", ">>:", "<:>"
      8: "&"
      7: "^"
@@ -181,7 +175,7 @@ add = (add, addOperator, multiply) | multiply ;
 (* "<<", ">>", ">>>" *)
 shift = (shift, shiftOperator, add) | add ;
 
-(* "is", "isnt",  "=", "!=", "<", ">", "<=", ">=", "::",
+(* "===", "!==", "==", "!=", "<", ">", "<=", ">=", "::",
     "!:", "<:", ">:", "<<:", ">>:", "<:>" *)
 compare = shift, {compareOperator, shift} ;
 

@@ -92,7 +92,7 @@ func parseCompositeLiteral(tokens *Tokenizer) *CompositeLiteral {
     }
     return &CompositeLiteral{body}
 }
-// TODO: use usual asignment and equal operators?
+
 func parseAtom(tokens *Tokenizer) Expression {
     if tokens.Head().Kind.IsLiteral() {
         // Literal
