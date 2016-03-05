@@ -39,6 +39,21 @@ type ContextFieldAccess struct {
     Name *Token
 }
 
+type FieldAccess struct {
+    Object Expression
+    Name *Token
+}
+
+type ArrayAccess struct {
+    Object Expression
+    Index Expression
+}
+
+type FunctionCall struct {
+    Object Expression
+    Arguments []Expression
+}
+
 func (this *NamedType) String() string {
     dimensionsString := ""
     for _, dimension := range this.Dimensions {
@@ -73,6 +88,18 @@ func (this *Initializer) String() string {
 
 func (this *ContextFieldAccess) String() string {
     return fmt.Sprintf("ContextFieldAccess(.%s)", this.Name.Source)
+}
+
+func (this *FieldAccess) String() string {
+    return fmt.Sprintf("FieldAccess(%s.%s)", this.Object.String(), this.Name.Source)
+}
+
+func (this *ArrayAccess) String() string {
+    return fmt.Sprintf("ArrayAccess(%s[%s])", this.Object.String(), this.Index.String())
+}
+
+func (this *FunctionCall) String() string {
+    return fmt.Sprintf("FunctionCall(%s(%s))", this.Object.String(), joinString(this.Arguments, ", "))
 }
 
 func joinString(things interface{}, joiner string) string {

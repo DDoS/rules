@@ -136,8 +136,49 @@ func parseAtom(tokens *Tokenizer) Expression {
     panic("Expected a literal, a name or '('")
 }
 
+func parseAccess(tokens *Tokenizer) Expression {
+    return parseAccessOn(tokens, parseAtom(tokens))
+}
+
+func parseAccessOn(tokens *Tokenizer, object Expression) Expression {
+    if tokens.Head().Is(".") {
+        tokens.Advance()
+        if tokens.Head().Kind != IDENTIFIER {
+            panic("Expected an identifier")
+        }
+        name := tokens.Head()
+        tokens.Advance()
+        return parseAccessOn(tokens, &FieldAccess{object, name})
+    }
+    if tokens.Head().Is("[") {
+        tokens.Advance()
+        index := ParseExpression(tokens)
+        if !tokens.Head().Is("]") {
+            panic("Expected ']'")
+        }
+        tokens.Advance()
+        return parseAccessOn(tokens, &ArrayAccess{object, index})
+    }
+    if tokens.Head().Is("(") {
+        tokens.Advance()
+        var arguments []Expression
+        if tokens.Head().Is(")") {
+            tokens.Advance()
+            arguments = []Expression{}
+        } else {
+            arguments = parseExpressionList(tokens)
+            if !tokens.Head().Is(")") {
+                panic("Expected ')'")
+            }
+            tokens.Advance()
+        }
+        return parseAccessOn(tokens, &FunctionCall{object, arguments})
+    }
+    return object
+}
+
 func ParseExpression(tokens *Tokenizer) Expression {
-    return parseAtom(tokens)
+    return parseAccess(tokens)
 }
 
 func parseExpressionList(tokens *Tokenizer) []Expression {

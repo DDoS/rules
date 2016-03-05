@@ -28,3 +28,22 @@ func TestParseAtom(t *testing.T) {
         lang.ParseExpression(lang.StringTokenizer("test[] {1, \"2\", {hey: 2.1}}")).String(),
     )
 }
+
+func TestParseAccess(t *testing.T) {
+    assert.Equal(t,
+        "FieldAccess(StringLiteral(\"test\").length)",
+        lang.ParseExpression(lang.StringTokenizer("\"test\".length")).String(),
+    )
+    assert.Equal(t,
+        "FieldAccess(FieldAccess(FloatLiteral(5.0).ucc).test)",
+        lang.ParseExpression(lang.StringTokenizer("5.0.ucc.test")).String(),
+    )
+    assert.Equal(t,
+        "ArrayAccess(StringLiteral(\"test\")[DecimalIntegerLiteral(2)])",
+        lang.ParseExpression(lang.StringTokenizer("\"test\"[2]")).String(),
+    )
+    assert.Equal(t,
+        "FunctionCall(FieldAccess(StringLiteral(\"test\").substring)(DecimalIntegerLiteral(1), DecimalIntegerLiteral(3)))",
+        lang.ParseExpression(lang.StringTokenizer("\"test\".substring(1, 3)")).String(),
+    )
+}
