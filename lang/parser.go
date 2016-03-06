@@ -411,8 +411,23 @@ func parseRangeOn(tokens *Tokenizer, from Expression) Expression {
     return from
 }
 
+func parseConditional(tokens *Tokenizer) Expression {
+    trueValue := parseRange(tokens)
+    if !tokens.Head().Is("if") {
+        return trueValue
+    }
+    tokens.Advance()
+    condition := parseRange(tokens)
+    if !tokens.Head().Is("else") {
+        panic("Expected \"else\"")
+    }
+    tokens.Advance()
+    falseValue := parseRange(tokens)
+    return &Conditional{condition, trueValue, falseValue}
+}
+
 func ParseExpression(tokens *Tokenizer) Expression {
-    return parseRange(tokens)
+    return parseConditional(tokens)
 }
 
 func parseExpressionList(tokens *Tokenizer) []Expression {

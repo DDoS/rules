@@ -320,11 +320,30 @@ func TestParseRange(t *testing.T) {
         lang.ParseExpression(lang.StringTokenizer("u .. v")).String(),
     )
     assert.Equal(t,
+        "Range(u .. v)",
+        lang.ParseExpression(lang.StringTokenizer("u..v")).String(),
+    )
+    assert.Equal(t,
         "Range(Range(u .. v) .. w)",
         lang.ParseExpression(lang.StringTokenizer("u .. v .. w")).String(),
     )
     assert.Equal(t,
         "Range(Concatenate(u ~ m) .. Concatenate(v ~ w))",
         lang.ParseExpression(lang.StringTokenizer("u ~ m .. v ~ w")).String(),
+    )
+}
+
+func TestParseConditional(t *testing.T) {
+    assert.Equal(t,
+        "Conditional(u if v else w)",
+        lang.ParseExpression(lang.StringTokenizer("u if v else w")).String(),
+    )
+    assert.Equal(t,
+        "Conditional(Conditional(a if b else c) if Conditional(d if e else f) else Conditional(g if h else j))",
+        lang.ParseExpression(lang.StringTokenizer("(a if b else c) if (d if e else f) else (g if h else j)")).String(),
+    )
+    assert.Equal(t,
+        "Conditional(Range(a .. b) if Range(c .. d) else Range(e .. f))",
+        lang.ParseExpression(lang.StringTokenizer("a .. b if c .. d else e .. f")).String(),
     )
 }

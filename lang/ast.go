@@ -143,6 +143,12 @@ type Range struct {
     To Expression
 }
 
+type Conditional struct {
+    Condition Expression
+    TrueValue Expression
+    FalseValue Expression
+}
+
 func (this *NamedType) String() string {
     dimensionsString := ""
     for _, dimension := range this.Dimensions {
@@ -267,4 +273,8 @@ func (this *Concatenate) String() string {
 
 func (this *Range) String() string {
     return fmt.Sprintf("Range(%s .. %s)", this.From.String(), this.To.String())
+}
+
+func (this *Conditional) String() string {
+    return fmt.Sprintf("Conditional(%s if %s else %s)", this.TrueValue.String(), this.Condition.String(), this.FalseValue.String())
 }
