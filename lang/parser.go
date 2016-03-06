@@ -346,8 +346,47 @@ func parseBitwiseOrOn(tokens *Tokenizer, left Expression) Expression {
     return left
 }
 
+func parseLogicalAnd(tokens *Tokenizer) Expression {
+    return parseLogicalAndOn(tokens, parseBitwiseOr(tokens))
+}
+
+func parseLogicalAndOn(tokens *Tokenizer, left Expression) Expression {
+    if tokens.Head().Is("&&") {
+        tokens.Advance()
+        right := parseBitwiseOr(tokens)
+        return parseLogicalAndOn(tokens, &LogicalAnd{left, right})
+    }
+    return left
+}
+
+func parseLogicalXor(tokens *Tokenizer) Expression {
+    return parseLogicalXorOn(tokens, parseLogicalAnd(tokens))
+}
+
+func parseLogicalXorOn(tokens *Tokenizer, left Expression) Expression {
+    if tokens.Head().Is("^^") {
+        tokens.Advance()
+        right := parseLogicalAnd(tokens)
+        return parseLogicalXorOn(tokens, &LogicalXor{left, right})
+    }
+    return left
+}
+
+func parseLogicalOr(tokens *Tokenizer) Expression {
+    return parseLogicalOrOn(tokens, parseLogicalXor(tokens))
+}
+
+func parseLogicalOrOn(tokens *Tokenizer, left Expression) Expression {
+    if tokens.Head().Is("||") {
+        tokens.Advance()
+        right := parseLogicalXor(tokens)
+        return parseLogicalOrOn(tokens, &LogicalOr{left, right})
+    }
+    return left
+}
+
 func ParseExpression(tokens *Tokenizer) Expression {
-    return parseBitwiseOr(tokens)
+    return parseLogicalOr(tokens)
 }
 
 func parseExpressionList(tokens *Tokenizer) []Expression {

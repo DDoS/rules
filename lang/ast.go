@@ -118,6 +118,21 @@ type BitwiseOr struct {
     Right Expression
 }
 
+type LogicalAnd struct {
+    Left Expression
+    Right Expression
+}
+
+type LogicalXor struct {
+    Left Expression
+    Right Expression
+}
+
+type LogicalOr struct {
+    Left Expression
+    Right Expression
+}
+
 func (this *NamedType) String() string {
     dimensionsString := ""
     for _, dimension := range this.Dimensions {
@@ -222,4 +237,16 @@ func (this *BitwiseXor) String() string {
 
 func (this *BitwiseOr) String() string {
     return fmt.Sprintf("BitwiseOr(%s | %s)", this.Left.String(), this.Right.String())
+}
+
+func (this *LogicalAnd) String() string {
+    return fmt.Sprintf("LogicalAnd(%s && %s)", this.Left.String(), this.Right.String())
+}
+
+func (this *LogicalXor) String() string {
+    return fmt.Sprintf("LogicalXor(%s ^^ %s)", this.Left.String(), this.Right.String())
+}
+
+func (this *LogicalOr) String() string {
+    return fmt.Sprintf("LogicalOr(%s || %s)", this.Left.String(), this.Right.String())
 }
