@@ -24,6 +24,10 @@ func TestParseAtom(t *testing.T) {
         lang.ParseExpression(lang.StringTokenizer("hello{test.name, label: other.thing}")).String(),
     )
     assert.Equal(t,
+        "Initializer(hello{2: test, 0xf1a: other, 0b00100: more})",
+        lang.ParseExpression(lang.StringTokenizer("hello{2: test, 0xf1a: other, 0b00100: more}")).String(),
+    )
+    assert.Equal(t,
         "Initializer(test[]{DecimalIntegerLiteral(1), StringLiteral(\"2\"), CompositeLiteral({hey: FloatLiteral(2.1)})})",
         lang.ParseExpression(lang.StringTokenizer("test[] {1, \"2\", {hey: 2.1}}")).String(),
     )

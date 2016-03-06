@@ -2,7 +2,9 @@ package lang
 
 func parseCompositeLiteralPart(tokens *Tokenizer) *LabeledExpression {
     var label *Token = nil
-    if tokens.Head().Kind == IDENTIFIER {
+    headKind := tokens.Head().Kind
+    if headKind == IDENTIFIER || headKind == DECIMAL_INTEGER_LITERAL ||
+            headKind == HEXADECIMAL_INTEGER_LITERAL || headKind == BINARY_INTEGER_LITERAL {
         label = tokens.Head()
         tokens.SavePosition()
         tokens.Advance()

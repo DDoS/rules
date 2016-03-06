@@ -64,7 +64,8 @@ callArguments = "(", [expressionList], ")" ;
 
 (* Composite literal can be made up of expressions or other composite literals,
     with optional labels *)
-compositeLiteralPart = identifierToken, ":", (compositeLiteral | expression) ;
+label = (identifierToken | decimalInteger | hexInteger | binaryInteger), ":" ;
+compositeLiteralPart = label, (compositeLiteral | expression) ;
 compositeLiteralBody = compositeLiteralPart, {",", compositeLiteralPart} ;
 
 (* Composite literals are like: {"guy", 19}, {name: "guy", age: 19} *)
