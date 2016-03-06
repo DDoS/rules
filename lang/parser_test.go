@@ -161,3 +161,22 @@ func TestParseShift(t *testing.T) {
         lang.ParseExpression(lang.StringTokenizer("u - m >>> v + w")).String(),
     )
 }
+
+func TestParseCompare(t *testing.T) {
+    assert.Equal(t,
+        "Compare(u == v)",
+        lang.ParseExpression(lang.StringTokenizer("u == v")).String(),
+    )
+    assert.Equal(t,
+        "Compare(u < v < w)",
+        lang.ParseExpression(lang.StringTokenizer("u < v < w")).String(),
+    )
+    assert.Equal(t,
+        "Compare(a == b < c > d <= e >= f :: g <: h >: i <<: j >>: k <:> l != m !: n)",
+        lang.ParseExpression(lang.StringTokenizer("a == b < c > d <= e >= f :: g <: h >: i <<: j >>: k <:> l != m !: n")).String(),
+    )
+    assert.Equal(t,
+        "Compare(Add(u + v) <= Add(j - l) < Infix(a log b))",
+        lang.ParseExpression(lang.StringTokenizer("u + v <= j - l < a log b")).String(),
+    )
+}

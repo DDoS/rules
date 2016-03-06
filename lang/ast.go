@@ -96,6 +96,11 @@ type Shift struct {
     Amount Expression
 }
 
+type Compare struct {
+    Values []Expression
+    Operators []*Token
+}
+
 func (this *NamedType) String() string {
     dimensionsString := ""
     for _, dimension := range this.Dimensions {
@@ -174,6 +179,15 @@ func (this *Add) String() string {
 
 func (this *Shift) String() string {
     return fmt.Sprintf("Shift(%s %s %s)", this.Value.String(), this.Operator.Source, this.Amount.String())
+}
+
+func (this *Compare) String() string {
+    s := "Compare("
+    for i, operator := range this.Operators {
+        s += fmt.Sprintf("%s %s ", this.Values[i].String(), operator.Source)
+    }
+    s += fmt.Sprintf("%s)", this.Values[len(this.Values) - 1].String())
+    return s
 }
 
 func joinString(things interface{}, joiner string) string {

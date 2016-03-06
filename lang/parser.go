@@ -280,8 +280,24 @@ func parseShiftOn(tokens *Tokenizer, value Expression) Expression {
     return value
 }
 
+func parseCompare(tokens *Tokenizer) Expression {
+    value := parseShift(tokens)
+    if tokens.Head().Kind != COMPARE_OPERATOR {
+        return value
+    }
+    operators := []*Token{tokens.Head()}
+    tokens.Advance()
+    values := []Expression{value, parseShift(tokens)}
+    for tokens.Head().Kind == COMPARE_OPERATOR {
+        operators = append(operators, tokens.Head())
+        tokens.Advance()
+        values = append(values, parseShift(tokens))
+    }
+    return &Compare{values, operators}
+}
+
 func ParseExpression(tokens *Tokenizer) Expression {
-    return parseShift(tokens)
+    return parseCompare(tokens)
 }
 
 func parseExpressionList(tokens *Tokenizer) []Expression {
