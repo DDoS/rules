@@ -266,8 +266,22 @@ func parseAddOn(tokens *Tokenizer, left Expression) Expression {
     return left
 }
 
+func parseShift(tokens *Tokenizer) Expression {
+    return parseShiftOn(tokens, parseAdd(tokens))
+}
+
+func parseShiftOn(tokens *Tokenizer, value Expression) Expression {
+    if tokens.Head().Kind == SHIFT_OPERATOR {
+        operator := tokens.Head()
+        tokens.Advance()
+        amount := parseAdd(tokens)
+        return parseShiftOn(tokens, &Shift{value, operator, amount})
+    }
+    return value
+}
+
 func ParseExpression(tokens *Tokenizer) Expression {
-    return parseAdd(tokens)
+    return parseShift(tokens)
 }
 
 func parseExpressionList(tokens *Tokenizer) []Expression {

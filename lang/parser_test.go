@@ -146,3 +146,18 @@ func TestParseAdd(t *testing.T) {
         lang.ParseExpression(lang.StringTokenizer("u * m + v / w")).String(),
     )
 }
+
+func TestParseShift(t *testing.T) {
+    assert.Equal(t,
+        "Shift(u << v)",
+        lang.ParseExpression(lang.StringTokenizer("u << v")).String(),
+    )
+    assert.Equal(t,
+        "Shift(Shift(u << v) >> w)",
+        lang.ParseExpression(lang.StringTokenizer("u << v >> w")).String(),
+    )
+    assert.Equal(t,
+        "Shift(Add(u - m) >>> Add(v + w))",
+        lang.ParseExpression(lang.StringTokenizer("u - m >>> v + w")).String(),
+    )
+}

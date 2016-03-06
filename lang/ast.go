@@ -90,6 +90,12 @@ type Add struct {
     Right Expression
 }
 
+type Shift struct {
+    Value Expression
+    Operator *Token
+    Amount Expression
+}
+
 func (this *NamedType) String() string {
     dimensionsString := ""
     for _, dimension := range this.Dimensions {
@@ -164,6 +170,10 @@ func (this *Multiply) String() string {
 
 func (this *Add) String() string {
     return fmt.Sprintf("Add(%s %s %s)", this.Left.String(), this.Operator.Source, this.Right.String())
+}
+
+func (this *Shift) String() string {
+    return fmt.Sprintf("Shift(%s %s %s)", this.Value.String(), this.Operator.Source, this.Amount.String())
 }
 
 func joinString(things interface{}, joiner string) string {
