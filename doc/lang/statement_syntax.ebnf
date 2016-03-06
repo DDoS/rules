@@ -33,6 +33,6 @@
 *)
 
 (* Assignment aren't expressions in this language *)
-variableAccess = name | fieldAccess | arrayAccess ;
-assignment = variableAccess,
+referenceExpression = name | fieldAccess | arrayAccess ;
+assignment = referenceExpression,
     ((assignmentOperator, expression) | ("=", compositeLiteral)) ;
