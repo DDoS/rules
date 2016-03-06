@@ -313,3 +313,18 @@ func TestParseConcatenate(t *testing.T) {
         lang.ParseExpression(lang.StringTokenizer("u || m ~ v || w")).String(),
     )
 }
+
+func TestParseRange(t *testing.T) {
+    assert.Equal(t,
+        "Range(u .. v)",
+        lang.ParseExpression(lang.StringTokenizer("u .. v")).String(),
+    )
+    assert.Equal(t,
+        "Range(Range(u .. v) .. w)",
+        lang.ParseExpression(lang.StringTokenizer("u .. v .. w")).String(),
+    )
+    assert.Equal(t,
+        "Range(Concatenate(u ~ m) .. Concatenate(v ~ w))",
+        lang.ParseExpression(lang.StringTokenizer("u ~ m .. v ~ w")).String(),
+    )
+}

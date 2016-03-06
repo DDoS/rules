@@ -138,6 +138,11 @@ type Concatenate struct {
     Right Expression
 }
 
+type Range struct {
+    From Expression
+    To Expression
+}
+
 func (this *NamedType) String() string {
     dimensionsString := ""
     for _, dimension := range this.Dimensions {
@@ -258,4 +263,8 @@ func (this *LogicalOr) String() string {
 
 func (this *Concatenate) String() string {
     return fmt.Sprintf("Concatenate(%s ~ %s)", this.Left.String(), this.Right.String())
+}
+
+func (this *Range) String() string {
+    return fmt.Sprintf("Range(%s .. %s)", this.From.String(), this.To.String())
 }

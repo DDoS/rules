@@ -385,7 +385,7 @@ var SYMBOLS = [][]rune{
    []rune(">:"), []rune("<<:"), []rune(">>:"), []rune("<:>"), []rune("!="), []rune("::"), []rune("!:"), []rune("&&"), []rune("^^"),
    []rune("||"), []rune("**="), []rune("*="), []rune("/="), []rune("%="), []rune("+="),[]rune("-="), []rune("<<="), []rune(">>="),
    []rune(">>>="), []rune("&="), []rune("^="), []rune("|="), []rune("&&="), []rune("^^="),[]rune("||="), []rune("~="), []rune("="),
-   []rune("=="), []rune("==="), []rune("!=="),
+   []rune("=="), []rune("==="), []rune("!=="), []rune(".."),
 }
 
 func isSymbolChar(c rune) bool {

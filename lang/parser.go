@@ -398,8 +398,21 @@ func parseConcatenateOn(tokens *Tokenizer, left Expression) Expression {
     return left
 }
 
+func parseRange(tokens *Tokenizer) Expression {
+    return parseRangeOn(tokens, parseConcatenate(tokens))
+}
+
+func parseRangeOn(tokens *Tokenizer, from Expression) Expression {
+    if tokens.Head().Is("..") {
+        tokens.Advance()
+        to := parseConcatenate(tokens)
+        return parseRangeOn(tokens, &Range{from, to})
+    }
+    return from
+}
+
 func ParseExpression(tokens *Tokenizer) Expression {
-    return parseConcatenate(tokens)
+    return parseRange(tokens)
 }
 
 func parseExpressionList(tokens *Tokenizer) []Expression {
