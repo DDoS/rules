@@ -43,6 +43,10 @@ func parseNamedType(tokens *Tokenizer) *NamedType {
     return &NamedType{name, dimensions}
 }
 
+func parseType(tokens *Tokenizer) Type {
+    return parseNamedType(tokens)
+}
+
 func parseCompositeLiteralPart(tokens *Tokenizer) *LabeledExpression {
     var label *Token = nil
     if tokens.Head().Kind == IDENTIFIER {
@@ -282,18 +286,25 @@ func parseShiftOn(tokens *Tokenizer, value Expression) Expression {
 
 func parseCompare(tokens *Tokenizer) Expression {
     value := parseShift(tokens)
-    if tokens.Head().Kind != COMPARE_OPERATOR {
+    if tokens.Head().Kind != VALUE_COMPARE_OPERATOR &&
+        tokens.Head().Kind != TYPE_COMPARE_OPERATOR {
         return value
     }
-    operators := []*Token{tokens.Head()}
-    tokens.Advance()
-    values := []Expression{value, parseShift(tokens)}
-    for tokens.Head().Kind == COMPARE_OPERATOR {
-        operators = append(operators, tokens.Head())
+    valueOperators := []*Token{}
+    values := []Expression{value}
+    for tokens.Head().Kind == VALUE_COMPARE_OPERATOR {
+        valueOperators = append(valueOperators, tokens.Head())
         tokens.Advance()
         values = append(values, parseShift(tokens))
     }
-    return &Compare{values, operators}
+    var typeOperator *Token = nil
+    var _type Type = nil
+    if tokens.Head().Kind == TYPE_COMPARE_OPERATOR {
+        typeOperator = tokens.Head()
+        tokens.Advance()
+        _type = parseType(tokens)
+    }
+    return &Compare{values, valueOperators, _type, typeOperator}
 }
 
 func parseBitwiseAnd(tokens *Tokenizer) Expression {

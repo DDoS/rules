@@ -5,6 +5,7 @@ import (
 )
 
 type Type interface {
+    String() string
 }
 
 type NamedType struct {
@@ -97,7 +98,9 @@ type Shift struct {
 
 type Compare struct {
     Values []Expression
-    Operators []*Token
+    ValueOperators []*Token
+    Type Type
+    TypeOperator *Token
 }
 
 type BitwiseAnd struct {
@@ -197,10 +200,15 @@ func (this *Shift) String() string {
 
 func (this *Compare) String() string {
     s := "Compare("
-    for i, operator := range this.Operators {
+    for i, operator := range this.ValueOperators {
         s += fmt.Sprintf("%s %s ", this.Values[i].String(), operator.Source)
     }
-    s += fmt.Sprintf("%s)", this.Values[len(this.Values) - 1].String())
+    s += this.Values[len(this.Values) - 1].String()
+    if this.TypeOperator != nil {
+        s += fmt.Sprintf(" %s %s)", this.TypeOperator.Source, this.Type.String())
+    } else {
+        s += ")"
+    }
     return s
 }
 

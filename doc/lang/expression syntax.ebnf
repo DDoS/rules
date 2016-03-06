@@ -42,8 +42,8 @@ infixOperator = identifierToken ;
 multiplyOperator = "*" | "/" | "%" ;
 addOperator = "+" | "-" ;
 shiftOperator = "<<" | ">>" | ">>>" ;
-compareOperator = "===", "!==", "==" | "!=" | "<" | ">" | "<=" | ">=" | "::"
-    | "!:" | "<:" | ">:" | "<<:" | ">>:" | "<:>";
+valueCompareOperator = "===", "!==", "==" | "!=" | "<" | ">" | "<=" | ">=" ;
+typeCompareOperator = "::" | "!:" | "<:" | ">:" | "<<:" | ">>:" | "<:>";
 bitwiseAndOperator = "&" ;
 bitwiseXorOperator = "^" ;
 bitwiseOrOperator = "|" ;
@@ -126,6 +126,9 @@ name = identifierToken, {".", identifierToken} ;
 (* Named types are names with optional array dimensions *)
 namedType = name, {arrayDimension} ;
 
+type = namedType ;
+
+(* An initializer for a value is a named type with a composite literal*)
 initializer = namedType, compositeLiteral ;
 
 (* an atom is a literal, a name, an initializer or an expression in "()" *)
@@ -177,7 +180,7 @@ shift = (shift, shiftOperator, add) | add ;
 
 (* "===", "!==", "==", "!=", "<", ">", "<=", ">=", "::",
     "!:", "<:", ">:", "<<:", ">>:", "<:>" *)
-compare = shift, {compareOperator, shift} ;
+compare = shift, {valueCompareOperator, shift}, [typeCompareOperator, type] ;
 
 (* "&" *)
 bitwiseAnd = (bitwiseAnd, bitwiseAndOperator, compare) | compare ;

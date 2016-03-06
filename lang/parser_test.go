@@ -172,8 +172,36 @@ func TestParseCompare(t *testing.T) {
         lang.ParseExpression(lang.StringTokenizer("u < v < w")).String(),
     )
     assert.Equal(t,
-        "Compare(a == b < c > d <= e >= f :: g <: h >: i <<: j >>: k <:> l != m !: n)",
-        lang.ParseExpression(lang.StringTokenizer("a == b < c > d <= e >= f :: g <: h >: i <<: j >>: k <:> l != m !: n")).String(),
+        "Compare(a == b < c > d <= e >= f :: g)",
+        lang.ParseExpression(lang.StringTokenizer("a == b < c > d <= e >= f :: g")).String(),
+    )
+    assert.Equal(t,
+        "Compare(a !: g)",
+        lang.ParseExpression(lang.StringTokenizer("a !: g")).String(),
+    )
+    assert.Equal(t,
+        "Compare(a <: g)",
+        lang.ParseExpression(lang.StringTokenizer("a <: g")).String(),
+    )
+    assert.Equal(t,
+        "Compare(a >: g)",
+        lang.ParseExpression(lang.StringTokenizer("a >: g")).String(),
+    )
+    assert.Equal(t,
+        "Compare(a <<: g)",
+        lang.ParseExpression(lang.StringTokenizer("a <<: g")).String(),
+    )
+    assert.Equal(t,
+        "Compare(a >>: g)",
+        lang.ParseExpression(lang.StringTokenizer("a >>: g")).String(),
+    )
+    assert.Equal(t,
+        "Compare(a <:> g[])",
+        lang.ParseExpression(lang.StringTokenizer("a <:> g[]")).String(),
+    )
+    assert.Equal(t,
+        "Compare(a == Compare(b < c > d) != Compare(e >= f))",
+        lang.ParseExpression(lang.StringTokenizer("a == (b < c > d) != (e >= f)")).String(),
     )
     assert.Equal(t,
         "Compare(Add(u + v) <= Add(j - l) < Infix(a log b))",
