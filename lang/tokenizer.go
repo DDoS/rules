@@ -242,7 +242,7 @@ func collectEscapeSequence(chars RuneStream) bool {
         }
         return true
     }
-    if RunesContain(ESCAPE_LITERALS, chars.Head()) {
+    if runesContain(ESCAPE_LITERALS, chars.Head()) {
         chars.Collect()
         return true
     }
@@ -426,7 +426,7 @@ var KEYWORDS = [][]rune{
 
 func isKeyword(cs []rune) bool {
     for _, keyword := range KEYWORDS {
-        if RunesEquals(cs, keyword) {
+        if runesEquals(cs, keyword) {
             return true
         }
     }
@@ -437,7 +437,7 @@ var FALSE_LITERAL = []rune("false")
 var TRUE_LITERAL = []rune("true")
 
 func isBooleanLiteral(cs []rune) bool {
-    return RunesEquals(cs, FALSE_LITERAL) || RunesEquals(cs, TRUE_LITERAL)
+    return runesEquals(cs, FALSE_LITERAL) || runesEquals(cs, TRUE_LITERAL)
 }
 
 var ESCAPE_LITERALS = []rune{

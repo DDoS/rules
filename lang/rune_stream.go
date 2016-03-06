@@ -66,24 +66,3 @@ func (this *StringRuneStream) PopCollected() []rune {
     this.collected = nil
     return collected
 }
-
-func RunesContain(a []rune, b rune) bool {
-    for _, r := range a {
-        if r == b {
-            return true
-        }
-    }
-    return false
-}
-
-func RunesEquals(a []rune, b []rune) bool {
-    if len(a) != len(b) {
-        return false
-    }
-    for i := range a {
-        if a[i] != b[i] {
-            return false
-        }
-    }
-    return true
-}
