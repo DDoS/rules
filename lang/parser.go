@@ -224,8 +224,50 @@ func parseExponentOn(tokens *Tokenizer, value Expression) Expression {
     return value
 }
 
+func parseInfix(tokens *Tokenizer) Expression {
+    return parseInfixOn(tokens, parseExponent(tokens))
+}
+
+func parseInfixOn(tokens *Tokenizer, value Expression) Expression {
+    if tokens.Head().Kind == IDENTIFIER {
+        function := tokens.Head()
+        tokens.Advance()
+        argument := parseExponent(tokens)
+        return parseInfixOn(tokens, &Infix{value, function, argument})
+    }
+    return value
+}
+
+func parseMultiply(tokens *Tokenizer) Expression {
+    return parseMultiplyOn(tokens, parseInfix(tokens))
+}
+
+func parseMultiplyOn(tokens *Tokenizer, left Expression) Expression {
+    if tokens.Head().Kind == MULTIPLY_OPERATOR {
+        operator := tokens.Head()
+        tokens.Advance()
+        right := parseInfix(tokens)
+        return parseMultiplyOn(tokens, &Multiply{left, operator, right})
+    }
+    return left
+}
+
+func parseAdd(tokens *Tokenizer) Expression {
+    return parseAddOn(tokens, parseMultiply(tokens))
+}
+
+func parseAddOn(tokens *Tokenizer, left Expression) Expression {
+    if tokens.Head().Kind == ADD_OPERATOR {
+        operator := tokens.Head()
+        tokens.Advance()
+        right := parseMultiply(tokens)
+        return parseAddOn(tokens, &Add{left, operator, right})
+    }
+    return left
+}
+
 func ParseExpression(tokens *Tokenizer) Expression {
-    return parseExponent(tokens)
+    return parseAdd(tokens)
 }
 
 func parseExpressionList(tokens *Tokenizer) []Expression {

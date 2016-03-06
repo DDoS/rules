@@ -72,6 +72,24 @@ type Exponent struct {
     Exponent Expression
 }
 
+type Infix struct {
+    Value Expression
+    Function *Token
+    Argument Expression
+}
+
+type Multiply struct {
+    Left Expression
+    Operator *Token
+    Right Expression
+}
+
+type Add struct {
+    Left Expression
+    Operator *Token
+    Right Expression
+}
+
 func (this *NamedType) String() string {
     dimensionsString := ""
     for _, dimension := range this.Dimensions {
@@ -134,6 +152,18 @@ func (this *BitwiseNot) String() string {
 
 func (this *Exponent) String() string {
     return fmt.Sprintf("Exponent(%s ** %s)", this.Value.String(), this.Exponent.String())
+}
+
+func (this *Infix) String() string {
+    return fmt.Sprintf("Infix(%s %s %s)", this.Value.String(), this.Function.Source, this.Argument.String())
+}
+
+func (this *Multiply) String() string {
+    return fmt.Sprintf("Multiply(%s %s %s)", this.Left.String(), this.Operator.Source, this.Right.String())
+}
+
+func (this *Add) String() string {
+    return fmt.Sprintf("Add(%s %s %s)", this.Left.String(), this.Operator.Source, this.Right.String())
 }
 
 func joinString(things interface{}, joiner string) string {

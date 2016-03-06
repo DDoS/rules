@@ -101,3 +101,48 @@ func TestParseExponent(t *testing.T) {
         lang.ParseExpression(lang.StringTokenizer("\"1\".length ** -2")).String(),
     )
 }
+
+func TestParseInfix(t *testing.T) {
+    assert.Equal(t,
+        "Infix(u x v)",
+        lang.ParseExpression(lang.StringTokenizer("u x v")).String(),
+    )
+    assert.Equal(t,
+        "Infix(Infix(u cross v) dot w)",
+        lang.ParseExpression(lang.StringTokenizer("u cross v dot w")).String(),
+    )
+    assert.Equal(t,
+        "Infix(Sign(-u) x Exponent(v ** w))",
+        lang.ParseExpression(lang.StringTokenizer("-u x v ** w")).String(),
+    )
+}
+
+func TestParseMultiply(t *testing.T) {
+    assert.Equal(t,
+        "Multiply(u * v)",
+        lang.ParseExpression(lang.StringTokenizer("u * v")).String(),
+    )
+    assert.Equal(t,
+        "Multiply(Multiply(u / v) % w)",
+        lang.ParseExpression(lang.StringTokenizer("u / v % w")).String(),
+    )
+    assert.Equal(t,
+        "Multiply(Infix(u log m) * Infix(v ln w))",
+        lang.ParseExpression(lang.StringTokenizer("u log m * v ln w")).String(),
+    )
+}
+
+func TestParseAdd(t *testing.T) {
+    assert.Equal(t,
+        "Add(u + v)",
+        lang.ParseExpression(lang.StringTokenizer("u + v")).String(),
+    )
+    assert.Equal(t,
+        "Add(Add(u - v) + w)",
+        lang.ParseExpression(lang.StringTokenizer("u - v + w")).String(),
+    )
+    assert.Equal(t,
+        "Add(Multiply(u * m) + Multiply(v / w))",
+        lang.ParseExpression(lang.StringTokenizer("u * m + v / w")).String(),
+    )
+}
