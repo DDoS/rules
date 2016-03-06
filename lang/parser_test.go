@@ -298,3 +298,18 @@ func TestParseLogicalOr(t *testing.T) {
         lang.ParseExpression(lang.StringTokenizer("u ^^ m || v ^^ w")).String(),
     )
 }
+
+func TestParseConcatenate(t *testing.T) {
+    assert.Equal(t,
+        "Concatenate(u ~ v)",
+        lang.ParseExpression(lang.StringTokenizer("u ~ v")).String(),
+    )
+    assert.Equal(t,
+        "Concatenate(Concatenate(u ~ v) ~ w)",
+        lang.ParseExpression(lang.StringTokenizer("u ~ v ~ w")).String(),
+    )
+    assert.Equal(t,
+        "Concatenate(LogicalOr(u || m) ~ LogicalOr(v || w))",
+        lang.ParseExpression(lang.StringTokenizer("u || m ~ v || w")).String(),
+    )
+}

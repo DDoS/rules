@@ -385,8 +385,21 @@ func parseLogicalOrOn(tokens *Tokenizer, left Expression) Expression {
     return left
 }
 
+func parseConcatenate(tokens *Tokenizer) Expression {
+    return parseConcatenateOn(tokens, parseLogicalOr(tokens))
+}
+
+func parseConcatenateOn(tokens *Tokenizer, left Expression) Expression {
+    if tokens.Head().Is("~") {
+        tokens.Advance()
+        right := parseLogicalOr(tokens)
+        return parseConcatenateOn(tokens, &Concatenate{left, right})
+    }
+    return left
+}
+
 func ParseExpression(tokens *Tokenizer) Expression {
-    return parseLogicalOr(tokens)
+    return parseConcatenate(tokens)
 }
 
 func parseExpressionList(tokens *Tokenizer) []Expression {

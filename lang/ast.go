@@ -133,6 +133,11 @@ type LogicalOr struct {
     Right Expression
 }
 
+type Concatenate struct {
+    Left Expression
+    Right Expression
+}
+
 func (this *NamedType) String() string {
     dimensionsString := ""
     for _, dimension := range this.Dimensions {
@@ -249,4 +254,8 @@ func (this *LogicalXor) String() string {
 
 func (this *LogicalOr) String() string {
     return fmt.Sprintf("LogicalOr(%s || %s)", this.Left.String(), this.Right.String())
+}
+
+func (this *Concatenate) String() string {
+    return fmt.Sprintf("Concatenate(%s ~ %s)", this.Left.String(), this.Right.String())
 }
