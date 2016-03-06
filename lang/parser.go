@@ -189,8 +189,30 @@ func parseAccessOn(tokens *Tokenizer, object Expression) Expression {
     return object
 }
 
+func parseUnary(tokens *Tokenizer) Expression {
+    switch tokens.Head().Source {
+    case "+":
+        fallthrough
+    case "-":
+        operator := tokens.Head()
+        tokens.Advance()
+        inner := parseUnary(tokens)
+        return &Sign{operator, inner}
+    case "!":
+        tokens.Advance()
+        inner := parseUnary(tokens)
+        return &LogicalNot{inner}
+    case "~":
+        tokens.Advance()
+        inner := parseUnary(tokens)
+        return &BitwiseNot{inner}
+    default:
+        return parseAccess(tokens)
+    }
+}
+
 func ParseExpression(tokens *Tokenizer) Expression {
-    return parseAccess(tokens)
+    return parseUnary(tokens)
 }
 
 func parseExpressionList(tokens *Tokenizer) []Expression {

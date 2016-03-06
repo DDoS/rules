@@ -59,3 +59,30 @@ func TestParseAccess(t *testing.T) {
         lang.ParseExpression(lang.StringTokenizer("\"test\".substring(1, 3)")).String(),
     )
 }
+
+func TestParseUnary(t *testing.T) {
+    assert.Equal(t,
+        "Sign(+test)",
+        lang.ParseExpression(lang.StringTokenizer("+test")).String(),
+    )
+    assert.Equal(t,
+        "Sign(+Sign(+test))",
+        lang.ParseExpression(lang.StringTokenizer("++test")).String(),
+    )
+    assert.Equal(t,
+        "Sign(+Sign(-test))",
+        lang.ParseExpression(lang.StringTokenizer("+-test")).String(),
+    )
+    assert.Equal(t,
+        "LogicalNot(!test)",
+        lang.ParseExpression(lang.StringTokenizer("!test")).String(),
+    )
+    assert.Equal(t,
+        "BitwiseNot(~test)",
+        lang.ParseExpression(lang.StringTokenizer("~test")).String(),
+    )
+    assert.Equal(t,
+        "Sign(-FieldAccess(StringLiteral(\"test\").length))",
+        lang.ParseExpression(lang.StringTokenizer("-\"test\".length")).String(),
+    )
+}

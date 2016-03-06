@@ -54,6 +54,19 @@ type FunctionCall struct {
     Arguments []Expression
 }
 
+type Sign struct {
+    Operator *Token
+    Inner Expression
+}
+
+type LogicalNot struct {
+    Inner Expression
+}
+
+type BitwiseNot struct {
+    Inner Expression
+}
+
 func (this *NamedType) String() string {
     dimensionsString := ""
     for _, dimension := range this.Dimensions {
@@ -100,6 +113,18 @@ func (this *ArrayAccess) String() string {
 
 func (this *FunctionCall) String() string {
     return fmt.Sprintf("FunctionCall(%s(%s))", this.Object.String(), joinString(this.Arguments, ", "))
+}
+
+func (this *Sign) String() string {
+    return fmt.Sprintf("Sign(%s%s)", this.Operator.Source, this.Inner.String())
+}
+
+func (this *LogicalNot) String() string {
+    return fmt.Sprintf("LogicalNot(!%s)", this.Inner.String())
+}
+
+func (this *BitwiseNot) String() string {
+    return fmt.Sprintf("BitwiseNot(~%s)", this.Inner.String())
 }
 
 func joinString(things interface{}, joiner string) string {
