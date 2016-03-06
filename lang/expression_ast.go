@@ -4,15 +4,6 @@ import (
     "fmt"
 )
 
-type Type interface {
-    String() string
-}
-
-type NamedType struct {
-    Name []*Token
-    Dimensions []Expression
-}
-
 type Expression interface {
     String() string
 }
@@ -147,18 +138,6 @@ type Conditional struct {
     Condition Expression
     TrueValue Expression
     FalseValue Expression
-}
-
-func (this *NamedType) String() string {
-    dimensionsString := ""
-    for _, dimension := range this.Dimensions {
-        if dimension == nil {
-            dimensionsString += "[]"
-        } else {
-            dimensionsString += "[" + dimension.String() + "]"
-        }
-    }
-    return joinSource(this.Name, ".") + dimensionsString
 }
 
 func (this *NameReference) String() string {

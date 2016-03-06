@@ -1,5 +1,3 @@
-(* Depends on the lexical syntax: all elements are taken from the token list *)
-
 (*
     Strict equality is done using "===", which behaves like "==" in Java. It compares
     addresses for objects, but in our language it cannot by used for any other types.
@@ -55,52 +53,13 @@ rangeOperator = ".." ;
 assignmentOperator = "**=" | "*=" | "/=" | "%=" | "+=" | "-=" | "<<=" | ">>="
     | ">>>=" | "&=" | "^=" | "|=" | "&&=" | "^^=" | "||=" | "~=" | "="  ;
 
-(*
-    Here are some examples of value initialization
-
-    # Initialization from a literal, nothing special
-    int i = 4;
-    # Constructors don't exist outside of ordinary functions
-    # Initialization is done using curly braces, and is always on the heap
-    Vec3 v = Vec3{i, 1, 2};
-
-    # In an assignment expression, we can omit the class name in the initializer
-    # This results in the variable type being used instead
-    Vec3 u = {i, 1, 2};
-
-    # We can also nest initializations, which works like assignment of the fields
-    Transform s = {{0, 3, 2}, {0, 0, 0, 1}, {1, 1, 2}};
-    # It's also possible to use labels so we can reorder (but can't partially label)
-    Transform t = {scale: {1, 1, 2}, rot: {0, 0, 0, 1}, pos: {x: 1, y: 1, z: 2}};
-
-    # Initializers work basically the same for arrays, but no labeling is allowed
-    int[] a = {1, 2, 3, 5};
-    int[][] b = {{1}, {}};
-
-    # To distinguish between array initialization and indexing operations
-    # we must always include the curly braces.
-    # Missing elements use the default value for the type.
-    Vec3[4] {} == {0, 0, 0, 0}
-    Vec3[2] {3, 1} == {3, 1}
-    Vec3[1][2] {{2}, {}} == {{2}, {0}}
-    Vec3[][2] {a} == {{1, 2, 3, 5} {}}
-
-    # When no sizes are given for arrays, the initializer size is used
-    Vec3[] {1, 2, 3}.length == 3
-*)
-
 (* Field access is like: anObject.aField *)
 fieldAccess = access, ".", identifierToken ;
 (* Array access is like: anArray[anIndex] *)
-arrayAccess = access, arraySize ;
-variableAccess = name | fieldAccess | arrayAccess ;
+arrayAccess = access, "[", expression, "]" ;
 
-(* Assignment aren't expressions in this language *)
-assignment = variableAccess,
-    ((assignmentOperator, expression) | ("=", compositeLiteral)) ;
-
+(* Supports C style calls, but also infix *)
 expressionList = expression, {",", expression} ;
-
 callArguments = "(", [expressionList], ")" ;
 
 (* Composite literal can be made up of expressions or other composite literals,
@@ -110,23 +69,6 @@ compositeLiteralBody = compositeLiteralPart, {",", compositeLiteralPart} ;
 
 (* Composite literals are like: {"guy", 19}, {name: "guy", age: 19} *)
 compositeLiteral = "{", [compositeLiteralBody], "}" ;
-
-(* Array notation is like D and reversed compared to Java.
-    int[1][2] is an array of 2 arrays of 1 integer.
-    We can also have unsized arrays which, like int[][2],
-    which means an array of 2 integer arrays. *)
-arrayUnsized = "[", "]" ;
-arraySized = "[", expression, "]" ;
-arrayDimension = arrayUnsized | arraySized ;
-
-(* Names are just "." separated list of identifiers. They represent packages, class
-    names, fields and/or variables. These need to be disambiguated later. *)
-name = identifierToken, {".", identifierToken} ;
-
-(* Named types are names with optional array dimensions *)
-namedType = name, {arrayDimension} ;
-
-type = namedType ;
 
 (* An initializer for a value is a named type with a composite literal*)
 initializer = namedType, compositeLiteral ;
