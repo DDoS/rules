@@ -40,17 +40,17 @@ type ContextFieldAccess struct {
 }
 
 type FieldAccess struct {
-    Object Expression
+    Value Expression
     Name *Token
 }
 
 type ArrayAccess struct {
-    Object Expression
+    Value Expression
     Index Expression
 }
 
 type FunctionCall struct {
-    Object Expression
+    Value Expression
     Arguments []Expression
 }
 
@@ -65,6 +65,11 @@ type LogicalNot struct {
 
 type BitwiseNot struct {
     Inner Expression
+}
+
+type Exponent struct {
+    Value Expression
+    Exponent Expression
 }
 
 func (this *NamedType) String() string {
@@ -104,15 +109,15 @@ func (this *ContextFieldAccess) String() string {
 }
 
 func (this *FieldAccess) String() string {
-    return fmt.Sprintf("FieldAccess(%s.%s)", this.Object.String(), this.Name.Source)
+    return fmt.Sprintf("FieldAccess(%s.%s)", this.Value.String(), this.Name.Source)
 }
 
 func (this *ArrayAccess) String() string {
-    return fmt.Sprintf("ArrayAccess(%s[%s])", this.Object.String(), this.Index.String())
+    return fmt.Sprintf("ArrayAccess(%s[%s])", this.Value.String(), this.Index.String())
 }
 
 func (this *FunctionCall) String() string {
-    return fmt.Sprintf("FunctionCall(%s(%s))", this.Object.String(), joinString(this.Arguments, ", "))
+    return fmt.Sprintf("FunctionCall(%s(%s))", this.Value.String(), joinString(this.Arguments, ", "))
 }
 
 func (this *Sign) String() string {
@@ -125,6 +130,10 @@ func (this *LogicalNot) String() string {
 
 func (this *BitwiseNot) String() string {
     return fmt.Sprintf("BitwiseNot(~%s)", this.Inner.String())
+}
+
+func (this *Exponent) String() string {
+    return fmt.Sprintf("Exponent(%s ** %s)", this.Value.String(), this.Exponent.String())
 }
 
 func joinString(things interface{}, joiner string) string {

@@ -86,3 +86,18 @@ func TestParseUnary(t *testing.T) {
         lang.ParseExpression(lang.StringTokenizer("-\"test\".length")).String(),
     )
 }
+
+func TestParseExponent(t *testing.T) {
+    assert.Equal(t,
+        "Exponent(test ** DecimalIntegerLiteral(12))",
+        lang.ParseExpression(lang.StringTokenizer("test ** 12")).String(),
+    )
+    assert.Equal(t,
+        "Exponent(Exponent(test ** another) ** more)",
+        lang.ParseExpression(lang.StringTokenizer("test ** another ** more")).String(),
+    )
+    assert.Equal(t,
+        "Exponent(FieldAccess(StringLiteral(\"1\").length) ** Sign(-DecimalIntegerLiteral(2)))",
+        lang.ParseExpression(lang.StringTokenizer("\"1\".length ** -2")).String(),
+    )
+}

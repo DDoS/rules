@@ -140,7 +140,7 @@ func parseAccess(tokens *Tokenizer) Expression {
     return parseAccessOn(tokens, parseAtom(tokens))
 }
 
-func parseAccessOn(tokens *Tokenizer, object Expression) Expression {
+func parseAccessOn(tokens *Tokenizer, value Expression) Expression {
     if tokens.Head().Is(".") {
         tokens.Advance()
         if tokens.Head().Kind != IDENTIFIER {
@@ -148,7 +148,7 @@ func parseAccessOn(tokens *Tokenizer, object Expression) Expression {
         }
         name := tokens.Head()
         tokens.Advance()
-        return parseAccessOn(tokens, &FieldAccess{object, name})
+        return parseAccessOn(tokens, &FieldAccess{value, name})
     }
     if tokens.Head().Is("[") {
         tokens.Advance()
@@ -157,7 +157,7 @@ func parseAccessOn(tokens *Tokenizer, object Expression) Expression {
             panic("Expected ']'")
         }
         tokens.Advance()
-        return parseAccessOn(tokens, &ArrayAccess{object, index})
+        return parseAccessOn(tokens, &ArrayAccess{value, index})
     }
     if tokens.Head().Is("(") {
         tokens.Advance()
@@ -172,11 +172,11 @@ func parseAccessOn(tokens *Tokenizer, object Expression) Expression {
             }
             tokens.Advance()
         }
-        return parseAccessOn(tokens, &FunctionCall{object, arguments})
+        return parseAccessOn(tokens, &FunctionCall{value, arguments})
     }
     // Disambiguate between a float without decimal digits
     // and an integer with a field access
-    token, ok := object.(*Token)
+    token, ok := value.(*Token)
     if ok && token.Kind == FLOAT_LITERAL && tokens.Head().Kind == IDENTIFIER &&
             token.Source[len(token.Source) - 1] == '.' {
         name := tokens.Head()
@@ -186,7 +186,7 @@ func parseAccessOn(tokens *Tokenizer, object Expression) Expression {
         decimalInt := &Token{token.Source[:len(token.Source) - 1], DECIMAL_INTEGER_LITERAL}
         return parseAccessOn(tokens, &FieldAccess{decimalInt, name})
     }
-    return object
+    return value
 }
 
 func parseUnary(tokens *Tokenizer) Expression {
@@ -211,8 +211,21 @@ func parseUnary(tokens *Tokenizer) Expression {
     }
 }
 
+func parseExponent(tokens *Tokenizer) Expression {
+    return parseExponentOn(tokens, parseUnary(tokens))
+}
+
+func parseExponentOn(tokens *Tokenizer, value Expression) Expression {
+    if tokens.Head().Is("**") {
+        tokens.Advance()
+        exponent := parseUnary(tokens)
+        return parseExponentOn(tokens, &Exponent{value, exponent})
+    }
+    return value
+}
+
 func ParseExpression(tokens *Tokenizer) Expression {
-    return parseUnary(tokens)
+    return parseExponent(tokens)
 }
 
 func parseExpressionList(tokens *Tokenizer) []Expression {
