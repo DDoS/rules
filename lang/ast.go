@@ -101,6 +101,21 @@ type Compare struct {
     Operators []*Token
 }
 
+type BitwiseAnd struct {
+    Left Expression
+    Right Expression
+}
+
+type BitwiseXor struct {
+    Left Expression
+    Right Expression
+}
+
+type BitwiseOr struct {
+    Left Expression
+    Right Expression
+}
+
 func (this *NamedType) String() string {
     dimensionsString := ""
     for _, dimension := range this.Dimensions {
@@ -188,6 +203,18 @@ func (this *Compare) String() string {
     }
     s += fmt.Sprintf("%s)", this.Values[len(this.Values) - 1].String())
     return s
+}
+
+func (this *BitwiseAnd) String() string {
+    return fmt.Sprintf("BitwiseAnd(%s & %s)", this.Left.String(), this.Right.String())
+}
+
+func (this *BitwiseXor) String() string {
+    return fmt.Sprintf("BitwiseXor(%s ^ %s)", this.Left.String(), this.Right.String())
+}
+
+func (this *BitwiseOr) String() string {
+    return fmt.Sprintf("BitwiseOr(%s | %s)", this.Left.String(), this.Right.String())
 }
 
 func joinString(things interface{}, joiner string) string {

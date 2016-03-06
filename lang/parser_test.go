@@ -180,3 +180,48 @@ func TestParseCompare(t *testing.T) {
         lang.ParseExpression(lang.StringTokenizer("u + v <= j - l < a log b")).String(),
     )
 }
+
+func TestParseBitwiseAnd(t *testing.T) {
+    assert.Equal(t,
+        "BitwiseAnd(u & v)",
+        lang.ParseExpression(lang.StringTokenizer("u & v")).String(),
+    )
+    assert.Equal(t,
+        "BitwiseAnd(BitwiseAnd(u & v) & w)",
+        lang.ParseExpression(lang.StringTokenizer("u & v & w")).String(),
+    )
+    assert.Equal(t,
+        "BitwiseAnd(Compare(u == m) & Compare(v != w))",
+        lang.ParseExpression(lang.StringTokenizer("u == m & v != w")).String(),
+    )
+}
+
+func TestParseBitwiseXor(t *testing.T) {
+    assert.Equal(t,
+        "BitwiseXor(u ^ v)",
+        lang.ParseExpression(lang.StringTokenizer("u ^ v")).String(),
+    )
+    assert.Equal(t,
+        "BitwiseXor(BitwiseXor(u ^ v) ^ w)",
+        lang.ParseExpression(lang.StringTokenizer("u ^ v ^ w")).String(),
+    )
+    assert.Equal(t,
+        "BitwiseXor(BitwiseAnd(u & m) ^ BitwiseAnd(v & w))",
+        lang.ParseExpression(lang.StringTokenizer("u & m ^ v & w")).String(),
+    )
+}
+
+func TestParseBitwiseOr(t *testing.T) {
+    assert.Equal(t,
+        "BitwiseOr(u | v)",
+        lang.ParseExpression(lang.StringTokenizer("u | v")).String(),
+    )
+    assert.Equal(t,
+        "BitwiseOr(BitwiseOr(u | v) | w)",
+        lang.ParseExpression(lang.StringTokenizer("u | v | w")).String(),
+    )
+    assert.Equal(t,
+        "BitwiseOr(BitwiseXor(u ^ m) | BitwiseXor(v ^ w))",
+        lang.ParseExpression(lang.StringTokenizer("u ^ m | v ^ w")).String(),
+    )
+}

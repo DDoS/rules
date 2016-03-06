@@ -296,8 +296,47 @@ func parseCompare(tokens *Tokenizer) Expression {
     return &Compare{values, operators}
 }
 
+func parseBitwiseAnd(tokens *Tokenizer) Expression {
+    return parseBitwiseAndOn(tokens, parseCompare(tokens))
+}
+
+func parseBitwiseAndOn(tokens *Tokenizer, left Expression) Expression {
+    if tokens.Head().Is("&") {
+        tokens.Advance()
+        right := parseCompare(tokens)
+        return parseBitwiseAndOn(tokens, &BitwiseAnd{left, right})
+    }
+    return left
+}
+
+func parseBitwiseXor(tokens *Tokenizer) Expression {
+    return parseBitwiseXorOn(tokens, parseBitwiseAnd(tokens))
+}
+
+func parseBitwiseXorOn(tokens *Tokenizer, left Expression) Expression {
+    if tokens.Head().Is("^") {
+        tokens.Advance()
+        right := parseBitwiseAnd(tokens)
+        return parseBitwiseXorOn(tokens, &BitwiseXor{left, right})
+    }
+    return left
+}
+
+func parseBitwiseOr(tokens *Tokenizer) Expression {
+    return parseBitwiseOrOn(tokens, parseBitwiseXor(tokens))
+}
+
+func parseBitwiseOrOn(tokens *Tokenizer, left Expression) Expression {
+    if tokens.Head().Is("|") {
+        tokens.Advance()
+        right := parseBitwiseXor(tokens)
+        return parseBitwiseOrOn(tokens, &BitwiseOr{left, right})
+    }
+    return left
+}
+
 func ParseExpression(tokens *Tokenizer) Expression {
-    return parseCompare(tokens)
+    return parseBitwiseOr(tokens)
 }
 
 func parseExpressionList(tokens *Tokenizer) []Expression {
