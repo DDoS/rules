@@ -41,6 +41,7 @@ lineComment = "#", {printChar | lineWsChar} ;
 (* Count of "#" as prefix and suffix needs to be the same
     This allows comment nesting *)
 blockComment = "##", {"#"}, {printChar | wsChar}, "##", {"#"} ;
+(* TODO: expect a new line after a block comment? *)
 
 (* Comments, line white space and escaped new lines are ignored by the lexer *)
 ignored = lineWsChar | lineComment | blockComment

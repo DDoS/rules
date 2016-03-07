@@ -9,345 +9,353 @@ import (
 func TestParseAtom(t *testing.T) {
     assert.Equal(t,
         "test",
-        lang.ParseExpression(lang.StringTokenizer("test")).String(),
+        parseTestExpression("test"),
     )
     assert.Equal(t,
         "ContextFieldAccess(.test)",
-        lang.ParseExpression(lang.StringTokenizer(".test")).String(),
+        parseTestExpression(".test"),
     )
     assert.Equal(t,
         "test.name",
-        lang.ParseExpression(lang.StringTokenizer("(test.name)")).String(),
+        parseTestExpression("(test.name)"),
     )
     assert.Equal(t,
         "Initializer(hello{test.name, label: other.thing})",
-        lang.ParseExpression(lang.StringTokenizer("hello{test.name, label: other.thing}")).String(),
+        parseTestExpression("hello{test.name, label: other.thing}"),
     )
     assert.Equal(t,
         "Initializer(hello{2: test, 0xf1a: other, 0b00100: more})",
-        lang.ParseExpression(lang.StringTokenizer("hello{2: test, 0xf1a: other, 0b00100: more}")).String(),
+        parseTestExpression("hello{2: test, 0xf1a: other, 0b00100: more}"),
     )
     assert.Equal(t,
         "Initializer(test[]{DecimalIntegerLiteral(1), StringLiteral(\"2\"), CompositeLiteral({hey: FloatLiteral(2.1)})})",
-        lang.ParseExpression(lang.StringTokenizer("test[] {1, \"2\", {hey: 2.1}}")).String(),
+        parseTestExpression("test[] {1, \"2\", {hey: 2.1}}"),
     )
 }
 
 func TestParseAccess(t *testing.T) {
     assert.Equal(t,
         "FieldAccess(StringLiteral(\"test\").length)",
-        lang.ParseExpression(lang.StringTokenizer("\"test\".length")).String(),
+        parseTestExpression("\"test\".length"),
     )
     assert.Equal(t,
         "FieldAccess(FieldAccess(DecimalIntegerLiteral(5).ucc).test)",
-        lang.ParseExpression(lang.StringTokenizer("5.ucc.test")).String(),
+        parseTestExpression("5.ucc.test"),
     )
     assert.Equal(t,
         "FieldAccess(FieldAccess(HexadecimalIntegerLiteral(0xf).ucc).test)",
-        lang.ParseExpression(lang.StringTokenizer("0xf.ucc.test")).String(),
+        parseTestExpression("0xf.ucc.test"),
     )
     assert.Equal(t,
         "FieldAccess(FieldAccess(FloatLiteral(5.).ucc).test)",
-        lang.ParseExpression(lang.StringTokenizer("5..ucc.test")).String(),
+        parseTestExpression("5..ucc.test"),
     )
     assert.Equal(t,
         "ArrayAccess(StringLiteral(\"test\")[DecimalIntegerLiteral(2)])",
-        lang.ParseExpression(lang.StringTokenizer("\"test\"[2]")).String(),
+        parseTestExpression("\"test\"[2]"),
     )
     assert.Equal(t,
         "FunctionCall(FieldAccess(StringLiteral(\"test\").len)())",
-        lang.ParseExpression(lang.StringTokenizer("\"test\".len()")).String(),
+        parseTestExpression("\"test\".len()"),
     )
     assert.Equal(t,
         "FunctionCall(FieldAccess(StringLiteral(\"test\").substring)(DecimalIntegerLiteral(1), DecimalIntegerLiteral(3)))",
-        lang.ParseExpression(lang.StringTokenizer("\"test\".substring(1, 3)")).String(),
+        parseTestExpression("\"test\".substring(1, 3)"),
     )
 }
 
 func TestParseUnary(t *testing.T) {
     assert.Equal(t,
         "Sign(+test)",
-        lang.ParseExpression(lang.StringTokenizer("+test")).String(),
+        parseTestExpression("+test"),
     )
     assert.Equal(t,
         "Sign(+Sign(+test))",
-        lang.ParseExpression(lang.StringTokenizer("++test")).String(),
+        parseTestExpression("++test"),
     )
     assert.Equal(t,
         "Sign(+Sign(-test))",
-        lang.ParseExpression(lang.StringTokenizer("+-test")).String(),
+        parseTestExpression("+-test"),
     )
     assert.Equal(t,
         "LogicalNot(!test)",
-        lang.ParseExpression(lang.StringTokenizer("!test")).String(),
+        parseTestExpression("!test"),
     )
     assert.Equal(t,
         "BitwiseNot(~test)",
-        lang.ParseExpression(lang.StringTokenizer("~test")).String(),
+        parseTestExpression("~test"),
     )
     assert.Equal(t,
         "Sign(-FieldAccess(StringLiteral(\"test\").length))",
-        lang.ParseExpression(lang.StringTokenizer("-\"test\".length")).String(),
+        parseTestExpression("-\"test\".length"),
     )
 }
 
 func TestParseExponent(t *testing.T) {
     assert.Equal(t,
         "Exponent(test ** DecimalIntegerLiteral(12))",
-        lang.ParseExpression(lang.StringTokenizer("test ** 12")).String(),
+        parseTestExpression("test ** 12"),
     )
     assert.Equal(t,
         "Exponent(Exponent(test ** another) ** more)",
-        lang.ParseExpression(lang.StringTokenizer("test ** another ** more")).String(),
+        parseTestExpression("test ** another ** more"),
     )
     assert.Equal(t,
         "Exponent(FieldAccess(StringLiteral(\"1\").length) ** Sign(-DecimalIntegerLiteral(2)))",
-        lang.ParseExpression(lang.StringTokenizer("\"1\".length ** -2")).String(),
+        parseTestExpression("\"1\".length ** -2"),
     )
 }
 
 func TestParseInfix(t *testing.T) {
     assert.Equal(t,
         "Infix(u x v)",
-        lang.ParseExpression(lang.StringTokenizer("u x v")).String(),
+        parseTestExpression("u x v"),
     )
     assert.Equal(t,
         "Infix(Infix(u cross v) dot w)",
-        lang.ParseExpression(lang.StringTokenizer("u cross v dot w")).String(),
+        parseTestExpression("u cross v dot w"),
     )
     assert.Equal(t,
         "Infix(Sign(-u) x Exponent(v ** w))",
-        lang.ParseExpression(lang.StringTokenizer("-u x v ** w")).String(),
+        parseTestExpression("-u x v ** w"),
     )
 }
 
 func TestParseMultiply(t *testing.T) {
     assert.Equal(t,
         "Multiply(u * v)",
-        lang.ParseExpression(lang.StringTokenizer("u * v")).String(),
+        parseTestExpression("u * v"),
     )
     assert.Equal(t,
         "Multiply(Multiply(u / v) % w)",
-        lang.ParseExpression(lang.StringTokenizer("u / v % w")).String(),
+        parseTestExpression("u / v % w"),
     )
     assert.Equal(t,
         "Multiply(Infix(u log m) * Infix(v ln w))",
-        lang.ParseExpression(lang.StringTokenizer("u log m * v ln w")).String(),
+        parseTestExpression("u log m * v ln w"),
     )
 }
 
 func TestParseAdd(t *testing.T) {
     assert.Equal(t,
         "Add(u + v)",
-        lang.ParseExpression(lang.StringTokenizer("u + v")).String(),
+        parseTestExpression("u + v"),
     )
     assert.Equal(t,
         "Add(Add(u - v) + w)",
-        lang.ParseExpression(lang.StringTokenizer("u - v + w")).String(),
+        parseTestExpression("u - v + w"),
     )
     assert.Equal(t,
         "Add(Multiply(u * m) + Multiply(v / w))",
-        lang.ParseExpression(lang.StringTokenizer("u * m + v / w")).String(),
+        parseTestExpression("u * m + v / w"),
     )
 }
 
 func TestParseShift(t *testing.T) {
     assert.Equal(t,
         "Shift(u << v)",
-        lang.ParseExpression(lang.StringTokenizer("u << v")).String(),
+        parseTestExpression("u << v"),
     )
     assert.Equal(t,
         "Shift(Shift(u << v) >> w)",
-        lang.ParseExpression(lang.StringTokenizer("u << v >> w")).String(),
+        parseTestExpression("u << v >> w"),
     )
     assert.Equal(t,
         "Shift(Add(u - m) >>> Add(v + w))",
-        lang.ParseExpression(lang.StringTokenizer("u - m >>> v + w")).String(),
+        parseTestExpression("u - m >>> v + w"),
     )
 }
 
 func TestParseCompare(t *testing.T) {
     assert.Equal(t,
         "Compare(u == v)",
-        lang.ParseExpression(lang.StringTokenizer("u == v")).String(),
+        parseTestExpression("u == v"),
     )
     assert.Equal(t,
         "Compare(u < v < w)",
-        lang.ParseExpression(lang.StringTokenizer("u < v < w")).String(),
+        parseTestExpression("u < v < w"),
     )
     assert.Equal(t,
         "Compare(a == b < c > d <= e >= f :: g)",
-        lang.ParseExpression(lang.StringTokenizer("a == b < c > d <= e >= f :: g")).String(),
+        parseTestExpression("a == b < c > d <= e >= f :: g"),
     )
     assert.Equal(t,
         "Compare(a !: g)",
-        lang.ParseExpression(lang.StringTokenizer("a !: g")).String(),
+        parseTestExpression("a !: g"),
     )
     assert.Equal(t,
         "Compare(a <: g)",
-        lang.ParseExpression(lang.StringTokenizer("a <: g")).String(),
+        parseTestExpression("a <: g"),
     )
     assert.Equal(t,
         "Compare(a >: g)",
-        lang.ParseExpression(lang.StringTokenizer("a >: g")).String(),
+        parseTestExpression("a >: g"),
     )
     assert.Equal(t,
         "Compare(a <<: g)",
-        lang.ParseExpression(lang.StringTokenizer("a <<: g")).String(),
+        parseTestExpression("a <<: g"),
     )
     assert.Equal(t,
         "Compare(a >>: g)",
-        lang.ParseExpression(lang.StringTokenizer("a >>: g")).String(),
+        parseTestExpression("a >>: g"),
     )
     assert.Equal(t,
         "Compare(a <:> g[])",
-        lang.ParseExpression(lang.StringTokenizer("a <:> g[]")).String(),
+        parseTestExpression("a <:> g[]"),
     )
     assert.Equal(t,
         "Compare(a == Compare(b < c > d) != Compare(e >= f))",
-        lang.ParseExpression(lang.StringTokenizer("a == (b < c > d) != (e >= f)")).String(),
+        parseTestExpression("a == (b < c > d) != (e >= f)"),
     )
     assert.Equal(t,
         "Compare(Add(u + v) <= Add(j - l) < Infix(a log b))",
-        lang.ParseExpression(lang.StringTokenizer("u + v <= j - l < a log b")).String(),
+        parseTestExpression("u + v <= j - l < a log b"),
     )
 }
 
 func TestParseBitwiseAnd(t *testing.T) {
     assert.Equal(t,
         "BitwiseAnd(u & v)",
-        lang.ParseExpression(lang.StringTokenizer("u & v")).String(),
+        parseTestExpression("u & v"),
     )
     assert.Equal(t,
         "BitwiseAnd(BitwiseAnd(u & v) & w)",
-        lang.ParseExpression(lang.StringTokenizer("u & v & w")).String(),
+        parseTestExpression("u & v & w"),
     )
     assert.Equal(t,
         "BitwiseAnd(Compare(u == m) & Compare(v != w))",
-        lang.ParseExpression(lang.StringTokenizer("u == m & v != w")).String(),
+        parseTestExpression("u == m & v != w"),
     )
 }
 
 func TestParseBitwiseXor(t *testing.T) {
     assert.Equal(t,
         "BitwiseXor(u ^ v)",
-        lang.ParseExpression(lang.StringTokenizer("u ^ v")).String(),
+        parseTestExpression("u ^ v"),
     )
     assert.Equal(t,
         "BitwiseXor(BitwiseXor(u ^ v) ^ w)",
-        lang.ParseExpression(lang.StringTokenizer("u ^ v ^ w")).String(),
+        parseTestExpression("u ^ v ^ w"),
     )
     assert.Equal(t,
         "BitwiseXor(BitwiseAnd(u & m) ^ BitwiseAnd(v & w))",
-        lang.ParseExpression(lang.StringTokenizer("u & m ^ v & w")).String(),
+        parseTestExpression("u & m ^ v & w"),
     )
 }
 
 func TestParseBitwiseOr(t *testing.T) {
     assert.Equal(t,
         "BitwiseOr(u | v)",
-        lang.ParseExpression(lang.StringTokenizer("u | v")).String(),
+        parseTestExpression("u | v"),
     )
     assert.Equal(t,
         "BitwiseOr(BitwiseOr(u | v) | w)",
-        lang.ParseExpression(lang.StringTokenizer("u | v | w")).String(),
+        parseTestExpression("u | v | w"),
     )
     assert.Equal(t,
         "BitwiseOr(BitwiseXor(u ^ m) | BitwiseXor(v ^ w))",
-        lang.ParseExpression(lang.StringTokenizer("u ^ m | v ^ w")).String(),
+        parseTestExpression("u ^ m | v ^ w"),
     )
 }
 
 func TestParseLogicalAnd(t *testing.T) {
     assert.Equal(t,
         "LogicalAnd(u && v)",
-        lang.ParseExpression(lang.StringTokenizer("u && v")).String(),
+        parseTestExpression("u && v"),
     )
     assert.Equal(t,
         "LogicalAnd(LogicalAnd(u && v) && w)",
-        lang.ParseExpression(lang.StringTokenizer("u && v && w")).String(),
+        parseTestExpression("u && v && w"),
     )
     assert.Equal(t,
         "LogicalAnd(BitwiseOr(u | m) && BitwiseOr(v | w))",
-        lang.ParseExpression(lang.StringTokenizer("u | m && v | w")).String(),
+        parseTestExpression("u | m && v | w"),
     )
 }
 
 func TestParseLogicalXor(t *testing.T) {
     assert.Equal(t,
         "LogicalXor(u ^^ v)",
-        lang.ParseExpression(lang.StringTokenizer("u ^^ v")).String(),
+        parseTestExpression("u ^^ v"),
     )
     assert.Equal(t,
         "LogicalXor(LogicalXor(u ^^ v) ^^ w)",
-        lang.ParseExpression(lang.StringTokenizer("u ^^ v ^^ w")).String(),
+        parseTestExpression("u ^^ v ^^ w"),
     )
     assert.Equal(t,
         "LogicalXor(LogicalAnd(u && m) ^^ LogicalAnd(v && w))",
-        lang.ParseExpression(lang.StringTokenizer("u && m ^^ v && w")).String(),
+        parseTestExpression("u && m ^^ v && w"),
     )
 }
 
 func TestParseLogicalOr(t *testing.T) {
     assert.Equal(t,
         "LogicalOr(u || v)",
-        lang.ParseExpression(lang.StringTokenizer("u || v")).String(),
+        parseTestExpression("u || v"),
     )
     assert.Equal(t,
         "LogicalOr(LogicalOr(u || v) || w)",
-        lang.ParseExpression(lang.StringTokenizer("u || v || w")).String(),
+        parseTestExpression("u || v || w"),
     )
     assert.Equal(t,
         "LogicalOr(LogicalXor(u ^^ m) || LogicalXor(v ^^ w))",
-        lang.ParseExpression(lang.StringTokenizer("u ^^ m || v ^^ w")).String(),
+        parseTestExpression("u ^^ m || v ^^ w"),
     )
 }
 
 func TestParseConcatenate(t *testing.T) {
     assert.Equal(t,
         "Concatenate(u ~ v)",
-        lang.ParseExpression(lang.StringTokenizer("u ~ v")).String(),
+        parseTestExpression("u ~ v"),
     )
     assert.Equal(t,
         "Concatenate(Concatenate(u ~ v) ~ w)",
-        lang.ParseExpression(lang.StringTokenizer("u ~ v ~ w")).String(),
+        parseTestExpression("u ~ v ~ w"),
     )
     assert.Equal(t,
         "Concatenate(LogicalOr(u || m) ~ LogicalOr(v || w))",
-        lang.ParseExpression(lang.StringTokenizer("u || m ~ v || w")).String(),
+        parseTestExpression("u || m ~ v || w"),
     )
 }
 
 func TestParseRange(t *testing.T) {
     assert.Equal(t,
         "Range(u .. v)",
-        lang.ParseExpression(lang.StringTokenizer("u .. v")).String(),
+        parseTestExpression("u .. v"),
     )
     assert.Equal(t,
         "Range(u .. v)",
-        lang.ParseExpression(lang.StringTokenizer("u..v")).String(),
+        parseTestExpression("u..v"),
     )
     assert.Equal(t,
         "Range(Range(u .. v) .. w)",
-        lang.ParseExpression(lang.StringTokenizer("u .. v .. w")).String(),
+        parseTestExpression("u .. v .. w"),
     )
     assert.Equal(t,
         "Range(Concatenate(u ~ m) .. Concatenate(v ~ w))",
-        lang.ParseExpression(lang.StringTokenizer("u ~ m .. v ~ w")).String(),
+        parseTestExpression("u ~ m .. v ~ w"),
     )
 }
 
 func TestParseConditional(t *testing.T) {
     assert.Equal(t,
         "Conditional(u if v else w)",
-        lang.ParseExpression(lang.StringTokenizer("u if v else w")).String(),
+        parseTestExpression("u if v else w"),
     )
     assert.Equal(t,
         "Conditional(Conditional(a if b else c) if Conditional(d if e else f) else Conditional(g if h else j))",
-        lang.ParseExpression(lang.StringTokenizer("(a if b else c) if (d if e else f) else (g if h else j)")).String(),
+        parseTestExpression("(a if b else c) if (d if e else f) else (g if h else j)"),
     )
     assert.Equal(t,
         "Conditional(Range(a .. b) if Range(c .. d) else Range(e .. f))",
-        lang.ParseExpression(lang.StringTokenizer("a .. b if c .. d else e .. f")).String(),
+        parseTestExpression("a .. b if c .. d else e .. f"),
     )
+}
+
+func parseTestExpression(source string) string {
+    tokenizer := lang.StringTokenizer(source);
+    if tokenizer.Head().Kind == lang.INDENTATION {
+        tokenizer.Advance()
+    }
+    return lang.ParseExpression(tokenizer).String()
 }

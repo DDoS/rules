@@ -47,3 +47,20 @@ func TestFunctionCall(t *testing.T) {
         lang.ParseStatment(lang.StringTokenizer("(2 log b).test()")).String(),
     )
 }
+
+func TestParseStatments(t *testing.T) {
+    assert.Equal(t,
+        "FunctionCall(a()); Assignment(a = DecimalIntegerLiteral(1)); FunctionCall(a.b()); Assignment(a.b *= v)",
+        toString(lang.ParseStatments(lang.StringTokenizer("a()\na = 1; a.b();\n\t\ra.b *= v"))),
+    )
+}
+
+func toString(statements []lang.Statement) string {
+    s := ""
+    length := len(statements) - 1
+    for i := 0; i < length; i++ {
+        s += statements[i].String() + "; "
+    }
+    s += statements[length].String()
+    return s
+}

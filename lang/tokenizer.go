@@ -46,11 +46,9 @@ func (this *Tokenizer) DiscardPosition() {
 func (this *Tokenizer) next() *Token {
     var token *Token = EofToken
     if (this.firstToken) {
-        // First token can be indentation, which in this case
+        // First token is indentation, which in this case
         // is not after a new line
-        if isLineWhiteSpace(this.chars.Head()) {
-            token = Indentation(collectIndentation(this.chars))
-        }
+        token = Indentation(collectIndentation(this.chars))
         for consumeIgnored(this.chars) {
             // Remove trailing comments and whitespace
         }
@@ -59,10 +57,8 @@ func (this *Tokenizer) next() *Token {
     for this.chars.Has() && token == EofToken {
         if isNewLineChar(this.chars.Head()) {
             consumeNewLine(this.chars)
-            // Just after a new line, try to consume indentation
-            if isLineWhiteSpace(this.chars.Head()) {
-                token = Indentation(collectIndentation(this.chars))
-            }
+            // Just after a new line, consume indentation of next line
+            token = Indentation(collectIndentation(this.chars))
         } else if this.chars.Head() == ';' {
             // A terminator breaks a line but doesn't need indentation
             this.chars.Advance()
