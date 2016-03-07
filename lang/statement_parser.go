@@ -1,8 +1,8 @@
 package lang
 
-func parseAssigmnent(tokens *Tokenizer) Statement {
+func parseAssigmnentOrFunctionCall(tokens *Tokenizer) Statement {
     access := parseAccess(tokens)
-    switch access.(type) {
+    switch t := access.(type) {
     case *NameReference:
         break
     case *ContextFieldAccess:
@@ -11,6 +11,8 @@ func parseAssigmnent(tokens *Tokenizer) Statement {
         break
     case *ArrayAccess:
         break
+    case *FunctionCall:
+        return t
     default:
         panic("Not a reference expression")
     }
@@ -19,15 +21,12 @@ func parseAssigmnent(tokens *Tokenizer) Statement {
     }
     operator := tokens.Head()
     tokens.Advance()
-    var assignment Statement
     if operator.Is("=") && tokens.Head().Is("{") {
-        assignment = &InitializerAssignment{access, parseCompositeLiteral(tokens)}
-    } else {
-        assignment = &Assignment{access, operator, ParseExpression(tokens)}
+        return &InitializerAssignment{access, parseCompositeLiteral(tokens)}
     }
-    return assignment
+    return &Assignment{access, operator, ParseExpression(tokens)}
 }
 
 func ParseStatment(tokens *Tokenizer) Statement {
-    return parseAssigmnent(tokens)
+    return parseAssigmnentOrFunctionCall(tokens)
 }

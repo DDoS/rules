@@ -61,6 +61,7 @@ arrayAccess = access, "[", expression, "]" ;
 (* Supports C style calls, but also infix *)
 expressionList = expression, {",", expression} ;
 callArguments = "(", [expressionList], ")" ;
+functionCall = access, callArguments ;
 
 (* Composite literal can be made up of expressions or other composite literals,
     with optional labels *)
@@ -101,7 +102,7 @@ atom = ("(", expression, ")") | literalToken | name
 *)
 
 (* ".", "[]", "()" *)
-access = fieldAccess | arrayAccess | (access, callArguments) | atom ;
+access = fieldAccess | arrayAccess | functionCall | atom ;
 
 (* "+", "-", "!", "~" *)
 unary = (unaryOperator, unary) | access ;

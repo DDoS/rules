@@ -36,3 +36,5 @@
 referenceExpression = name | fieldAccess | arrayAccess ;
 assignment = referenceExpression,
     ((assignmentOperator, expression) | ("=", compositeLiteral)) ;
+
+statement = assignment | functionCall ;
