@@ -30,8 +30,6 @@
 
     The conditional operator use the "trueValue if someCondition else falseValue" instead
     of the C version "someCondition ? trueValue : falseValue" This makes it more readable.
-    The syntax also prevents nesting without using parentheses, in an attempt to improve
-    readability (just one level of nesting C like conditionals is difficult to read).
 *)
 
 unaryOperator = "+" | "-" | "!" | "~" ;
@@ -151,7 +149,7 @@ concatenate = (concatenate, concatenateOperator, logicalOr) | logicalOr ;
 range = (range, rangeOperator, concatenate) | concatenate ;
 
 (* "... if ... else ... " *)
-conditional = (range, "if", range, "else", range) | range ;
+conditional = (range, "if", range, "else", conditional) | range ;
 
 (* Not the usual assignment, since it is not an expression *)
 expression = conditional ;

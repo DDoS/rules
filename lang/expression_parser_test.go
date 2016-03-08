@@ -343,6 +343,10 @@ func TestParseConditional(t *testing.T) {
         parseTestExpression("u if v else w"),
     )
     assert.Equal(t,
+        "Conditional(u if v else Conditional(w if x else y))",
+        parseTestExpression("u if v else w if x else y"),
+    )
+    assert.Equal(t,
         "Conditional(Conditional(a if b else c) if Conditional(d if e else f) else Conditional(g if h else j))",
         parseTestExpression("(a if b else c) if (d if e else f) else (g if h else j)"),
     )

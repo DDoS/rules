@@ -377,7 +377,7 @@ func parseConditional(tokens *Tokenizer) Expression {
         panic("Expected \"else\"")
     }
     tokens.Advance()
-    falseValue := parseRange(tokens)
+    falseValue := parseConditional(tokens)
     return &Conditional{condition, trueValue, falseValue}
 }
 
