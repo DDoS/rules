@@ -1,7 +1,11 @@
 package lang
 
+import (
+    "os"
+)
+
 type Tokenizer struct {
-    chars RuneStream
+    chars *RuneReader
     head []*Token
     position int
     savedPositions []int
@@ -9,7 +13,11 @@ type Tokenizer struct {
 }
 
 func StringTokenizer(source string) *Tokenizer {
-    return &Tokenizer{chars: &StringRuneStream{source: source}, position: 0, firstToken: true}
+    return &Tokenizer{chars: StringRuneReader(source), firstToken: true}
+}
+
+func ReadLineTokenizer(file *os.File) *Tokenizer {
+    return &Tokenizer{chars: ReadLineRuneReader(file), firstToken: true}
 }
 
 func (this *Tokenizer) Has() bool {
@@ -45,7 +53,7 @@ func (this *Tokenizer) DiscardPosition() {
 
 func (this *Tokenizer) next() *Token {
     var token *Token = EofToken
-    if (this.firstToken) {
+    if this.firstToken && this.chars.Has() {
         // First token is indentation, which in this case
         // is not after a new line
         token = Indentation(collectIndentation(this.chars))
@@ -98,14 +106,14 @@ func (this *Tokenizer) next() *Token {
     return token
 }
 
-func collectIdentifierBody(chars RuneStream) []rune {
+func collectIdentifierBody(chars *RuneReader) []rune {
     for isIdentifierBody(chars.Head()) {
         chars.Collect()
     }
     return chars.PopCollected()
 }
 
-func consumeIgnored(chars RuneStream) bool {
+func consumeIgnored(chars *RuneReader) bool {
     if isLineWhiteSpace(chars.Head()) {
         // Consume a line whitespace character
         chars.Advance()
@@ -138,7 +146,7 @@ func consumeIgnored(chars RuneStream) bool {
     return false
 }
 
-func completeBlockComment(chars RuneStream) {
+func completeBlockComment(chars *RuneReader) {
     // Count and consume leading # symbols
     leading := 2
     for chars.Head() == '#' {
@@ -160,13 +168,13 @@ func completeBlockComment(chars RuneStream) {
     }
 }
 
-func completeLineComment(chars RuneStream) {
+func completeLineComment(chars *RuneReader) {
     for isPrintChar(chars.Head()) || isLineWhiteSpace(chars.Head()) {
         chars.Advance()
     }
 }
 
-func consumeNewLine(chars RuneStream) {
+func consumeNewLine(chars *RuneReader) {
     if chars.Head() == '\r'{
         // CR
         chars.Advance()
@@ -180,21 +188,21 @@ func consumeNewLine(chars RuneStream) {
     }
 }
 
-func collectIndentation(chars RuneStream) []rune {
+func collectIndentation(chars *RuneReader) []rune {
     for isLineWhiteSpace(chars.Head()) {
         chars.Collect()
     }
     return chars.PopCollected()
 }
 
-func collectSymbol(chars RuneStream) []rune {
+func collectSymbol(chars *RuneReader) []rune {
     for isSymbolPrefix(chars.PeekCollected(), chars.Head()) {
         chars.Collect()
     }
     return chars.PopCollected()
 }
 
-func collectStringLiteral(chars RuneStream) []rune {
+func collectStringLiteral(chars *RuneReader) []rune {
     // Opening "
     if chars.Head() != '"' {
         panic("Expected opening \"")
@@ -221,7 +229,7 @@ func collectStringLiteral(chars RuneStream) []rune {
     return chars.PopCollected()
 }
 
-func collectEscapeSequence(chars RuneStream) bool {
+func collectEscapeSequence(chars *RuneReader) bool {
     if chars.Head() != '\\' {
         return false
     }
@@ -245,7 +253,7 @@ func collectEscapeSequence(chars RuneStream) bool {
     return false
 }
 
-func collectNumberLiteral(chars RuneStream) *Token {
+func collectNumberLiteral(chars *RuneReader) *Token {
     // Start with non-decimal integers
     if chars.Head() == '0' {
         chars.Collect()
@@ -288,7 +296,7 @@ func collectNumberLiteral(chars RuneStream) *Token {
     return DecimalIntegerLiteral(chars.PopCollected())
 }
 
-func completeFloatLiteralStartingWithDecimalSeparator(chars RuneStream) *Token {
+func completeFloatLiteralStartingWithDecimalSeparator(chars *RuneReader) *Token {
     // Must have a decimal digit sequence next after the decimal
     collectDigitSequence(chars, isDecimalDigit)
     // We can have an optional exponent
@@ -296,7 +304,7 @@ func completeFloatLiteralStartingWithDecimalSeparator(chars RuneStream) *Token {
     return FloatLiteral(chars.PopCollected())
 }
 
-func collectFloatLiteralExponent(chars RuneStream) bool {
+func collectFloatLiteralExponent(chars *RuneReader) bool {
     // Only collect the exponent if it exists
     if chars.Head() != 'e' && chars.Head() != 'E' {
         return false
@@ -311,7 +319,7 @@ func collectFloatLiteralExponent(chars RuneStream) bool {
     return true
 }
 
-func collectDigitSequence(chars RuneStream, isDigit func(rune) bool) {
+func collectDigitSequence(chars *RuneReader, isDigit func(rune) bool) {
     if !isDigit(chars.Head()) {
         panic("Expected a digit")
     }

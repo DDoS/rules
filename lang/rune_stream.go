@@ -1,39 +1,68 @@
 package lang
 
 import (
+    "os"
+    "bufio"
     "unicode/utf8"
 )
 
 type RuneStream interface {
     Has() bool
-    Head() rune
-    Advance()
-    Count() uint
-    Collect()
-    PeekCollected() []rune
-    PopCollected() []rune
+    Next() rune
 }
 
 type StringRuneStream struct {
     source string
+}
+
+type ReadLineRuneStream struct {
+    buffer *bufio.Reader
+    headRune rune
+    ahead bool
+}
+
+type RuneReader struct {
+    RuneStream
     headRune rune
     ahead bool
     count uint
     collected []rune
 }
 
-func (this *StringRuneStream) Has() bool {
-    return len(this.source) > 0 || this.ahead && this.headRune != '\u0004'
+func StringRuneReader(source string) *RuneReader {
+    return &RuneReader{RuneStream: &StringRuneStream{source}}
 }
 
-func (this *StringRuneStream) Head() rune {
+func (this *StringRuneStream) Has() bool {
+    return len(this.source) > 0
+}
+
+func (this *StringRuneStream) Next() rune {
+    char, size := utf8.DecodeRuneInString(this.source)
+    this.source = this.source[size:]
+    return char
+}
+
+func ReadLineRuneReader(file *os.File) *RuneReader {
+    return &RuneReader{RuneStream: &ReadLineRuneStream{buffer: bufio.NewReader(file)}}
+}
+
+func (this *ReadLineRuneStream) Has() bool {
+    return this.Head() != '\u0004'
+}
+
+func (this *ReadLineRuneStream) Next() rune {
+    char := this.Head()
+    this.ahead = false
+    return char
+}
+
+func (this *ReadLineRuneStream) Head() rune {
     if !this.ahead {
-        if this.Has() {
-            char, size := utf8.DecodeRuneInString(this.source)
+        char, _, err := this.buffer.ReadRune()
+        if err == nil && char != '\n' {
             this.headRune = char
-            this.source = this.source[size:]
         } else {
-            // EOT
             this.headRune = '\u0004'
         }
         this.ahead = true
@@ -41,26 +70,42 @@ func (this *StringRuneStream) Head() rune {
     return this.headRune
 }
 
-func (this *StringRuneStream) Count() uint {
+func (this *RuneReader) Has() bool {
+    return this.RuneStream.Has() || this.ahead && this.headRune != '\u0004'
+}
+
+func (this *RuneReader) Head() rune {
+    if !this.ahead {
+        if this.RuneStream.Has() {
+            this.headRune = this.Next()
+        } else {
+            this.headRune = '\u0004'
+        }
+        this.ahead = true
+    }
+    return this.headRune
+}
+
+func (this *RuneReader) Count() uint {
     return this.count
 }
 
-func (this *StringRuneStream) Advance() {
+func (this *RuneReader) Advance() {
     this.Head()
     this.ahead = false
     this.count++
 }
 
-func (this *StringRuneStream) Collect() {
+func (this *RuneReader) Collect() {
     this.Advance()
     this.collected = append(this.collected, this.headRune)
 }
 
-func (this *StringRuneStream) PeekCollected() []rune {
+func (this *RuneReader) PeekCollected() []rune {
     return this.collected
 }
 
-func (this *StringRuneStream) PopCollected() []rune {
+func (this *RuneReader) PopCollected() []rune {
     collected := make([]rune, len(this.collected))
     copy(collected, this.collected)
     this.collected = nil
