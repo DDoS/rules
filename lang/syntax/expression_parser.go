@@ -64,7 +64,7 @@ func parseAtom(tokens *Tokenizer) Expression {
         if tokens.Head().Kind() != IDENTIFIER {
             panic("Expected an identifier")
         }
-        identifier := tokens.Head().(*IdentifierToken)
+        identifier := tokens.Head().(*Identifier)
         tokens.Advance()
         return &ContextFieldAccess{identifier}
     }
@@ -105,7 +105,7 @@ func parseAccessOn(tokens *Tokenizer, value Expression) Expression {
         if tokens.Head().Kind() != IDENTIFIER {
             panic("Expected an identifier")
         }
-        name := tokens.Head().(*IdentifierToken)
+        name := tokens.Head().(*Identifier)
         tokens.Advance()
         return parseAccessOn(tokens, &FieldAccess{value, name})
     }
@@ -135,14 +135,13 @@ func parseAccessOn(tokens *Tokenizer, value Expression) Expression {
     }
     // Disambiguate between a float without decimal digits
     // and an integer with a field access
-    token, ok := value.(Token)
-    if ok && token.Kind() == FLOAT_LITERAL && tokens.Head().Kind() == IDENTIFIER &&
-            token.Source()[len(token.Source()) - 1] == '.' {
-        name := tokens.Head().(*IdentifierToken)
+    token, ok := value.(*FloatLiteral)
+    if ok && tokens.Head().Kind() == IDENTIFIER && token.Source()[len(token.Source()) - 1] == '.' {
+        name := tokens.Head().(*Identifier)
         tokens.Advance()
         // The form decimalInt.identifier is lexed as float(numberSeq.)identifier
         // We detect it and convert it to first form here
-        decimalInt := &DecimalIntegerLiteralToken{SourceToken{token.Source()[:len(token.Source()) - 1]}}
+        decimalInt := &DecimalIntegerLiteral{Source_{token.Source()[:len(token.Source()) - 1]}}
         return parseAccessOn(tokens, &FieldAccess{decimalInt, name})
     }
     return value
@@ -153,7 +152,7 @@ func parseUnary(tokens *Tokenizer) Expression {
     case "+":
         fallthrough
     case "-":
-        operator := tokens.Head().(*SymbolToken)
+        operator := tokens.Head().(*Symbol)
         tokens.Advance()
         inner := parseUnary(tokens)
         return &Sign{operator, inner}
@@ -189,7 +188,7 @@ func parseInfix(tokens *Tokenizer) Expression {
 
 func parseInfixOn(tokens *Tokenizer, value Expression) Expression {
     if tokens.Head().Kind() == IDENTIFIER {
-        function := tokens.Head().(*IdentifierToken)
+        function := tokens.Head().(*Identifier)
         tokens.Advance()
         argument := parseExponent(tokens)
         return parseInfixOn(tokens, &Infix{value, function, argument})
@@ -203,7 +202,7 @@ func parseMultiply(tokens *Tokenizer) Expression {
 
 func parseMultiplyOn(tokens *Tokenizer, left Expression) Expression {
     if tokens.Head().Kind() == MULTIPLY_OPERATOR {
-        operator := tokens.Head().(*SymbolToken)
+        operator := tokens.Head().(*Symbol)
         tokens.Advance()
         right := parseInfix(tokens)
         return parseMultiplyOn(tokens, &Multiply{left, operator, right})
@@ -217,7 +216,7 @@ func parseAdd(tokens *Tokenizer) Expression {
 
 func parseAddOn(tokens *Tokenizer, left Expression) Expression {
     if tokens.Head().Kind() == ADD_OPERATOR {
-        operator := tokens.Head().(*SymbolToken)
+        operator := tokens.Head().(*Symbol)
         tokens.Advance()
         right := parseMultiply(tokens)
         return parseAddOn(tokens, &Add{left, operator, right})
@@ -231,7 +230,7 @@ func parseShift(tokens *Tokenizer) Expression {
 
 func parseShiftOn(tokens *Tokenizer, value Expression) Expression {
     if tokens.Head().Kind() == SHIFT_OPERATOR {
-        operator := tokens.Head().(*SymbolToken)
+        operator := tokens.Head().(*Symbol)
         tokens.Advance()
         amount := parseAdd(tokens)
         return parseShiftOn(tokens, &Shift{value, operator, amount})
@@ -245,17 +244,17 @@ func parseCompare(tokens *Tokenizer) Expression {
         tokens.Head().Kind() != TYPE_COMPARE_OPERATOR {
         return value
     }
-    valueOperators := []*SymbolToken{}
+    valueOperators := []*Symbol{}
     values := []Expression{value}
     for tokens.Head().Kind() == VALUE_COMPARE_OPERATOR {
-        valueOperators = append(valueOperators, tokens.Head().(*SymbolToken))
+        valueOperators = append(valueOperators, tokens.Head().(*Symbol))
         tokens.Advance()
         values = append(values, parseShift(tokens))
     }
-    var typeOperator *SymbolToken = nil
+    var typeOperator *Symbol = nil
     var _type Type = nil
     if tokens.Head().Kind() == TYPE_COMPARE_OPERATOR {
-        typeOperator = tokens.Head().(*SymbolToken)
+        typeOperator = tokens.Head().(*Symbol)
         tokens.Advance()
         _type = parseType(tokens)
     }

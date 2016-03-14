@@ -15,7 +15,7 @@ type InitializerAssignment struct {
 
 type Assignment struct {
     Target Expression
-    Operator *SymbolToken
+    Operator *Symbol
     Value Expression
 }
 

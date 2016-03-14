@@ -9,7 +9,7 @@ type Expression interface {
 }
 
 type NameReference struct {
-    Name []*IdentifierToken
+    Name []*Identifier
 }
 
 type LabeledExpression struct {
@@ -27,12 +27,12 @@ type Initializer struct {
 }
 
 type ContextFieldAccess struct {
-    Name *IdentifierToken
+    Name *Identifier
 }
 
 type FieldAccess struct {
     Value Expression
-    Name *IdentifierToken
+    Name *Identifier
 }
 
 type ArrayAccess struct {
@@ -46,7 +46,7 @@ type FunctionCall struct {
 }
 
 type Sign struct {
-    Operator *SymbolToken
+    Operator *Symbol
     Inner Expression
 }
 
@@ -65,33 +65,33 @@ type Exponent struct {
 
 type Infix struct {
     Value Expression
-    Function *IdentifierToken
+    Function *Identifier
     Argument Expression
 }
 
 type Multiply struct {
     Left Expression
-    Operator *SymbolToken
+    Operator *Symbol
     Right Expression
 }
 
 type Add struct {
     Left Expression
-    Operator *SymbolToken
+    Operator *Symbol
     Right Expression
 }
 
 type Shift struct {
     Value Expression
-    Operator *SymbolToken
+    Operator *Symbol
     Amount Expression
 }
 
 type Compare struct {
     Values []Expression
-    ValueOperators []*SymbolToken
+    ValueOperators []*Symbol
     Type Type
-    TypeOperator *SymbolToken
+    TypeOperator *Symbol
 }
 
 type BitwiseAnd struct {

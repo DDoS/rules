@@ -8,7 +8,7 @@ type IndentSpec struct {
     nextIgnored bool
 }
 
-func (this *IndentSpec) validate(indentation *IndentationToken) bool {
+func (this *IndentSpec) validate(indentation *Indentation) bool {
     if len(indentation.Source()) != this.count {
         return false
     }
@@ -41,7 +41,7 @@ func parseAssigmnentOrFunctionCall(tokens *Tokenizer) Statement {
     if tokens.Head().Kind() != ASSIGNMENT_OPERATOR {
         panic("Expected an assignment operator")
     }
-    operator := tokens.Head().(*SymbolToken)
+    operator := tokens.Head().(*Symbol)
     tokens.Advance()
     if operator.Is("=") && tokens.Head().Is("{") {
         return &InitializerAssignment{access, parseCompositeLiteral(tokens)}
@@ -58,7 +58,7 @@ func parseStatment(tokens *Tokenizer, indentSpec *IndentSpec) Statement {
     indentSpec.nextIgnored = false
     // Consume indentation preceding the statement
     for tokens.Head().Kind() == INDENTATION {
-        validIndent = indentSpec.validate(tokens.Head().(*IndentationToken))
+        validIndent = indentSpec.validate(tokens.Head().(*Indentation))
         tokens.Advance()
     }
     // Only the last indentation before the statement matters

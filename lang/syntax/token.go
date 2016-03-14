@@ -36,227 +36,227 @@ type Token interface {
     String() string
 }
 
-type SourceToken struct {
+type Source_ struct {
     source string
 }
 
-type IndentationToken struct {
-    SourceToken
+type Indentation struct {
+    Source_
 }
 
-type TerminatorToken struct {
+type Terminator struct {
 }
 
-type IdentifierToken struct {
-    SourceToken
+type Identifier struct {
+    Source_
 }
 
-type KeywordToken struct {
-    SourceToken
+type Keyword struct {
+    Source_
 }
 
-type SymbolToken struct {
-    SourceToken
+type Symbol struct {
+    Source_
     kind Kind
 }
 
-type BooleanLiteralToken struct {
-    SourceToken
+type BooleanLiteral struct {
+    Source_
 }
 
-type StringLiteralToken struct {
-    SourceToken
+type StringLiteral struct {
+    Source_
 }
 
-type BinaryIntegerLiteralToken struct {
-    SourceToken
+type BinaryIntegerLiteral struct {
+    Source_
 }
 
-type DecimalIntegerLiteralToken struct {
-    SourceToken
+type DecimalIntegerLiteral struct {
+    Source_
 }
 
-type HexadecimalIntegerLiteralToken struct {
-    SourceToken
+type HexadecimalIntegerLiteral struct {
+    Source_
 }
 
-type FloatLiteralToken struct {
-    SourceToken
+type FloatLiteral struct {
+    Source_
 }
 
-type EofToken struct {
+type Eof struct {
 }
 
-func Indentation(source []rune) *IndentationToken {
-    return &IndentationToken{SourceToken{string(source)}}
+func NewIndentation(source []rune) *Indentation {
+    return &Indentation{Source_{string(source)}}
 }
 
-var terminatorToken *TerminatorToken = &TerminatorToken{}
+var terminator *Terminator = &Terminator{}
 
-func Terminator() *TerminatorToken {
-    return terminatorToken
+func NewTerminator() *Terminator {
+    return terminator
 }
 
-func Identifier(source []rune) *IdentifierToken {
-    return &IdentifierToken{SourceToken{string(source)}}
+func NewIdentifier(source []rune) *Identifier {
+    return &Identifier{Source_{string(source)}}
 }
 
-func Keyword(source []rune) *KeywordToken {
-    return &KeywordToken{SourceToken{string(source)}}
+func NewKeyword(source []rune) *Keyword {
+    return &Keyword{Source_{string(source)}}
 }
 
-func Symbol(source []rune) *SymbolToken {
+func NewSymbol(source []rune) *Symbol {
     stringSource := string(source)
-    return &SymbolToken{SourceToken{stringSource}, getSymbolType(stringSource)}
+    return &Symbol{Source_{stringSource}, getSymbolType(stringSource)}
 }
 
-func BooleanLiteral(source []rune) *BooleanLiteralToken {
-    return &BooleanLiteralToken{SourceToken{string(source)}}
+func NewBooleanLiteral(source []rune) *BooleanLiteral {
+    return &BooleanLiteral{Source_{string(source)}}
 }
 
-func StringLiteral(source []rune) *StringLiteralToken {
-    return &StringLiteralToken{SourceToken{string(source)}}
+func NewStringLiteral(source []rune) *StringLiteral {
+    return &StringLiteral{Source_{string(source)}}
 }
 
-func BinaryIntegerLiteral(source []rune) *BinaryIntegerLiteralToken {
-    return &BinaryIntegerLiteralToken{SourceToken{string(source)}}
+func NewBinaryIntegerLiteral(source []rune) *BinaryIntegerLiteral {
+    return &BinaryIntegerLiteral{Source_{string(source)}}
 }
 
-func DecimalIntegerLiteral(source []rune) *DecimalIntegerLiteralToken {
-    return &DecimalIntegerLiteralToken{SourceToken{string(source)}}
+func NewDecimalIntegerLiteral(source []rune) *DecimalIntegerLiteral {
+    return &DecimalIntegerLiteral{Source_{string(source)}}
 }
 
-func HexadecimalIntegerLiteral(source []rune) *HexadecimalIntegerLiteralToken {
-    return &HexadecimalIntegerLiteralToken{SourceToken{string(source)}}
+func NewHexadecimalIntegerLiteral(source []rune) *HexadecimalIntegerLiteral {
+    return &HexadecimalIntegerLiteral{Source_{string(source)}}
 }
 
-func FloatLiteral(source []rune) *FloatLiteralToken {
-    return &FloatLiteralToken{SourceToken{string(source)}}
+func NewFloatLiteral(source []rune) *FloatLiteral {
+    return &FloatLiteral{Source_{string(source)}}
 }
 
-var eofToken *EofToken = &EofToken{}
+var eof *Eof = &Eof{}
 
-func Eof() *EofToken {
-    return eofToken
+func NewEof() *Eof {
+    return eof
 }
 
-func (this *SourceToken) Source() string {
+func (this *Source_) Source() string {
     return this.source
 }
 
-func (this *TerminatorToken) Source() string {
+func (this *Terminator) Source() string {
     return ";"
 }
 
-func (this *EofToken) Source() string {
+func (this *Eof) Source() string {
     return "\u0004"
 }
 
-func (this *SourceToken) Is(source string) bool {
+func (this *Source_) Is(source string) bool {
     return this.Source() == source
 }
 
-func (this *TerminatorToken) Is(source string) bool {
+func (this *Terminator) Is(source string) bool {
     return ";" == source
 }
 
-func (this *EofToken) Is(source string) bool {
+func (this *Eof) Is(source string) bool {
     return "\u0004" == source
 }
 
-func (this *IndentationToken) Kind() Kind {
+func (this *Indentation) Kind() Kind {
     return INDENTATION
 }
 
-func (this *TerminatorToken) Kind() Kind {
+func (this *Terminator) Kind() Kind {
     return TERMINATOR
 }
 
-func (this *IdentifierToken) Kind() Kind {
+func (this *Identifier) Kind() Kind {
     return IDENTIFIER
 }
 
-func (this *KeywordToken) Kind() Kind {
+func (this *Keyword) Kind() Kind {
     return KEYWORD
 }
 
-func (this *SymbolToken) Kind() Kind {
+func (this *Symbol) Kind() Kind {
     return this.kind
 }
 
-func (this *BooleanLiteralToken) Kind() Kind {
+func (this *BooleanLiteral) Kind() Kind {
     return BOOLEAN_LITERAL
 }
 
-func (this *StringLiteralToken) Kind() Kind {
+func (this *StringLiteral) Kind() Kind {
     return STRING_LITERAL
 }
 
-func (this *BinaryIntegerLiteralToken) Kind() Kind {
+func (this *BinaryIntegerLiteral) Kind() Kind {
     return BINARY_INTEGER_LITERAL
 }
 
-func (this *DecimalIntegerLiteralToken) Kind() Kind {
+func (this *DecimalIntegerLiteral) Kind() Kind {
     return DECIMAL_INTEGER_LITERAL
 }
 
-func (this *HexadecimalIntegerLiteralToken) Kind() Kind {
+func (this *HexadecimalIntegerLiteral) Kind() Kind {
     return HEXADECIMAL_INTEGER_LITERAL
 }
 
-func (this *FloatLiteralToken) Kind() Kind {
+func (this *FloatLiteral) Kind() Kind {
     return FLOAT_LITERAL
 }
 
-func (this *EofToken) Kind() Kind {
+func (this *Eof) Kind() Kind {
     return EOF
 }
 
-func (this *IndentationToken) String() string {
+func (this *Indentation) String() string {
     return fmt.Sprintf("Indentation(%s)", this.source)
 }
 
-func (this *TerminatorToken) String() string {
+func (this *Terminator) String() string {
     return "Terminator(;)"
 }
 
-func (this *IdentifierToken) String() string {
+func (this *Identifier) String() string {
     return fmt.Sprintf("Identifier(%s)", this.source)
 }
 
-func (this *KeywordToken) String() string {
+func (this *Keyword) String() string {
     return fmt.Sprintf("Keyword(%s)", this.source)
 }
 
-func (this *SymbolToken) String() string {
+func (this *Symbol) String() string {
     return fmt.Sprintf("Symbol(%s)", this.source)
 }
 
-func (this *BooleanLiteralToken) String() string {
+func (this *BooleanLiteral) String() string {
     return fmt.Sprintf("BooleanLiteral(%s)", this.source)
 }
 
-func (this *StringLiteralToken) String() string {
+func (this *StringLiteral) String() string {
     return fmt.Sprintf("StringLiteral(%s)", this.source)
 }
 
-func (this *BinaryIntegerLiteralToken) String() string {
+func (this *BinaryIntegerLiteral) String() string {
     return fmt.Sprintf("BinaryIntegerLiteral(%s)", this.source)
 }
 
-func (this *DecimalIntegerLiteralToken) String() string {
+func (this *DecimalIntegerLiteral) String() string {
     return fmt.Sprintf("DecimalIntegerLiteral(%s)", this.source)
 }
 
-func (this *HexadecimalIntegerLiteralToken) String() string {
+func (this *HexadecimalIntegerLiteral) String() string {
     return fmt.Sprintf("HexadecimalIntegerLiteral(%s)", this.source)
 }
 
-func (this *FloatLiteralToken) String() string {
+func (this *FloatLiteral) String() string {
     return fmt.Sprintf("FloatLiteral(%s)", this.source)
 }
 
-func (this *EofToken) String() string {
+func (this *Eof) String() string {
     return "EOF()"
 }
 

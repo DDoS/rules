@@ -21,7 +21,7 @@ func ReadLineTokenizer(file *os.File) *Tokenizer {
 }
 
 func (this *Tokenizer) Has() bool {
-    return this.Head() != Eof()
+    return this.Head() != NewEof()
 }
 
 func (this *Tokenizer) Head() Token {
@@ -33,7 +33,7 @@ func (this *Tokenizer) Head() Token {
 
 func (this *Tokenizer) Advance() {
     head := this.Head()
-    if head != Eof() {
+    if head != NewEof() {
         this.position++
     }
 }
@@ -52,35 +52,35 @@ func (this *Tokenizer) DiscardPosition() {
 }
 
 func (this *Tokenizer) next() Token {
-    var token Token = Eof()
+    var token Token = NewEof()
     if this.firstToken && this.chars.Has() {
         // First token is indentation, which in this case
         // is not after a new line
-        token = Indentation(collectIndentation(this.chars))
+        token = NewIndentation(collectIndentation(this.chars))
         for consumeIgnored(this.chars) {
             // Remove trailing comments and whitespace
         }
         this.firstToken = false
     }
-    for this.chars.Has() && token == Eof() {
+    for this.chars.Has() && token == NewEof() {
         if isNewLineChar(this.chars.Head()) {
             consumeNewLine(this.chars)
             // Just after a new line, consume indentation of next line
-            token = Indentation(collectIndentation(this.chars))
+            token = NewIndentation(collectIndentation(this.chars))
         } else if this.chars.Head() == ';' {
             // A terminator breaks a line but doesn't need indentation
             this.chars.Advance()
-            token = Terminator()
+            token = NewTerminator()
         } else if isIdentifierStart(this.chars.Head()) {
             this.chars.Collect()
             identifier := collectIdentifierBody(this.chars)
             // An indentifier can also be a keyword
             if isKeyword(identifier) {
-                token = Keyword(identifier)
+                token = NewKeyword(identifier)
             } else if isBooleanLiteral(identifier) {
-                token = BooleanLiteral(identifier)
+                token = NewBooleanLiteral(identifier)
             } else {
-                token = Identifier(identifier)
+                token = NewIdentifier(identifier)
             }
         } else if this.chars.Head() == '.' {
             // Could be a float starting with a decimal separator or a symbol
@@ -88,12 +88,12 @@ func (this *Tokenizer) next() Token {
             if isDecimalDigit(this.chars.Head()) {
                 token = completeFloatLiteralStartingWithDecimalSeparator(this.chars)
             } else {
-                token = Symbol(collectSymbol(this.chars))
+                token = NewSymbol(collectSymbol(this.chars))
             }
         } else if isSymbolChar(this.chars.Head()) {
-            token = Symbol(collectSymbol(this.chars))
+            token = NewSymbol(collectSymbol(this.chars))
         } else if this.chars.Head() == '"' {
-            token = StringLiteral(collectStringLiteral(this.chars))
+            token = NewStringLiteral(collectStringLiteral(this.chars))
         } else if isDecimalDigit(this.chars.Head()) {
             token = collectNumberLiteral(this.chars)
         } else {
@@ -261,17 +261,17 @@ func collectNumberLiteral(chars *RuneReader) Token {
             // Binary integer
             chars.Collect()
             collectDigitSequence(chars, isBinaryDigit)
-            return BinaryIntegerLiteral(chars.PopCollected())
+            return NewBinaryIntegerLiteral(chars.PopCollected())
         }
         if chars.Head() == 'x' || chars.Head() == 'X' {
             // Hexadecimal integer
             chars.Collect()
             collectDigitSequence(chars, isHexDigit)
-            return HexadecimalIntegerLiteral(chars.PopCollected())
+            return NewHexadecimalIntegerLiteral(chars.PopCollected())
         }
         if !isDecimalDigit(chars.Head()) {
             // Just a zero
-            return DecimalIntegerLiteral(chars.PopCollected())
+            return NewDecimalIntegerLiteral(chars.PopCollected())
         }
         // Anything else is either a decimal integer or float
     }
@@ -286,14 +286,14 @@ func collectNumberLiteral(chars *RuneReader) Token {
         }
         // We can have an optional exponent
         collectFloatLiteralExponent(chars)
-        return FloatLiteral(chars.PopCollected())
+        return NewFloatLiteral(chars.PopCollected())
     }
     // Or we can have an exponent marker, again making it a float
     if collectFloatLiteralExponent(chars) {
-        return FloatLiteral(chars.PopCollected())
+        return NewFloatLiteral(chars.PopCollected())
     }
     // Else it's a decimal integer and there's nothing more to do
-    return DecimalIntegerLiteral(chars.PopCollected())
+    return NewDecimalIntegerLiteral(chars.PopCollected())
 }
 
 func completeFloatLiteralStartingWithDecimalSeparator(chars *RuneReader) Token {
@@ -301,7 +301,7 @@ func completeFloatLiteralStartingWithDecimalSeparator(chars *RuneReader) Token {
     collectDigitSequence(chars, isDecimalDigit)
     // We can have an optional exponent
     collectFloatLiteralExponent(chars)
-    return FloatLiteral(chars.PopCollected())
+    return NewFloatLiteral(chars.PopCollected())
 }
 
 func collectFloatLiteralExponent(chars *RuneReader) bool {

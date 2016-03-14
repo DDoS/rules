@@ -1,17 +1,17 @@
 package syntax
 
-func parseName(tokens *Tokenizer) []*IdentifierToken {
+func parseName(tokens *Tokenizer) []*Identifier {
     if tokens.Head().Kind() != IDENTIFIER {
         panic("Expected an identifier")
     }
-    name := []*IdentifierToken{tokens.Head().(*IdentifierToken)}
+    name := []*Identifier{tokens.Head().(*Identifier)}
     tokens.Advance()
     for tokens.Head().Is(".") {
         tokens.Advance()
         if tokens.Head().Kind() != IDENTIFIER {
             panic("Expected an identifier")
         }
-        name = append(name, tokens.Head().(*IdentifierToken))
+        name = append(name, tokens.Head().(*Identifier))
         tokens.Advance()
     }
     return name
