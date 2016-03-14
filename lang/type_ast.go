@@ -5,7 +5,7 @@ type Type interface {
 }
 
 type NamedType struct {
-    Name []*Token
+    Name []*IdentifierToken
     Dimensions []Expression
 }
 

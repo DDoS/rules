@@ -8,11 +8,11 @@ type IndentSpec struct {
     nextIgnored bool
 }
 
-func (this *IndentSpec) validate(indentation *Token) bool {
-    if len(indentation.Source) != this.count {
+func (this *IndentSpec) validate(indentation *IndentationToken) bool {
+    if len(indentation.Source()) != this.count {
         return false
     }
-    for _, c := range indentation.Source {
+    for _, c := range indentation.Source() {
         if c != this.char {
             return false
         }
@@ -38,10 +38,10 @@ func parseAssigmnentOrFunctionCall(tokens *Tokenizer) Statement {
     default:
         panic("Not a reference expression")
     }
-    if tokens.Head().Kind != ASSIGNMENT_OPERATOR {
+    if tokens.Head().Kind() != ASSIGNMENT_OPERATOR {
         panic("Expected an assignment operator")
     }
-    operator := tokens.Head()
+    operator := tokens.Head().(*SymbolToken)
     tokens.Advance()
     if operator.Is("=") && tokens.Head().Is("{") {
         return &InitializerAssignment{access, parseCompositeLiteral(tokens)}
@@ -57,8 +57,8 @@ func parseStatment(tokens *Tokenizer, indentSpec *IndentSpec) Statement {
     validIndent := indentSpec.nextIgnored
     indentSpec.nextIgnored = false
     // Consume indentation preceding the statement
-    for tokens.Head().Kind == INDENTATION {
-        validIndent = indentSpec.validate(tokens.Head())
+    for tokens.Head().Kind() == INDENTATION {
+        validIndent = indentSpec.validate(tokens.Head().(*IndentationToken))
         tokens.Advance()
     }
     // Only the last indentation before the statement matters
@@ -76,17 +76,17 @@ func parseStatments(tokens *Tokenizer, indentSpec *IndentSpec) []Statement {
     statements := []Statement{}
     for tokens.Has() {
         statements = append(statements, parseStatment(tokens, indentSpec))
-        if tokens.Head().Kind == TERMINATOR {
+        if tokens.Head().Kind() == TERMINATOR {
             tokens.Advance()
             // Can ignore indentation for the next statement if on the same line
             indentSpec.nextIgnored = true
             continue
         }
-        if tokens.Head().Kind == INDENTATION {
+        if tokens.Head().Kind() == INDENTATION {
             // Indentation marks a new statement, so the end of the current one
             continue
         }
-        if tokens.Head().Kind == EOF {
+        if tokens.Head().Kind() == EOF {
             // Nothing else to parse
             break
         }

@@ -147,7 +147,7 @@ func TestLexGenericProgram(t *testing.T) {
 func assertLexNoIndent(t *testing.T, source string, expected ...string) {
     tokenizer := lang.StringTokenizer(source)
     tokens := []string{}
-    if tokenizer.Head().Kind == lang.INDENTATION {
+    if tokenizer.Head().Kind() == lang.INDENTATION {
         tokenizer.Advance()
     }
     for tokenizer.Has() {

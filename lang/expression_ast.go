@@ -9,11 +9,11 @@ type Expression interface {
 }
 
 type NameReference struct {
-    Name []*Token
+    Name []*IdentifierToken
 }
 
 type LabeledExpression struct {
-    Label *Token
+    Label Token
     Value Expression
 }
 
@@ -27,12 +27,12 @@ type Initializer struct {
 }
 
 type ContextFieldAccess struct {
-    Name *Token
+    Name *IdentifierToken
 }
 
 type FieldAccess struct {
     Value Expression
-    Name *Token
+    Name *IdentifierToken
 }
 
 type ArrayAccess struct {
@@ -46,7 +46,7 @@ type FunctionCall struct {
 }
 
 type Sign struct {
-    Operator *Token
+    Operator *SymbolToken
     Inner Expression
 }
 
@@ -65,33 +65,33 @@ type Exponent struct {
 
 type Infix struct {
     Value Expression
-    Function *Token
+    Function *IdentifierToken
     Argument Expression
 }
 
 type Multiply struct {
     Left Expression
-    Operator *Token
+    Operator *SymbolToken
     Right Expression
 }
 
 type Add struct {
     Left Expression
-    Operator *Token
+    Operator *SymbolToken
     Right Expression
 }
 
 type Shift struct {
     Value Expression
-    Operator *Token
+    Operator *SymbolToken
     Amount Expression
 }
 
 type Compare struct {
     Values []Expression
-    ValueOperators []*Token
+    ValueOperators []*SymbolToken
     Type Type
-    TypeOperator *Token
+    TypeOperator *SymbolToken
 }
 
 type BitwiseAnd struct {
@@ -147,7 +147,7 @@ func (this *NameReference) String() string {
 func (this *LabeledExpression) String() string {
     labelString := ""
     if this.Label != nil {
-        labelString = this.Label.Source + ": "
+        labelString = this.Label.Source() + ": "
     }
     return labelString + this.Value.String()
 }
@@ -161,11 +161,11 @@ func (this *Initializer) String() string {
 }
 
 func (this *ContextFieldAccess) String() string {
-    return fmt.Sprintf("ContextFieldAccess(.%s)", this.Name.Source)
+    return fmt.Sprintf("ContextFieldAccess(.%s)", this.Name.Source())
 }
 
 func (this *FieldAccess) String() string {
-    return fmt.Sprintf("FieldAccess(%s.%s)", this.Value.String(), this.Name.Source)
+    return fmt.Sprintf("FieldAccess(%s.%s)", this.Value.String(), this.Name.Source())
 }
 
 func (this *ArrayAccess) String() string {
@@ -177,7 +177,7 @@ func (this *FunctionCall) String() string {
 }
 
 func (this *Sign) String() string {
-    return fmt.Sprintf("Sign(%s%s)", this.Operator.Source, this.Inner.String())
+    return fmt.Sprintf("Sign(%s%s)", this.Operator.Source(), this.Inner.String())
 }
 
 func (this *LogicalNot) String() string {
@@ -193,29 +193,29 @@ func (this *Exponent) String() string {
 }
 
 func (this *Infix) String() string {
-    return fmt.Sprintf("Infix(%s %s %s)", this.Value.String(), this.Function.Source, this.Argument.String())
+    return fmt.Sprintf("Infix(%s %s %s)", this.Value.String(), this.Function.Source(), this.Argument.String())
 }
 
 func (this *Multiply) String() string {
-    return fmt.Sprintf("Multiply(%s %s %s)", this.Left.String(), this.Operator.Source, this.Right.String())
+    return fmt.Sprintf("Multiply(%s %s %s)", this.Left.String(), this.Operator.Source(), this.Right.String())
 }
 
 func (this *Add) String() string {
-    return fmt.Sprintf("Add(%s %s %s)", this.Left.String(), this.Operator.Source, this.Right.String())
+    return fmt.Sprintf("Add(%s %s %s)", this.Left.String(), this.Operator.Source(), this.Right.String())
 }
 
 func (this *Shift) String() string {
-    return fmt.Sprintf("Shift(%s %s %s)", this.Value.String(), this.Operator.Source, this.Amount.String())
+    return fmt.Sprintf("Shift(%s %s %s)", this.Value.String(), this.Operator.Source(), this.Amount.String())
 }
 
 func (this *Compare) String() string {
     s := "Compare("
     for i, operator := range this.ValueOperators {
-        s += fmt.Sprintf("%s %s ", this.Values[i].String(), operator.Source)
+        s += fmt.Sprintf("%s %s ", this.Values[i].String(), operator.Source())
     }
     s += this.Values[len(this.Values) - 1].String()
     if this.TypeOperator != nil {
-        s += fmt.Sprintf(" %s %s)", this.TypeOperator.Source, this.Type.String())
+        s += fmt.Sprintf(" %s %s)", this.TypeOperator.Source(), this.Type.String())
     } else {
         s += ")"
     }

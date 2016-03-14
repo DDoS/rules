@@ -26,14 +26,14 @@ func runesEquals(a []rune, b []rune) bool {
 }
 
 func joinString(things interface{}, joiner string) string {
-    return join(things, joiner, "String", true)
+    return join(things, joiner, "String")
 }
 
 func joinSource(things interface{}, joiner string) string {
-    return join(things, joiner, "Source", false)
+    return join(things, joiner, "Source")
 }
 
-func join(things interface{}, joiner string, stringer string, function bool) string {
+func join(things interface{}, joiner string, stringer string) string {
     values := reflect.ValueOf(things)
     s := ""
     length :=  values.Len() - 1
@@ -41,15 +41,12 @@ func join(things interface{}, joiner string, stringer string, function bool) str
         return s
     }
     for i := 0; i < length; i++ {
-        s += getString(values.Index(i), stringer, function) + joiner
+        s += getString(values.Index(i), stringer) + joiner
     }
-    s += getString(values.Index(length), stringer, function)
+    s += getString(values.Index(length), stringer)
     return s
 }
 
-func getString(value reflect.Value, stringer string, function bool) string {
-    if function {
-        return value.MethodByName(stringer).Call(nil)[0].String()
-    }
-    return reflect.Indirect(value).FieldByName(stringer).String()
+func getString(value reflect.Value, stringer string) string {
+    return value.MethodByName(stringer).Call(nil)[0].String()
 }

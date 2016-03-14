@@ -6,7 +6,7 @@ import (
 
 type Tokenizer struct {
     chars *RuneReader
-    head []*Token
+    head []Token
     position int
     savedPositions []int
     firstToken bool
@@ -21,10 +21,10 @@ func ReadLineTokenizer(file *os.File) *Tokenizer {
 }
 
 func (this *Tokenizer) Has() bool {
-    return this.Head() != EofToken
+    return this.Head() != Eof()
 }
 
-func (this *Tokenizer) Head() *Token {
+func (this *Tokenizer) Head() Token {
     for len(this.head) <= this.position {
         this.head = append(this.head, this.next())
     }
@@ -33,7 +33,7 @@ func (this *Tokenizer) Head() *Token {
 
 func (this *Tokenizer) Advance() {
     head := this.Head()
-    if head != EofToken {
+    if head != Eof() {
         this.position++
     }
 }
@@ -51,8 +51,8 @@ func (this *Tokenizer) DiscardPosition() {
     this.savedPositions = this.savedPositions[:len(this.savedPositions) - 1]
 }
 
-func (this *Tokenizer) next() *Token {
-    var token *Token = EofToken
+func (this *Tokenizer) next() Token {
+    var token Token = Eof()
     if this.firstToken && this.chars.Has() {
         // First token is indentation, which in this case
         // is not after a new line
@@ -62,7 +62,7 @@ func (this *Tokenizer) next() *Token {
         }
         this.firstToken = false
     }
-    for this.chars.Has() && token == EofToken {
+    for this.chars.Has() && token == Eof() {
         if isNewLineChar(this.chars.Head()) {
             consumeNewLine(this.chars)
             // Just after a new line, consume indentation of next line
@@ -70,7 +70,7 @@ func (this *Tokenizer) next() *Token {
         } else if this.chars.Head() == ';' {
             // A terminator breaks a line but doesn't need indentation
             this.chars.Advance()
-            token = TerminatorToken
+            token = Terminator()
         } else if isIdentifierStart(this.chars.Head()) {
             this.chars.Collect()
             identifier := collectIdentifierBody(this.chars)
@@ -253,7 +253,7 @@ func collectEscapeSequence(chars *RuneReader) bool {
     return false
 }
 
-func collectNumberLiteral(chars *RuneReader) *Token {
+func collectNumberLiteral(chars *RuneReader) Token {
     // Start with non-decimal integers
     if chars.Head() == '0' {
         chars.Collect()
@@ -296,7 +296,7 @@ func collectNumberLiteral(chars *RuneReader) *Token {
     return DecimalIntegerLiteral(chars.PopCollected())
 }
 
-func completeFloatLiteralStartingWithDecimalSeparator(chars *RuneReader) *Token {
+func completeFloatLiteralStartingWithDecimalSeparator(chars *RuneReader) Token {
     // Must have a decimal digit sequence next after the decimal
     collectDigitSequence(chars, isDecimalDigit)
     // We can have an optional exponent

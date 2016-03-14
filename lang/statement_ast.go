@@ -15,7 +15,7 @@ type InitializerAssignment struct {
 
 type Assignment struct {
     Target Expression
-    Operator *Token
+    Operator *SymbolToken
     Value Expression
 }
 
@@ -24,5 +24,5 @@ func (this *InitializerAssignment) String() string {
 }
 
 func (this *Assignment) String() string {
-    return fmt.Sprintf("Assignment(%s %s %s)", this.Target.String(), this.Operator.Source, this.Value.String())
+    return fmt.Sprintf("Assignment(%s %s %s)", this.Target.String(), this.Operator.Source(), this.Value.String())
 }

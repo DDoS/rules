@@ -358,7 +358,7 @@ func TestParseConditional(t *testing.T) {
 
 func parseTestExpression(source string) string {
     tokenizer := lang.StringTokenizer(source);
-    if tokenizer.Head().Kind == lang.INDENTATION {
+    if tokenizer.Head().Kind() == lang.INDENTATION {
         tokenizer.Advance()
     }
     return lang.ParseExpression(tokenizer).String()

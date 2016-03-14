@@ -1,17 +1,17 @@
 package lang
 
-func parseName(tokens *Tokenizer) []*Token {
-    if tokens.Head().Kind != IDENTIFIER {
+func parseName(tokens *Tokenizer) []*IdentifierToken {
+    if tokens.Head().Kind() != IDENTIFIER {
         panic("Expected an identifier")
     }
-    name := []*Token{tokens.Head()}
+    name := []*IdentifierToken{tokens.Head().(*IdentifierToken)}
     tokens.Advance()
     for tokens.Head().Is(".") {
         tokens.Advance()
-        if tokens.Head().Kind != IDENTIFIER {
+        if tokens.Head().Kind() != IDENTIFIER {
             panic("Expected an identifier")
         }
-        name = append(name, tokens.Head())
+        name = append(name, tokens.Head().(*IdentifierToken))
         tokens.Advance()
     }
     return name
