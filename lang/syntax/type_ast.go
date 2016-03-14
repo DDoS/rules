@@ -1,4 +1,4 @@
-package lang
+package syntax
 
 type Type interface {
     String() string

@@ -1,4 +1,4 @@
-package lang
+package syntax
 
 func parseCompositeLiteralPart(tokens *Tokenizer) *LabeledExpression {
     var label Token = nil

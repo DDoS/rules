@@ -1,9 +1,9 @@
-package lang_test
+package syntax_test
 
 import (
     "testing"
     "github.com/stretchr/testify/assert"
-    "github.com/michael-golfi/rules/lang"
+    "github.com/michael-golfi/rules/lang/syntax"
 )
 
 func TestParseAtom(t *testing.T) {
@@ -357,9 +357,9 @@ func TestParseConditional(t *testing.T) {
 }
 
 func parseTestExpression(source string) string {
-    tokenizer := lang.StringTokenizer(source);
-    if tokenizer.Head().Kind() == lang.INDENTATION {
+    tokenizer := syntax.StringTokenizer(source);
+    if tokenizer.Head().Kind() == syntax.INDENTATION {
         tokenizer.Advance()
     }
-    return lang.ParseExpression(tokenizer).String()
+    return syntax.ParseExpression(tokenizer).String()
 }

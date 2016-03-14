@@ -1,4 +1,4 @@
-package lang
+package syntax
 
 func parseName(tokens *Tokenizer) []*IdentifierToken {
     if tokens.Head().Kind() != IDENTIFIER {

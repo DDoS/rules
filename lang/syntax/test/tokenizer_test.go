@@ -1,10 +1,10 @@
-package lang_test
+package syntax_test
 
 import (
     "fmt"
     "testing"
     "github.com/stretchr/testify/assert"
-    "github.com/michael-golfi/rules/lang"
+    "github.com/michael-golfi/rules/lang/syntax"
 )
 
 func TestLexIdentifier(t *testing.T) {
@@ -32,14 +32,14 @@ func TestLexTerminator(t *testing.T) {
 }
 
 func TestLexKeyword(t *testing.T) {
-    for _, keyword := range lang.KEYWORDS {
+    for _, keyword := range syntax.KEYWORDS {
         stringKeword := string(keyword)
         assertLexNoIndent(t, stringKeword, fmt.Sprintf("Keyword(%s)", stringKeword))
     }
 }
 
 func TestLexSymbol(t *testing.T) {
-    for _, symbol := range lang.SYMBOLS {
+    for _, symbol := range syntax.SYMBOLS {
         stringSymbol := string(symbol)
         assertLexNoIndent(t, stringSymbol, fmt.Sprintf("Symbol(%s)", stringSymbol))
     }
@@ -145,9 +145,9 @@ func TestLexGenericProgram(t *testing.T) {
 }
 
 func assertLexNoIndent(t *testing.T, source string, expected ...string) {
-    tokenizer := lang.StringTokenizer(source)
+    tokenizer := syntax.StringTokenizer(source)
     tokens := []string{}
-    if tokenizer.Head().Kind() == lang.INDENTATION {
+    if tokenizer.Head().Kind() == syntax.INDENTATION {
         tokenizer.Advance()
     }
     for tokenizer.Has() {
@@ -158,7 +158,7 @@ func assertLexNoIndent(t *testing.T, source string, expected ...string) {
 }
 
 func assertLex(t *testing.T, source string, expected ...string) {
-    tokenizer := lang.StringTokenizer(source)
+    tokenizer := syntax.StringTokenizer(source)
     tokens := []string{}
     for tokenizer.Has() {
         tokens = append(tokens, tokenizer.Head().String())
