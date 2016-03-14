@@ -53,13 +53,8 @@ func parseCompositeLiteral(tokens *Tokenizer) *CompositeLiteral {
 }
 
 func parseAtom(tokens *Tokenizer) Expression {
-    if tokens.Head().Kind().IsLiteral() {
-        // Literal
-        literal := tokens.Head()
-        tokens.Advance()
-        return literal
-    }
     if tokens.Head().Is(".") {
+        // Context field access
         tokens.Advance()
         if tokens.Head().Kind() != IDENTIFIER {
             panic("Expected an identifier")
@@ -91,6 +86,27 @@ func parseAtom(tokens *Tokenizer) Expression {
         }
         tokens.Advance()
         return expression
+    }
+    // Check for a literal
+    switch literal := tokens.Head().(type) {
+    case *BooleanLiteral:
+        tokens.Advance()
+        return literal
+    case *StringLiteral:
+        tokens.Advance()
+        return literal
+    case *BinaryIntegerLiteral:
+        tokens.Advance()
+        return literal
+    case *DecimalIntegerLiteral:
+        tokens.Advance()
+        return literal
+    case *HexadecimalIntegerLiteral:
+        tokens.Advance()
+        return literal
+    case *FloatLiteral:
+        tokens.Advance()
+        return literal
     }
     panic("Expected a literal, a name or '('")
 }

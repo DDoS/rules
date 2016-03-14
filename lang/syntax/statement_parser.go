@@ -34,7 +34,7 @@ func parseAssigmnentOrFunctionCall(tokens *Tokenizer) Statement {
     case *ArrayAccess:
         break
     case *FunctionCall:
-        return t
+        return &FunctionCallStatement{t}
     default:
         panic("Not a reference expression")
     }

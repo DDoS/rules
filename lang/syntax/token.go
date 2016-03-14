@@ -260,25 +260,6 @@ func (this *Eof) String() string {
     return "EOF()"
 }
 
-func (kind Kind) IsLiteral() bool {
-    switch kind {
-    case BOOLEAN_LITERAL:
-        fallthrough
-    case STRING_LITERAL:
-        fallthrough
-    case BINARY_INTEGER_LITERAL:
-        fallthrough
-    case DECIMAL_INTEGER_LITERAL:
-        fallthrough
-    case HEXADECIMAL_INTEGER_LITERAL:
-        fallthrough
-    case FLOAT_LITERAL:
-        return true
-    default:
-        return false
-    }
-}
-
 func getSymbolType(symbol string) Kind {
     operator, has := OPERATOR_TYPES[string(symbol)]
     if has {

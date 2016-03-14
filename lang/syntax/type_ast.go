@@ -1,6 +1,7 @@
 package syntax
 
 type Type interface {
+    Accept(TypeModifier) Type
     String() string
 }
 

@@ -5,6 +5,7 @@ import (
 )
 
 type Statement interface {
+    Accept(StatementModifier) Statement
     String() string
 }
 
@@ -17,6 +18,10 @@ type Assignment struct {
     Target Expression
     Operator *Symbol
     Value Expression
+}
+
+type FunctionCallStatement struct {
+    *FunctionCall
 }
 
 func (this *InitializerAssignment) String() string {
