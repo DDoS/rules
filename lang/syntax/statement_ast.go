@@ -5,7 +5,7 @@ import (
 )
 
 type Statement interface {
-    Accept(StatementModifier) Statement
+    Accept(*StatementModifier) Statement
     String() string
 }
 

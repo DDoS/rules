@@ -5,7 +5,7 @@ import (
 )
 
 type Expression interface {
-    Accept(ExpressionModifier) Expression
+    Accept(*ExpressionModifier) Expression
     String() string
 }
 
