@@ -5,6 +5,7 @@ import (
 	"os"
     "os/signal"
     "github.com/michael-golfi/rules/lang"
+	"github.com/michael-golfi/rules/lang/syntax"
 )
 
 func main() {
@@ -27,8 +28,9 @@ func parseLine() {
         }
     }()
     fmt.Fprint(os.Stdin, "> ")
-    tokenizer := lang.ReadLineTokenizer(os.Stdin)
-    for _, statement := range lang.ParseStatments(tokenizer) {
+    tokenizer := syntax.ReadLineTokenizer(os.Stdin)
+    for _, statement := range syntax.ParseStatments(tokenizer) {
+		statement = lang.ReduceLiterals(statement)
         fmt.Fprintln(os.Stdin, statement.String())
     }
 }

@@ -1,6 +1,9 @@
 package syntax
 
-import "fmt"
+import (
+    "fmt"
+    "math/big"
+)
 
 type Kind uint
 
@@ -62,26 +65,34 @@ type Symbol struct {
 
 type BooleanLiteral struct {
     Source_
+    value bool
+    evaluated bool
 }
 
 type StringLiteral struct {
     Source_
+    value string
+    evaluated bool
 }
 
 type BinaryIntegerLiteral struct {
     Source_
+    value *big.Int
 }
 
 type DecimalIntegerLiteral struct {
     Source_
+    value *big.Int
 }
 
 type HexadecimalIntegerLiteral struct {
     Source_
+    value *big.Int
 }
 
 type FloatLiteral struct {
     Source_
+    value *big.Float
 }
 
 type Eof struct {
@@ -111,27 +122,27 @@ func NewSymbol(source []rune) *Symbol {
 }
 
 func NewBooleanLiteral(source []rune) *BooleanLiteral {
-    return &BooleanLiteral{Source_{string(source)}}
+    return &BooleanLiteral{Source_{string(source)}, false, false}
 }
 
 func NewStringLiteral(source []rune) *StringLiteral {
-    return &StringLiteral{Source_{string(source)}}
+    return &StringLiteral{Source_{string(source)}, "", false}
 }
 
 func NewBinaryIntegerLiteral(source []rune) *BinaryIntegerLiteral {
-    return &BinaryIntegerLiteral{Source_{string(source)}}
+    return &BinaryIntegerLiteral{Source_{string(source)}, nil}
 }
 
 func NewDecimalIntegerLiteral(source []rune) *DecimalIntegerLiteral {
-    return &DecimalIntegerLiteral{Source_{string(source)}}
+    return &DecimalIntegerLiteral{Source_{string(source)}, nil}
 }
 
 func NewHexadecimalIntegerLiteral(source []rune) *HexadecimalIntegerLiteral {
-    return &HexadecimalIntegerLiteral{Source_{string(source)}}
+    return &HexadecimalIntegerLiteral{Source_{string(source)}, nil}
 }
 
 func NewFloatLiteral(source []rune) *FloatLiteral {
-    return &FloatLiteral{Source_{string(source)}}
+    return &FloatLiteral{Source_{string(source)}, nil}
 }
 
 var eof *Eof = &Eof{}
@@ -258,6 +269,21 @@ func (this *FloatLiteral) String() string {
 
 func (this *Eof) String() string {
     return "EOF()"
+}
+
+func (this *BooleanLiteral) Eval() bool {
+    if !this.evaluated {
+        switch this.Source() {
+        case "false":
+            this.value = false
+        case "true":
+            this.value = true
+        default:
+            panic("Not a boolean")
+        }
+        this.evaluated = true
+    }
+    return this.value
 }
 
 func getSymbolType(symbol string) Kind {

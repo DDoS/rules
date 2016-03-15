@@ -157,7 +157,7 @@ func parseAccessOn(tokens *Tokenizer, value Expression) Expression {
         tokens.Advance()
         // The form decimalInt.identifier is lexed as float(numberSeq.)identifier
         // We detect it and convert it to first form here
-        decimalInt := &DecimalIntegerLiteral{Source_{token.Source()[:len(token.Source()) - 1]}}
+        decimalInt := &DecimalIntegerLiteral{Source_{token.Source()[:len(token.Source()) - 1]}, nil}
         return parseAccessOn(tokens, &FieldAccess{decimalInt, name})
     }
     return value
