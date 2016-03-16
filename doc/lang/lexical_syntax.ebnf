@@ -75,7 +75,8 @@ boolean = "true" | "false" ;
     carriage return, double quote and backslash *)
 charEscape = "\a" | "\b" | "\t" | "\n" | "\v" | "\f" | "\r" | '\"' | "\\" ;
 (* Hexadecimal sequence to be converted to  unicode code point in the string *)
-unicodeEscape = "\u", hexDigit, {hexDigit} ;
+unicodeEscape = "\u", hexDigit, [hexDigit, [hexDigit, [hexDigit, [hexDigit
+    [hexDigit, [hexDigit, [hexDigit]]]]]]];
 (* String are any ASCII char, excluding double quotes and new line chars,
     but with escape sequences *)
 string = '"', {

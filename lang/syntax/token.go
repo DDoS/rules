@@ -2,6 +2,7 @@ package syntax
 
 import (
     "fmt"
+    "strconv"
     "math/big"
 )
 
@@ -71,7 +72,8 @@ type BooleanLiteral struct {
 
 type StringLiteral struct {
     Source_
-    value string
+    runeSource []rune
+    value []rune
     evaluated bool
 }
 
@@ -126,7 +128,7 @@ func NewBooleanLiteral(source []rune) *BooleanLiteral {
 }
 
 func NewStringLiteral(source []rune) *StringLiteral {
-    return &StringLiteral{Source_{string(source)}, "", false}
+    return &StringLiteral{Source_{string(source)}, source, nil, false}
 }
 
 func NewBinaryIntegerLiteral(source []rune) *BinaryIntegerLiteral {
@@ -271,7 +273,7 @@ func (this *Eof) String() string {
     return "EOF()"
 }
 
-func (this *BooleanLiteral) Eval() bool {
+func (this *BooleanLiteral) Value() bool {
     if !this.evaluated {
         switch this.Source() {
         case "false":
@@ -284,6 +286,83 @@ func (this *BooleanLiteral) Eval() bool {
         this.evaluated = true
     }
     return this.value
+}
+
+func (this *StringLiteral) Value() []rune {
+    if this.evaluated {
+        return this.value
+    }
+    length := len(this.runeSource)
+    if length < 2 {
+        panic("String is missing enclosing quotes")
+    }
+    if this.runeSource[0] != '"' {
+        panic("String is missing beginning quote")
+    }
+    value := []rune{}
+    for i := 1; i < length - 1; {
+        c := this.runeSource[i]
+        i += 1
+        if c == '\\' {
+            c = this.runeSource[i]
+            i += 1
+            if c == 'u' {
+                var j int
+                c, j = decodeUnicodeEscape(this.runeSource[i - 1:])
+                i += j
+            } else {
+                c = decodeCharEscape(c)
+            }
+        }
+        value = append(value, c)
+    }
+    if this.runeSource[length - 1] != '"' {
+        panic("String is missing ending quote")
+    }
+    this.value = value
+    this.evaluated = true
+    return value
+}
+
+func decodeUnicodeEscape(cs []rune) (rune, int) {
+    length := len(cs)
+    if length < 2 || cs[0] != 'u' {
+        panic("Not a valid unicode escape")
+    }
+    i := 1
+    for i < length && i < 9 && isHexDigit(cs[i]) {
+        i += 1
+    }
+    val, ok := strconv.ParseUint(string(cs[1:i]), 16, 32)
+    if ok != nil {
+        panic("Failed to parse unicode escape")
+    }
+    return rune(val), i - 1
+}
+
+func decodeCharEscape(c rune) rune {
+    switch c {
+    case 'a':
+        return '\a'
+    case 'b':
+        return '\b'
+    case 't':
+        return '\t'
+    case 'n':
+        return '\n'
+    case 'v':
+        return '\v'
+    case 'f':
+        return '\f'
+    case 'r':
+        return '\r'
+    case '"':
+        return '"'
+    case '\\':
+        return '\\'
+    default:
+        panic("Not a valid escape character")
+    }
 }
 
 func getSymbolType(symbol string) Kind {
