@@ -254,9 +254,9 @@ func collectEscapeSequence(chars *RuneReader) bool {
 }
 
 func collectNumberLiteral(chars *RuneReader) Token {
-    // Start with non-decimal integers
     if chars.Head() == '0' {
         chars.Collect()
+        // Start with non-decimal integers
         if chars.Head() == 'b' || chars.Head() == 'B' {
             // Binary integer
             chars.Collect()
@@ -269,14 +269,14 @@ func collectNumberLiteral(chars *RuneReader) Token {
             collectDigitSequence(chars, isHexDigit)
             return NewHexadecimalIntegerLiteral(chars.PopCollected())
         }
-        if !isDecimalDigit(chars.Head()) {
-            // Just a zero
-            return NewDecimalIntegerLiteral(chars.PopCollected())
+        if isDecimalDigit(chars.Head()) {
+            // Not just a zero, collect more digits
+            collectDigitSequence(chars, isDecimalDigit)
         }
-        // Anything else is either a decimal integer or float
+    } else {
+        // The number must have a decimal digit sequence first
+        collectDigitSequence(chars, isDecimalDigit)
     }
-    // The number must have a decimal digit sequence next
-    collectDigitSequence(chars, isDecimalDigit)
     // Now we can have a decimal separator here, making it a float
     if chars.Head() == '.' {
         chars.Collect()

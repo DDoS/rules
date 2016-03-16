@@ -97,6 +97,7 @@ func TestLexHexadecimalIntegerLiteral(t *testing.T) {
 func TestLexFloatLiteral(t *testing.T) {
     assertLexNoIndent(t, "1.", "FloatLiteral(1.)");
     assertLexNoIndent(t, "12_345_689.", "FloatLiteral(12_345_689.)");
+    assertLexNoIndent(t, "0.1", "FloatLiteral(0.1)");
     assertLexNoIndent(t, "1.0", "FloatLiteral(1.0)");
     assertLexNoIndent(t, ".1", "FloatLiteral(.1)");
     assertLexNoIndent(t, ".14321", "FloatLiteral(.14321)");
