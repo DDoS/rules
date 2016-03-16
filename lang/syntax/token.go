@@ -2,6 +2,7 @@ package syntax
 
 import (
     "fmt"
+    "strings"
     "strconv"
     "math/big"
 )
@@ -363,6 +364,37 @@ func decodeCharEscape(c rune) rune {
     default:
         panic("Not a valid escape character")
     }
+}
+
+func (this *BinaryIntegerLiteral) Value() *big.Int {
+    if this.value == nil {
+        this.value = parseIntegerLiteral(this.source)
+    }
+    return this.value
+}
+
+func (this *DecimalIntegerLiteral) Value() *big.Int {
+    if this.value == nil {
+        this.value = parseIntegerLiteral(this.source)
+    }
+    return this.value
+}
+
+func (this *HexadecimalIntegerLiteral) Value() *big.Int {
+    if this.value == nil {
+        this.value = parseIntegerLiteral(this.source)
+    }
+    return this.value
+}
+
+func parseIntegerLiteral(source string) *big.Int {
+    v := strings.Replace(source, "_", "", -1)
+    i := new(big.Int)
+    _, ok := i.SetString(v, 0)
+    if !ok {
+        panic("Failed to parse integer literal")
+    }
+    return i
 }
 
 func getSymbolType(symbol string) Kind {
