@@ -95,7 +95,7 @@ type HexadecimalIntegerLiteral struct {
 
 type FloatLiteral struct {
     Source_
-    value *big.Float
+    value *big.Rat
 }
 
 type Eof struct {
@@ -395,6 +395,19 @@ func parseIntegerLiteral(source string) *big.Int {
         panic("Failed to parse integer literal")
     }
     return i
+}
+
+func (this *FloatLiteral) Value() *big.Rat {
+    if this.value == nil {
+        v := strings.Replace(this.source, "_", "", -1)
+        i := new(big.Rat)
+        _, ok := i.SetString(v)
+        if !ok {
+            panic("Failed to parse float literal")
+        }
+        this.value = i
+    }
+    return this.value
 }
 
 func getSymbolType(symbol string) Kind {
