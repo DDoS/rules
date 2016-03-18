@@ -28,7 +28,7 @@ func TestParseAtom(t *testing.T) {
         parseTestExpression("hello{2: test, 0xf1a: other, 0b00100: more}"),
     )
     assert.Equal(t,
-        "Initializer(test[]{DecimalIntegerLiteral(1), StringLiteral(\"2\"), CompositeLiteral({hey: FloatLiteral(2.1)})})",
+        "Initializer(test[]{IntegerLiteral(1), StringLiteral(\"2\"), CompositeLiteral({hey: FloatLiteral(2.1)})})",
         parseTestExpression("test[] {1, \"2\", {hey: 2.1}}"),
     )
 }
@@ -39,11 +39,11 @@ func TestParseAccess(t *testing.T) {
         parseTestExpression("\"test\".length"),
     )
     assert.Equal(t,
-        "FieldAccess(FieldAccess(DecimalIntegerLiteral(5).ucc).test)",
+        "FieldAccess(FieldAccess(IntegerLiteral(5).ucc).test)",
         parseTestExpression("5.ucc.test"),
     )
     assert.Equal(t,
-        "FieldAccess(FieldAccess(HexadecimalIntegerLiteral(0xf).ucc).test)",
+        "FieldAccess(FieldAccess(IntegerLiteral(0xf).ucc).test)",
         parseTestExpression("0xf.ucc.test"),
     )
     assert.Equal(t,
@@ -51,7 +51,7 @@ func TestParseAccess(t *testing.T) {
         parseTestExpression("5..ucc.test"),
     )
     assert.Equal(t,
-        "ArrayAccess(StringLiteral(\"test\")[DecimalIntegerLiteral(2)])",
+        "ArrayAccess(StringLiteral(\"test\")[IntegerLiteral(2)])",
         parseTestExpression("\"test\"[2]"),
     )
     assert.Equal(t,
@@ -59,7 +59,7 @@ func TestParseAccess(t *testing.T) {
         parseTestExpression("\"test\".len()"),
     )
     assert.Equal(t,
-        "FunctionCall(FieldAccess(StringLiteral(\"test\").substring)(DecimalIntegerLiteral(1), DecimalIntegerLiteral(3)))",
+        "FunctionCall(FieldAccess(StringLiteral(\"test\").substring)(IntegerLiteral(1), IntegerLiteral(3)))",
         parseTestExpression("\"test\".substring(1, 3)"),
     )
 }
@@ -93,7 +93,7 @@ func TestParseUnary(t *testing.T) {
 
 func TestParseExponent(t *testing.T) {
     assert.Equal(t,
-        "Exponent(test ** DecimalIntegerLiteral(12))",
+        "Exponent(test ** IntegerLiteral(12))",
         parseTestExpression("test ** 12"),
     )
     assert.Equal(t,
@@ -101,7 +101,7 @@ func TestParseExponent(t *testing.T) {
         parseTestExpression("test ** another ** more"),
     )
     assert.Equal(t,
-        "Exponent(FieldAccess(StringLiteral(\"1\").length) ** Sign(-DecimalIntegerLiteral(2)))",
+        "Exponent(FieldAccess(StringLiteral(\"1\").length) ** Sign(-IntegerLiteral(2)))",
         parseTestExpression("\"1\".length ** -2"),
     )
 }

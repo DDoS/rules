@@ -261,13 +261,13 @@ func collectNumberLiteral(chars *RuneReader) Token {
             // Binary integer
             chars.Collect()
             collectDigitSequence(chars, isBinaryDigit)
-            return NewBinaryIntegerLiteral(chars.PopCollected())
+            return NewIntegerLiteral(chars.PopCollected())
         }
         if chars.Head() == 'x' || chars.Head() == 'X' {
             // Hexadecimal integer
             chars.Collect()
             collectDigitSequence(chars, isHexDigit)
-            return NewHexadecimalIntegerLiteral(chars.PopCollected())
+            return NewIntegerLiteral(chars.PopCollected())
         }
         if isDecimalDigit(chars.Head()) {
             // Not just a zero, collect more digits
@@ -293,7 +293,7 @@ func collectNumberLiteral(chars *RuneReader) Token {
         return NewFloatLiteral(chars.PopCollected())
     }
     // Else it's a decimal integer and there's nothing more to do
-    return NewDecimalIntegerLiteral(chars.PopCollected())
+    return NewIntegerLiteral(chars.PopCollected())
 }
 
 func completeFloatLiteralStartingWithDecimalSeparator(chars *RuneReader) Token {

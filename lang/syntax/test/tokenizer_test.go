@@ -64,34 +64,30 @@ func TestLextStringLiteral(t *testing.T) {
     assertLexNoIndent(t, "\"\\u214ader\"", "StringLiteral(\"\\u214ader\")")
 }
 
-func TestLexBinaryIntegerLiteral(t *testing.T) {
-    assertLexNoIndent(t, "0b0", "BinaryIntegerLiteral(0b0)")
-    assertLexNoIndent(t, "0b11", "BinaryIntegerLiteral(0b11)")
-    assertLexNoIndent(t, "0B110101", "BinaryIntegerLiteral(0B110101)")
-    assertLexNoIndent(t, "0b1101_0001", "BinaryIntegerLiteral(0b1101_0001)")
-    assertLexNoIndent(t, "0b1101__0001", "BinaryIntegerLiteral(0b1101__0001)")
-    assertLexNoIndent(t, "0b1101_0100_0001", "BinaryIntegerLiteral(0b1101_0100_0001)")
-    assertLexNoIndent(t, "0b1101_0100____0001", "BinaryIntegerLiteral(0b1101_0100____0001)")
-}
+func IntegerLiteral(t *testing.T) {
+    assertLexNoIndent(t, "0b0", "IntegerLiteral(0b0)")
+    assertLexNoIndent(t, "0b11", "IntegerLiteral(0b11)")
+    assertLexNoIndent(t, "0B110101", "IntegerLiteral(0B110101)")
+    assertLexNoIndent(t, "0b1101_0001", "IntegerLiteral(0b1101_0001)")
+    assertLexNoIndent(t, "0b1101__0001", "IntegerLiteral(0b1101__0001)")
+    assertLexNoIndent(t, "0b1101_0100_0001", "IntegerLiteral(0b1101_0100_0001)")
+    assertLexNoIndent(t, "0b1101_0100____0001", "IntegerLiteral(0b1101_0100____0001)")
 
-func TestLexDecimalIntegerLiteral(t *testing.T) {
-    assertLexNoIndent(t, "0", "DecimalIntegerLiteral(0)")
-    assertLexNoIndent(t, "012", "DecimalIntegerLiteral(012)")
-    assertLexNoIndent(t, "564", "DecimalIntegerLiteral(564)")
-    assertLexNoIndent(t, "5_000", "DecimalIntegerLiteral(5_000)")
-    assertLexNoIndent(t, "5__000", "DecimalIntegerLiteral(5__000)")
-    assertLexNoIndent(t, "5_000_000", "DecimalIntegerLiteral(5_000_000)")
-    assertLexNoIndent(t, "5_000____000", "DecimalIntegerLiteral(5_000____000)")
-}
+    assertLexNoIndent(t, "0", "IntegerLiteral(0)")
+    assertLexNoIndent(t, "012", "IntegerLiteral(012)")
+    assertLexNoIndent(t, "564", "IntegerLiteral(564)")
+    assertLexNoIndent(t, "5_000", "IntegerLiteral(5_000)")
+    assertLexNoIndent(t, "5__000", "IntegerLiteral(5__000)")
+    assertLexNoIndent(t, "5_000_000", "IntegerLiteral(5_000_000)")
+    assertLexNoIndent(t, "5_000____000", "IntegerLiteral(5_000____000)")
 
-func TestLexHexadecimalIntegerLiteral(t *testing.T) {
-    assertLexNoIndent(t, "0x0", "HexadecimalIntegerLiteral(0x0)")
-    assertLexNoIndent(t, "0xAf", "HexadecimalIntegerLiteral(0xAf)")
-    assertLexNoIndent(t, "0XA24E4", "HexadecimalIntegerLiteral(0XA24E4)")
-    assertLexNoIndent(t, "0xDEAD_BEEF", "HexadecimalIntegerLiteral(0xDEAD_BEEF)")
-    assertLexNoIndent(t, "0x2192__CAFE", "HexadecimalIntegerLiteral(0x2192__CAFE)")
-    assertLexNoIndent(t, "0xBABE_291c_13b2", "HexadecimalIntegerLiteral(0xBABE_291c_13b2)")
-    assertLexNoIndent(t, "0x4235_1232____54fd3", "HexadecimalIntegerLiteral(0x4235_1232____54fd3)")
+    assertLexNoIndent(t, "0x0", "IntegerLiteral(0x0)")
+    assertLexNoIndent(t, "0xAf", "IntegerLiteral(0xAf)")
+    assertLexNoIndent(t, "0XA24E4", "IntegerLiteral(0XA24E4)")
+    assertLexNoIndent(t, "0xDEAD_BEEF", "IntegerLiteral(0xDEAD_BEEF)")
+    assertLexNoIndent(t, "0x2192__CAFE", "IntegerLiteral(0x2192__CAFE)")
+    assertLexNoIndent(t, "0xBABE_291c_13b2", "IntegerLiteral(0xBABE_291c_13b2)")
+    assertLexNoIndent(t, "0x4235_1232____54fd3", "IntegerLiteral(0x4235_1232____54fd3)")
 }
 
 func TestLexFloatLiteral(t *testing.T) {
@@ -133,11 +129,11 @@ func TestLexGenericProgram(t *testing.T) {
         "printfln(\"%d! is %d\", n, fact)\n" +
         "## Random block comment ##",
         "Indentation()",
-        "Indentation()", "Keyword(let)", "Identifier(n)", "Symbol(=)", "DecimalIntegerLiteral(12)", "Terminator(;)",
-        "Keyword(var)", "Identifier(fact)", "Symbol(=)", "DecimalIntegerLiteral(1)",
-        "Indentation()", "Keyword(for)", "Keyword(var)", "Identifier(i)", "Symbol(=)", "DecimalIntegerLiteral(2)", "Terminator(;)",
+        "Indentation()", "Keyword(let)", "Identifier(n)", "Symbol(=)", "IntegerLiteral(12)", "Terminator(;)",
+        "Keyword(var)", "Identifier(fact)", "Symbol(=)", "IntegerLiteral(1)",
+        "Indentation()", "Keyword(for)", "Keyword(var)", "Identifier(i)", "Symbol(=)", "IntegerLiteral(2)", "Terminator(;)",
         "Identifier(i)", "Symbol(<=)", "Identifier(n)", "Terminator(;)",
-        "Identifier(i)", "Symbol(+=)", "DecimalIntegerLiteral(1)",
+        "Identifier(i)", "Symbol(+=)", "IntegerLiteral(1)",
         "Indentation(    )", "Identifier(fact)", "Symbol(*=)", "Identifier(i)",
         "Indentation()", "Identifier(printfln)", "Symbol(()", "StringLiteral(\"%d! is %d\")", "Symbol(,)",
         "Identifier(n)", "Symbol(,)", "Identifier(fact)", "Symbol())",

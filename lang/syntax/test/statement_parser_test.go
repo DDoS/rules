@@ -8,7 +8,7 @@ import (
 
 func TestAssignment(t *testing.T) {
     assert.Equal(t,
-        "Assignment(a = DecimalIntegerLiteral(1))",
+        "Assignment(a = IntegerLiteral(1))",
         syntax.ParseStatment(syntax.StringTokenizer("a = 1")).String(),
     )
     assert.Equal(t,
@@ -31,7 +31,7 @@ func TestFunctionCall(t *testing.T) {
         syntax.ParseStatment(syntax.StringTokenizer("a()")).String(),
     )
     assert.Equal(t,
-        "FunctionCall(a(DecimalIntegerLiteral(1), b))",
+        "FunctionCall(a(IntegerLiteral(1), b))",
         syntax.ParseStatment(syntax.StringTokenizer("a(1, b)")).String(),
     )
     assert.Equal(t,
@@ -43,14 +43,14 @@ func TestFunctionCall(t *testing.T) {
         syntax.ParseStatment(syntax.StringTokenizer("\"test\".length()")).String(),
     )
     assert.Equal(t,
-        "FunctionCall(FieldAccess(Infix(DecimalIntegerLiteral(2) log b).test)())",
+        "FunctionCall(FieldAccess(Infix(IntegerLiteral(2) log b).test)())",
         syntax.ParseStatment(syntax.StringTokenizer("(2 log b).test()")).String(),
     )
 }
 
 func TestParseStatments(t *testing.T) {
     assert.Equal(t,
-        "FunctionCall(a()); Assignment(a = DecimalIntegerLiteral(1)); FunctionCall(a.b()); Assignment(a.b *= v)",
+        "FunctionCall(a()); Assignment(a = IntegerLiteral(1)); FunctionCall(a.b()); Assignment(a.b *= v)",
         toString(syntax.ParseStatments(syntax.StringTokenizer("a()\na = 1; a.b();\n\t\ra.b *= v"))),
     )
 }

@@ -27,9 +27,7 @@ const (
     OTHER_SYMBOL
     BOOLEAN_LITERAL
     STRING_LITERAL
-    BINARY_INTEGER_LITERAL
-    DECIMAL_INTEGER_LITERAL
-    HEXADECIMAL_INTEGER_LITERAL
+    INTEGER_LITERAL
     FLOAT_LITERAL
     EOF
 )
@@ -78,17 +76,7 @@ type StringLiteral struct {
     evaluated bool
 }
 
-type BinaryIntegerLiteral struct {
-    Source_
-    value *big.Int
-}
-
-type DecimalIntegerLiteral struct {
-    Source_
-    value *big.Int
-}
-
-type HexadecimalIntegerLiteral struct {
+type IntegerLiteral struct {
     Source_
     value *big.Int
 }
@@ -132,16 +120,8 @@ func NewStringLiteral(source []rune) *StringLiteral {
     return &StringLiteral{Source_{string(source)}, source, nil, false}
 }
 
-func NewBinaryIntegerLiteral(source []rune) *BinaryIntegerLiteral {
-    return &BinaryIntegerLiteral{Source_{string(source)}, nil}
-}
-
-func NewDecimalIntegerLiteral(source []rune) *DecimalIntegerLiteral {
-    return &DecimalIntegerLiteral{Source_{string(source)}, nil}
-}
-
-func NewHexadecimalIntegerLiteral(source []rune) *HexadecimalIntegerLiteral {
-    return &HexadecimalIntegerLiteral{Source_{string(source)}, nil}
+func NewIntegerLiteral(source []rune) *IntegerLiteral {
+    return &IntegerLiteral{Source_{string(source)}, nil}
 }
 
 func NewFloatLiteral(source []rune) *FloatLiteral {
@@ -206,16 +186,8 @@ func (this *StringLiteral) Kind() Kind {
     return STRING_LITERAL
 }
 
-func (this *BinaryIntegerLiteral) Kind() Kind {
-    return BINARY_INTEGER_LITERAL
-}
-
-func (this *DecimalIntegerLiteral) Kind() Kind {
-    return DECIMAL_INTEGER_LITERAL
-}
-
-func (this *HexadecimalIntegerLiteral) Kind() Kind {
-    return HEXADECIMAL_INTEGER_LITERAL
+func (this *IntegerLiteral) Kind() Kind {
+    return INTEGER_LITERAL
 }
 
 func (this *FloatLiteral) Kind() Kind {
@@ -253,17 +225,8 @@ func (this *BooleanLiteral) String() string {
 func (this *StringLiteral) String() string {
     return fmt.Sprintf("StringLiteral(%s)", this.source)
 }
-
-func (this *BinaryIntegerLiteral) String() string {
-    return fmt.Sprintf("BinaryIntegerLiteral(%s)", this.source)
-}
-
-func (this *DecimalIntegerLiteral) String() string {
-    return fmt.Sprintf("DecimalIntegerLiteral(%s)", this.source)
-}
-
-func (this *HexadecimalIntegerLiteral) String() string {
-    return fmt.Sprintf("HexadecimalIntegerLiteral(%s)", this.source)
+func (this *IntegerLiteral) String() string {
+    return fmt.Sprintf("IntegerLiteral(%s)", this.source)
 }
 
 func (this *FloatLiteral) String() string {
@@ -366,35 +329,17 @@ func decodeCharEscape(c rune) rune {
     }
 }
 
-func (this *BinaryIntegerLiteral) Value() *big.Int {
+func (this *IntegerLiteral) Value() *big.Int {
     if this.value == nil {
-        this.value = parseIntegerLiteral(this.source)
+        v := strings.Replace(this.source, "_", "", -1)
+        i := new(big.Int)
+        _, ok := i.SetString(v, 0)
+        if !ok {
+            panic("Failed to parse integer literal")
+        }
+        this.value = i
     }
     return this.value
-}
-
-func (this *DecimalIntegerLiteral) Value() *big.Int {
-    if this.value == nil {
-        this.value = parseIntegerLiteral(this.source)
-    }
-    return this.value
-}
-
-func (this *HexadecimalIntegerLiteral) Value() *big.Int {
-    if this.value == nil {
-        this.value = parseIntegerLiteral(this.source)
-    }
-    return this.value
-}
-
-func parseIntegerLiteral(source string) *big.Int {
-    v := strings.Replace(source, "_", "", -1)
-    i := new(big.Int)
-    _, ok := i.SetString(v, 0)
-    if !ok {
-        panic("Failed to parse integer literal")
-    }
-    return i
 }
 
 func (this *FloatLiteral) Value() *big.Rat {

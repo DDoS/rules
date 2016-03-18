@@ -8,9 +8,7 @@ type ExpressionModifier struct {
     *TypeModifier
     ModifyBooleanLiteral func(*BooleanLiteral) Expression
     ModifyStringLiteral func(*StringLiteral) Expression
-    ModifyBinaryIntegerLiteral func(*BinaryIntegerLiteral) Expression
-    ModifyDecimalIntegerLiteral func(*DecimalIntegerLiteral) Expression
-    ModifyHexadecimalIntegerLiteral func(*HexadecimalIntegerLiteral) Expression
+    ModifyIntegerLiteral func(*IntegerLiteral) Expression
     ModifyFloatLiteral func(*FloatLiteral) Expression
     ModifyNameReference func(*NameReference) Expression
     ModifyCompositeLiteral func(*CompositeLiteral) Expression
@@ -53,12 +51,13 @@ func NewTypeModifier() *TypeModifier {
 func NewExpressionModifier() *ExpressionModifier {
     return &ExpressionModifier{
         NewTypeModifier(),
-        noopModifyBooleanLiteral, noopModifyStringLiteral, noopModifyBinaryIntegerLiteral, noopModifyDecimalIntegerLiteral, noopModifyHexadecimalIntegerLiteral,
-        noopModifyFloatLiteral, noopModifyNameReference, noopModifyCompositeLiteral, noopModifyInitializer, noopModifyContextFieldAccess,
-        noopModifyFieldAccess, noopModifyArrayAccess, noopModifyFunctionCall, noopModifySign, noopModifyLogicalNot,
-        noopModifyBitwiseNot, noopModifyExponent, noopModifyInfix, noopModifyMultiply, noopModifyAdd,
-        noopModifyShift, noopModifyCompare, noopModifyBitwiseAnd, noopModifyBitwiseXor, noopModifyBitwiseOr,
-        noopModifyLogicalAnd, noopModifyLogicalXor, noopModifyLogicalOr, noopModifyConcatenate, noopModifyRange,
+        noopModifyBooleanLiteral, noopModifyStringLiteral, noopModifyIntegerLiteral, noopModifyFloatLiteral,
+        noopModifyNameReference, noopModifyCompositeLiteral, noopModifyInitializer, noopModifyContextFieldAccess,
+        noopModifyFieldAccess, noopModifyArrayAccess, noopModifyFunctionCall, noopModifySign,
+        noopModifyLogicalNot, noopModifyBitwiseNot, noopModifyExponent, noopModifyInfix,
+        noopModifyMultiply, noopModifyAdd, noopModifyShift, noopModifyCompare,
+        noopModifyBitwiseAnd, noopModifyBitwiseXor, noopModifyBitwiseOr, noopModifyLogicalAnd,
+        noopModifyLogicalXor, noopModifyLogicalOr, noopModifyConcatenate, noopModifyRange,
         noopModifyConditional,
     }
 }
@@ -82,16 +81,8 @@ func (this *StringLiteral) Accept(visitor *ExpressionModifier) Expression {
     return visitor.ModifyStringLiteral(this)
 }
 
-func (this *BinaryIntegerLiteral) Accept(visitor *ExpressionModifier) Expression {
-    return visitor.ModifyBinaryIntegerLiteral(this)
-}
-
-func (this *DecimalIntegerLiteral) Accept(visitor *ExpressionModifier) Expression {
-    return visitor.ModifyDecimalIntegerLiteral(this)
-}
-
-func (this *HexadecimalIntegerLiteral) Accept(visitor *ExpressionModifier) Expression {
-    return visitor.ModifyHexadecimalIntegerLiteral(this)
+func (this *IntegerLiteral) Accept(visitor *ExpressionModifier) Expression {
+    return visitor.ModifyIntegerLiteral(this)
 }
 
 func (this *FloatLiteral) Accept(visitor *ExpressionModifier) Expression {
@@ -277,15 +268,7 @@ func noopModifyStringLiteral(expression *StringLiteral) Expression {
     return expression
 }
 
-func noopModifyBinaryIntegerLiteral(expression *BinaryIntegerLiteral) Expression {
-    return expression
-}
-
-func noopModifyDecimalIntegerLiteral(expression *DecimalIntegerLiteral) Expression {
-    return expression
-}
-
-func noopModifyHexadecimalIntegerLiteral(expression *HexadecimalIntegerLiteral) Expression {
+func noopModifyIntegerLiteral(expression *IntegerLiteral) Expression {
     return expression
 }
 

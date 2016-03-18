@@ -14,6 +14,12 @@ func ReduceLiterals(statement syntax.Statement) syntax.Statement {
     return statement.Accept(literalReducer)
 }
 
+/*func signReducer(sign *syntax.Sign) syntax.Expression {
+    switch t := sign.Inner.(type) {
+        case *
+    }
+}*/
+
 func addReducer(add *syntax.Add) syntax.Expression {
     return add
 }

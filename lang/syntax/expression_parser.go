@@ -3,8 +3,7 @@ package syntax
 func parseCompositeLiteralPart(tokens *Tokenizer) *LabeledExpression {
     var label Token = nil
     headKind := tokens.Head().Kind()
-    if headKind == IDENTIFIER || headKind == DECIMAL_INTEGER_LITERAL ||
-            headKind == HEXADECIMAL_INTEGER_LITERAL || headKind == BINARY_INTEGER_LITERAL {
+    if headKind == IDENTIFIER || headKind == INTEGER_LITERAL {
         label = tokens.Head()
         tokens.SavePosition()
         tokens.Advance()
@@ -95,13 +94,7 @@ func parseAtom(tokens *Tokenizer) Expression {
     case *StringLiteral:
         tokens.Advance()
         return literal
-    case *BinaryIntegerLiteral:
-        tokens.Advance()
-        return literal
-    case *DecimalIntegerLiteral:
-        tokens.Advance()
-        return literal
-    case *HexadecimalIntegerLiteral:
+    case *IntegerLiteral:
         tokens.Advance()
         return literal
     case *FloatLiteral:
@@ -157,7 +150,7 @@ func parseAccessOn(tokens *Tokenizer, value Expression) Expression {
         tokens.Advance()
         // The form decimalInt.identifier is lexed as float(numberSeq.)identifier
         // We detect it and convert it to first form here
-        decimalInt := &DecimalIntegerLiteral{Source_{token.Source()[:len(token.Source()) - 1]}, nil}
+        decimalInt := &IntegerLiteral{Source_{token.Source()[:len(token.Source()) - 1]}, nil}
         return parseAccessOn(tokens, &FieldAccess{decimalInt, name})
     }
     return value
