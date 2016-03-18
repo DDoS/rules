@@ -1,0 +1,6 @@
+name "rules-lang"
+targetName "ruleslang"
+description "The compiler of the language of rules"
+copyright "Copyright © 2016, Aleksi Sapon"
+authors "Aleksi Sapon"
+targetPath "bin"
