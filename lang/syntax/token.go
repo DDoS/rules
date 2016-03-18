@@ -39,50 +39,50 @@ type Token interface {
     String() string
 }
 
-type Source_ struct {
+type TokenSource struct {
     source string
 }
 
 type Indentation struct {
-    Source_
+    TokenSource
 }
 
 type Terminator struct {
 }
 
 type Identifier struct {
-    Source_
+    TokenSource
 }
 
 type Keyword struct {
-    Source_
+    TokenSource
 }
 
 type Symbol struct {
-    Source_
+    TokenSource
     kind Kind
 }
 
 type BooleanLiteral struct {
-    Source_
+    TokenSource
     value bool
     evaluated bool
 }
 
 type StringLiteral struct {
-    Source_
+    TokenSource
     runeSource []rune
     value []rune
     evaluated bool
 }
 
 type IntegerLiteral struct {
-    Source_
+    TokenSource
     value *big.Int
 }
 
 type FloatLiteral struct {
-    Source_
+    TokenSource
     value *big.Rat
 }
 
@@ -90,7 +90,7 @@ type Eof struct {
 }
 
 func NewIndentation(source []rune) *Indentation {
-    return &Indentation{Source_{string(source)}}
+    return &Indentation{TokenSource{string(source)}}
 }
 
 var terminator *Terminator = &Terminator{}
@@ -100,32 +100,58 @@ func NewTerminator() *Terminator {
 }
 
 func NewIdentifier(source []rune) *Identifier {
-    return &Identifier{Source_{string(source)}}
+    return &Identifier{TokenSource{string(source)}}
 }
 
 func NewKeyword(source []rune) *Keyword {
-    return &Keyword{Source_{string(source)}}
+    return &Keyword{TokenSource{string(source)}}
 }
 
 func NewSymbol(source []rune) *Symbol {
     stringSource := string(source)
-    return &Symbol{Source_{stringSource}, getSymbolType(stringSource)}
+    return &Symbol{TokenSource{stringSource}, getSymbolType(stringSource)}
 }
 
 func NewBooleanLiteral(source []rune) *BooleanLiteral {
-    return &BooleanLiteral{Source_{string(source)}, false, false}
+    return &BooleanLiteral{TokenSource{string(source)}, false, false}
+}
+
+func NewBooleanLiteralFromValue(value bool) *BooleanLiteral {
+    var source string
+    if value {
+        source = "true"
+    } else {
+        source = "false"
+    }
+    return &BooleanLiteral{TokenSource{source}, value, true}
 }
 
 func NewStringLiteral(source []rune) *StringLiteral {
-    return &StringLiteral{Source_{string(source)}, source, nil, false}
+    return &StringLiteral{TokenSource{string(source)}, source, nil, false}
+}
+
+func NewStringLiteralFromValue(value []rune) *StringLiteral {
+    bytes := []byte{}
+    for _, r := range value {
+        bytes = strconv.AppendQuoteRuneToASCII(bytes, r)
+    }
+    return &StringLiteral{TokenSource{string(bytes)}, nil, value, true}
 }
 
 func NewIntegerLiteral(source []rune) *IntegerLiteral {
-    return &IntegerLiteral{Source_{string(source)}, nil}
+    return &IntegerLiteral{TokenSource{string(source)}, nil}
+}
+
+func NewIntegerLiteralFromValue(value *big.Int) *IntegerLiteral {
+    return &IntegerLiteral{TokenSource{value.String()}, value}
 }
 
 func NewFloatLiteral(source []rune) *FloatLiteral {
-    return &FloatLiteral{Source_{string(source)}, nil}
+    return &FloatLiteral{TokenSource{string(source)}, nil}
+}
+
+func NewFloatLiteralFromValue(value *big.Rat) *FloatLiteral {
+    return &FloatLiteral{TokenSource{value.String()}, value}
 }
 
 var eof *Eof = &Eof{}
@@ -134,7 +160,7 @@ func NewEof() *Eof {
     return eof
 }
 
-func (this *Source_) Source() string {
+func (this *TokenSource) Source() string {
     return this.source
 }
 
@@ -146,7 +172,7 @@ func (this *Eof) Source() string {
     return "\u0004"
 }
 
-func (this *Source_) Is(source string) bool {
+func (this *TokenSource) Is(source string) bool {
     return this.Source() == source
 }
 
