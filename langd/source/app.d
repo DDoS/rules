@@ -1,6 +1,8 @@
 import std.stdio;
+import std.array;
 
-void main()
-{
-	writeln("Edit source/app.d to start your project.");
+import ruleslang.syntax.token;
+
+void main() {
+	writeln(":(");
 }

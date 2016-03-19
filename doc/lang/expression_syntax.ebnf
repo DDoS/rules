@@ -49,7 +49,7 @@ logicalOrOperator = "||" ;
 concatenateOperator = "~" ;
 rangeOperator = ".." ;
 assignmentOperator = "**=" | "*=" | "/=" | "%=" | "+=" | "-=" | "<<=" | ">>="
-    | ">>>=" | "&=" | "^=" | "|=" | "&&=" | "^^=" | "||=" | "~=" | "="  ;
+    | ">>>=" | "&=" | "^=" | "|=" | "&&=" | "^^=" | "||=" | "~=" | "=" ;
 
 (* Field access is like: anObject.aField *)
 fieldAccess = access, ".", identifierToken ;
