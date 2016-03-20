@@ -11,13 +11,24 @@ public enum Kind {
     TERMINATOR,
     IDENTIFIER,
     KEYWORD,
+    BITWISE_NOT_OPERATOR,
+    LOGICAL_NOT_OPERATOR,
+    EXPONENT_OPERATOR,
     MULTIPLY_OPERATOR,
     ADD_OPERATOR,
     SHIFT_OPERATOR,
     VALUE_COMPARE_OPERATOR,
     TYPE_COMPARE_OPERATOR,
+    BITWISE_AND_OPERATOR,
+    BITWISE_XOR_OPERATOR,
+    BITWISE_OR_OPERATOR,
+    LOGICAL_AND_OPERATOR,
+    LOGICAL_XOR_OPERATOR,
+    LOGICAL_OR_OPERATOR,
+    CONCATENATE_OPERATOR,
+    RANGE_OPERATOR,
     ASSIGNMENT_OPERATOR,
-    UNIQUE_SYMBOL,
+    OTHER_SYMBOL,
     BOOLEAN_LITERAL,
     STRING_LITERAL,
     INTEGER_LITERAL,
@@ -76,6 +87,9 @@ public template SourceToken(Kind kind) {
     }
 }
 
+public alias BitwiseNotOperator = SourceToken!(Kind.BITWISE_NOT_OPERATOR);
+public alias LogicalNotOperator = SourceToken!(Kind.LOGICAL_NOT_OPERATOR);
+public alias ExponentOpeartor = SourceToken!(Kind.EXPONENT_OPERATOR);
 public alias Indentation = SourceToken!(Kind.INDENTATION);
 public alias Identifier = SourceToken!(Kind.IDENTIFIER);
 public alias Keyword = SourceToken!(Kind.KEYWORD);
@@ -84,8 +98,16 @@ public alias AddOperator = SourceToken!(Kind.ADD_OPERATOR);
 public alias ShiftOperator = SourceToken!(Kind.SHIFT_OPERATOR);
 public alias ValueCompareOperator = SourceToken!(Kind.VALUE_COMPARE_OPERATOR);
 public alias TypeCompareOperator = SourceToken!(Kind.TYPE_COMPARE_OPERATOR);
+public alias BitwiseAndOperator = SourceToken!(Kind.BITWISE_AND_OPERATOR);
+public alias BitwiseXorOperator = SourceToken!(Kind.BITWISE_XOR_OPERATOR);
+public alias BitwiseOrOperator = SourceToken!(Kind.BITWISE_OR_OPERATOR);
+public alias LogicalAndOperator = SourceToken!(Kind.LOGICAL_AND_OPERATOR);
+public alias LogicalXorOperator = SourceToken!(Kind.LOGICAL_XOR_OPERATOR);
+public alias LogicalOrOperator = SourceToken!(Kind.LOGICAL_OR_OPERATOR);
+public alias ConcatenateOperator = SourceToken!(Kind.CONCATENATE_OPERATOR);
+public alias RangOperator = SourceToken!(Kind.RANGE_OPERATOR);
 public alias AssignmentOperator = SourceToken!(Kind.ASSIGNMENT_OPERATOR);
-public alias UniqueSymbol = SourceToken!(Kind.UNIQUE_SYMBOL);
+public alias OtherSymbol = SourceToken!(Kind.OTHER_SYMBOL);
 
 public class BooleanLiteral : SourceToken!(Kind.BOOLEAN_LITERAL) {
     private bool value;
@@ -287,7 +309,7 @@ public class Eof : Token {
 }
 
 public string toString(Kind kind) {
-    switch (kind) with (Kind) {
+    final switch (kind) with (Kind) {
         case INDENTATION:
             return "Indentation";
         case TERMINATOR:
@@ -296,13 +318,24 @@ public string toString(Kind kind) {
             return "Identifier";
         case KEYWORD:
             return "Keyword";
+        case BITWISE_NOT_OPERATOR:
+        case LOGICAL_NOT_OPERATOR:
+        case EXPONENT_OPERATOR:
         case MULTIPLY_OPERATOR:
         case ADD_OPERATOR:
         case SHIFT_OPERATOR:
         case VALUE_COMPARE_OPERATOR:
         case TYPE_COMPARE_OPERATOR:
+        case BITWISE_AND_OPERATOR:
+        case BITWISE_XOR_OPERATOR:
+        case BITWISE_OR_OPERATOR:
+        case LOGICAL_AND_OPERATOR:
+        case LOGICAL_XOR_OPERATOR:
+        case LOGICAL_OR_OPERATOR:
+        case CONCATENATE_OPERATOR:
+        case RANGE_OPERATOR:
         case ASSIGNMENT_OPERATOR:
-        case UNIQUE_SYMBOL:
+        case OTHER_SYMBOL:
             return "Symbol";
         case BOOLEAN_LITERAL:
             return "BooleanLiteral";
@@ -314,8 +347,6 @@ public string toString(Kind kind) {
             return "FloatLiteral";
         case EOF:
             return "EOF";
-        default:
-            throw new Exception(format("Unknown kind: %s", kind));
     }
 }
 
@@ -324,7 +355,7 @@ public Token newSymbol(dstring source) {
     if (constructor !is null) {
         return (*constructor)(source);
     }
-    return new UniqueSymbol(source);
+    return new OtherSymbol(source);
 }
 
 private Token function(dstring)[dstring] OPERATOR_SOURCES;
@@ -338,11 +369,22 @@ private void addSourcesForOperator(Op)(dstring[] sources ...) {
 }
 
 private static this() {
+    addSourcesForOperator!BitwiseNotOperator("~"d);
+    addSourcesForOperator!LogicalNotOperator("!"d);
+    addSourcesForOperator!ExponentOpeartor("**"d);
     addSourcesForOperator!MultiplyOperator("*"d, "/"d, "%"d);
     addSourcesForOperator!AddOperator("+"d, "-"d);
     addSourcesForOperator!ShiftOperator("<<"d, ">>"d, ">>>"d);
     addSourcesForOperator!ValueCompareOperator("==="d, "!=="d, "=="d, "!="d, "<"d, ">"d, "<="d, ">="d);
     addSourcesForOperator!TypeCompareOperator("::"d, "!:"d, "<:"d, ">:"d, "<<:"d, ">>:"d, "<:>"d);
+    addSourcesForOperator!BitwiseAndOperator("&"d);
+    addSourcesForOperator!BitwiseXorOperator("^"d);
+    addSourcesForOperator!BitwiseOrOperator("|"d);
+    addSourcesForOperator!LogicalAndOperator("&&"d);
+    addSourcesForOperator!LogicalXorOperator("^^"d);
+    addSourcesForOperator!LogicalOrOperator("||"d);
+    addSourcesForOperator!ConcatenateOperator("~"d);
+    addSourcesForOperator!RangOperator(".."d);
     addSourcesForOperator!AssignmentOperator(
         "**="d, "*="d, "/="d, "%="d, "+="d, "-="d, "<<="d, ">>="d,
         ">>>="d, "&="d, "^="d, "|="d, "&&="d, "^^="d, "||="d, "~="d, "="d
