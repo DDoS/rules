@@ -123,14 +123,14 @@ public class DCharReader {
 }
 
 unittest {
-    auto reader = new DCharReader(new StringDCharStream("this is a test héhé∑"));
+    auto reader = new DCharReader(new StringDCharStream("this is a test to see héhé∑"));
     while (reader.head() != ' ') {
         reader.advance();
     }
     while (reader.head() != 'h') {
         reader.collect();
     }
-    assert(reader.popCollected() == " is a test "d);
+    assert(reader.popCollected() == " is a test to see "d);
     while (reader.has()) {
         reader.collect();
     }

@@ -1,10 +1,10 @@
-module ruleslang.syntax.chars;
+module ruleslang.syntax.dchars;
 
 import std.conv;
 import std.exception;
 import std.format;
 import std.uni;
-import std.algorithm;
+import std.algorithm.iteration;
 
 private immutable dchar[dchar] ESCAPE_CHARS;
 private immutable dchar[dchar] CHAR_ESCAPES;
@@ -31,6 +31,18 @@ static this() {
     CHAR_ESCAPES = assumeUnique(reverse);
 }
 
+public bool isIdentifierStart(dchar c) {
+    return c == '_' || isLetter(c);
+}
+
+public bool isIdentifierBody(dchar c) {
+    return isIdentifierStart(c) || isDecimalDigit(c);
+}
+
+public bool isLetter(dchar c) {
+    return c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z';
+}
+
 public bool isBinaryDigit(dchar c) {
     return c == '0' || c == '1';
 }
@@ -41,6 +53,26 @@ public bool isDecimalDigit(dchar c) {
 
 public bool isHexDigit(dchar c) {
     return isDecimalDigit(c) || c >= 'A' && c <= 'F' || c >= 'a' && c <= 'f';
+}
+
+public bool isPrintChar(dchar c) {
+    return c >= '!' && c <= '~';
+}
+
+public bool isNewLineChar(dchar c) {
+    return c == '\n' || c == '\r';
+}
+
+public bool isLineWhiteSpace(dchar c) {
+    return c == ' ' || c == '\t';
+}
+
+public bool isWhiteSpace(dchar c) {
+    return isNewLineChar(c) || isLineWhiteSpace(c);
+}
+
+public bool isEscapeChar(dchar c) {
+    return (c in ESCAPE_CHARS) !is null;
 }
 
 public dchar decodeUnicodeEscape(dstring cs, ref size_t position) {
@@ -59,15 +91,17 @@ public dchar decodeUnicodeEscape(dstring cs, ref size_t position) {
 }
 
 public dchar decodeCharEscape(dchar c) {
-    if (c !in ESCAPE_CHARS) {
+    auto char_ = c in ESCAPE_CHARS;
+    if (char_ is null) {
         throw new Exception(format("Not a valid escape character: %s", escapeChar(c)));
     }
-    return ESCAPE_CHARS[c];
+    return *char_;
 }
 
 public dstring escapeChar(dchar c) {
-    if (c in CHAR_ESCAPES) {
-        return "\\" ~ CHAR_ESCAPES[c].to!dstring;
+    auto escape = c in CHAR_ESCAPES;
+    if (escape !is null) {
+        return "\\" ~ (*escape).to!dstring;
     }
     if (c.isGraphical()) {
         return c.to!dstring;

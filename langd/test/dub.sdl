@@ -1,0 +1,7 @@
+name "test"
+targetName "ruleslang_test"
+description "Tests for ruleslang"
+copyright "Copyright © 2016, Aleksi Sapon"
+authors "Aleksi Sapon"
+targetPath "bin"
+dependency "rules-lang" version="*"

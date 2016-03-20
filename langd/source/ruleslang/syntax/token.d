@@ -4,7 +4,7 @@ import std.format;
 import std.array;
 import std.conv;
 
-import ruleslang.syntax.chars;
+import ruleslang.syntax.dchars;
 
 public enum Kind {
     INDENTATION,
@@ -77,6 +77,7 @@ public template SourceToken(Kind kind) {
 }
 
 public alias Indentation = SourceToken!(Kind.INDENTATION);
+public alias Identifier = SourceToken!(Kind.IDENTIFIER);
 public alias Keyword = SourceToken!(Kind.KEYWORD);
 public alias MultiplyOperator = SourceToken!(Kind.MULTIPLY_OPERATOR);
 public alias AddOperator = SourceToken!(Kind.ADD_OPERATOR);
@@ -154,6 +155,7 @@ public class StringLiteral : SourceToken!(Kind.STRING_LITERAL) {
                 throw new Exception("String is missing beginning quote");
             }
             dchar[] buffer = [];
+            buffer.reserve(64);
             for (size_t i = 1; i < length - 1; ) {
                 dchar c = original[i];
                 i += 1;
@@ -272,7 +274,7 @@ public class Eof : Token {
     }
 
     public Kind getKind() {
-        return Kind.TERMINATOR;
+        return Kind.EOF;
     }
 
     public override bool opEquals(const string source) {
@@ -318,8 +320,9 @@ public string toString(Kind kind) {
 }
 
 public Token newSymbol(dstring source) {
-    if (source !in OPERATOR_SOURCES) {
-        return OPERATOR_SOURCES[source](source);
+    auto constructor = source in OPERATOR_SOURCES;
+    if (constructor !is null) {
+        return (*constructor)(source);
     }
     return new UniqueSymbol(source);
 }
