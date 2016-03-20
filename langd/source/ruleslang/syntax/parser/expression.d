@@ -41,7 +41,7 @@ private LabeledExpression[] parseCompositeLiteralBody(Tokenizer tokens) {
     return values;
 }
 
-private CompositeLiteral parseCompositeLiteral(Tokenizer tokens) {
+public CompositeLiteral parseCompositeLiteral(Tokenizer tokens) {
     if (tokens.head() != "{") {
         throw new Exception("Expected '{'");
     }
@@ -103,7 +103,7 @@ private Expression parseAtom(Tokenizer tokens) {
     throw new Exception("Expected a literal, a name or '('");
 }
 
-private Expression parseAccess(Tokenizer tokens) {
+public Expression parseAccess(Tokenizer tokens) {
     return parseAccess(tokens, parseAtom(tokens));
 }
 

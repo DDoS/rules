@@ -12,7 +12,10 @@ public interface Expression {
     public string toString();
 }
 
-public class NameReference : Expression {
+public interface Reference : Expression {
+}
+
+public class NameReference : Reference {
     private Identifier[] name;
 
     public this(Identifier[] name) {
@@ -64,7 +67,7 @@ public class Initializer : Expression {
     }
 }
 
-public class ContextMemberAccess : Expression {
+public class ContextMemberAccess : Reference {
     private Identifier name;
 
     public this(Identifier name) {
@@ -76,7 +79,7 @@ public class ContextMemberAccess : Expression {
     }
 }
 
-public class MemberAccess : Expression {
+public class MemberAccess : Reference {
     private Expression value;
     private Identifier name;
 
@@ -90,7 +93,7 @@ public class MemberAccess : Expression {
     }
 }
 
-public class ArrayAccess : Expression {
+public class ArrayAccess : Reference {
     private Expression value;
     private Expression index;
 

@@ -9,7 +9,7 @@ public interface Statement {
     public string toString();
 }
 
-public class InitializerAssignment : Expression {
+public class InitializerAssignment : Statement {
     private Expression target;
     private CompositeLiteral literal;
 
@@ -23,7 +23,7 @@ public class InitializerAssignment : Expression {
     }
 }
 
-public class Assignment : Expression {
+public class Assignment : Statement {
     private Expression target;
     private Expression value;
     private AssignmentOperator operator;
