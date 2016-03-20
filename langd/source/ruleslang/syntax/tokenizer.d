@@ -7,8 +7,8 @@ import ruleslang.syntax.dcharstream;
 import ruleslang.syntax.token;
 
 public class Tokenizer {
-    private Terminator TERMINATOR_TOKEN = new Terminator();
-    private Eof EOF_TOKEN = new Eof();
+    private Terminator terminator;
+    private Eof eof;
     private DCharReader chars;
     private Token[] headTokens;
     private uint position = 0;
@@ -17,6 +17,8 @@ public class Tokenizer {
 
     public this(DCharReader chars) {
         this.chars = chars;
+        terminator = new Terminator();
+        eof = new Eof();
         headTokens = new Token[0];
         headTokens.reserve(32);
         savedPositions = new uint[0];
@@ -54,7 +56,7 @@ public class Tokenizer {
     }
 
     public Token next() {
-        Token token = EOF_TOKEN;
+        Token token = eof;
         if (firstToken && chars.has()) {
             // First token is indentation, which in this case
             // is not after a new line
@@ -64,7 +66,7 @@ public class Tokenizer {
             }
             firstToken = false;
         }
-        while (chars.has() && token is EOF_TOKEN) {
+        while (chars.has() && token is eof) {
             if (chars.head().isNewLineChar()) {
                 chars.consumeNewLine();
                 // Just after a new line, consume indentation of next line
@@ -72,7 +74,7 @@ public class Tokenizer {
             } else if (chars.head() == ';') {
                 // A terminator breaks a line but doesn't need indentation
                 chars.advance();
-                token = TERMINATOR_TOKEN;
+                token = terminator;
             } else if (chars.head().isIdentifierStart()) {
                 chars.collect();
                 auto identifier = collectIdentifierBody(chars);

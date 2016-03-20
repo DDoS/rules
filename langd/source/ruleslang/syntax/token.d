@@ -5,13 +5,13 @@ import std.array;
 import std.conv;
 
 import ruleslang.syntax.dchars;
+import ruleslang.syntax.ast.expression;
 
 public enum Kind {
     INDENTATION,
     TERMINATOR,
     IDENTIFIER,
     KEYWORD,
-    BITWISE_NOT_OPERATOR,
     LOGICAL_NOT_OPERATOR,
     EXPONENT_OPERATOR,
     MULTIPLY_OPERATOR,
@@ -87,9 +87,8 @@ public template SourceToken(Kind kind) {
     }
 }
 
-public alias BitwiseNotOperator = SourceToken!(Kind.BITWISE_NOT_OPERATOR);
 public alias LogicalNotOperator = SourceToken!(Kind.LOGICAL_NOT_OPERATOR);
-public alias ExponentOpeartor = SourceToken!(Kind.EXPONENT_OPERATOR);
+public alias ExponentOperator = SourceToken!(Kind.EXPONENT_OPERATOR);
 public alias Indentation = SourceToken!(Kind.INDENTATION);
 public alias Identifier = SourceToken!(Kind.IDENTIFIER);
 public alias Keyword = SourceToken!(Kind.KEYWORD);
@@ -109,7 +108,7 @@ public alias RangOperator = SourceToken!(Kind.RANGE_OPERATOR);
 public alias AssignmentOperator = SourceToken!(Kind.ASSIGNMENT_OPERATOR);
 public alias OtherSymbol = SourceToken!(Kind.OTHER_SYMBOL);
 
-public class BooleanLiteral : SourceToken!(Kind.BOOLEAN_LITERAL) {
+public class BooleanLiteral : SourceToken!(Kind.BOOLEAN_LITERAL), Expression {
     private bool value;
     private bool evaluated = false;
 
@@ -140,6 +139,10 @@ public class BooleanLiteral : SourceToken!(Kind.BOOLEAN_LITERAL) {
         return value;
     }
 
+    public override string toString() {
+        return super.toString();
+    }
+
     unittest {
         auto a = new BooleanLiteral("true");
         assert(a.getValue());
@@ -148,7 +151,7 @@ public class BooleanLiteral : SourceToken!(Kind.BOOLEAN_LITERAL) {
     }
 }
 
-public class StringLiteral : SourceToken!(Kind.STRING_LITERAL) {
+public class StringLiteral : SourceToken!(Kind.STRING_LITERAL), Expression {
     private dstring original;
     private dstring value = null;
 
@@ -200,6 +203,10 @@ public class StringLiteral : SourceToken!(Kind.STRING_LITERAL) {
         return value;
     }
 
+    public override string toString() {
+        return super.toString();
+    }
+
     unittest {
         auto a = new StringLiteral("\"hello\\u0041\\nlol\""d);
         assert(a.getValue() == "helloA\nlol"d);
@@ -208,7 +215,7 @@ public class StringLiteral : SourceToken!(Kind.STRING_LITERAL) {
     }
 }
 
-public class IntegerLiteral : SourceToken!(Kind.INTEGER_LITERAL) {
+public class IntegerLiteral : SourceToken!(Kind.INTEGER_LITERAL), Expression {
     private long value;
     private bool evaluated = false;
 
@@ -248,6 +255,10 @@ public class IntegerLiteral : SourceToken!(Kind.INTEGER_LITERAL) {
         return value;
     }
 
+    public override string toString() {
+        return super.toString();
+    }
+
     unittest {
         auto a = new IntegerLiteral("424_32");
         assert(a.getValue() == 42432);
@@ -258,7 +269,7 @@ public class IntegerLiteral : SourceToken!(Kind.INTEGER_LITERAL) {
     }
 }
 
-public class FloatLiteral : SourceToken!(Kind.FLOAT_LITERAL) {
+public class FloatLiteral : SourceToken!(Kind.FLOAT_LITERAL), Expression {
     private real value;
     private bool evaluated = false;
 
@@ -278,6 +289,10 @@ public class FloatLiteral : SourceToken!(Kind.FLOAT_LITERAL) {
             evaluated = true;
         }
         return value;
+    }
+
+    public override string toString() {
+        return super.toString();
     }
 
     unittest {
@@ -318,7 +333,6 @@ public string toString(Kind kind) {
             return "Identifier";
         case KEYWORD:
             return "Keyword";
-        case BITWISE_NOT_OPERATOR:
         case LOGICAL_NOT_OPERATOR:
         case EXPONENT_OPERATOR:
         case MULTIPLY_OPERATOR:
@@ -363,15 +377,17 @@ private Token function(dstring)[dstring] OPERATOR_SOURCES;
 private void addSourcesForOperator(Op)(dstring[] sources ...) {
     Token function(dstring) constructor = (dstring source) => new Op(source);
     foreach (source; sources) {
+        if (source in OPERATOR_SOURCES) {
+            throw new Exception("Symbol is declared for two different operators: " ~ source.to!string);
+        }
         OPERATOR_SOURCES[source] = constructor;
     }
     OPERATOR_SOURCES.rehash;
 }
 
 private static this() {
-    addSourcesForOperator!BitwiseNotOperator("~"d);
     addSourcesForOperator!LogicalNotOperator("!"d);
-    addSourcesForOperator!ExponentOpeartor("**"d);
+    addSourcesForOperator!ExponentOperator("**"d);
     addSourcesForOperator!MultiplyOperator("*"d, "/"d, "%"d);
     addSourcesForOperator!AddOperator("+"d, "-"d);
     addSourcesForOperator!ShiftOperator("<<"d, ">>"d, ">>>"d);

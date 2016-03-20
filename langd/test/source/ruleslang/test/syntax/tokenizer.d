@@ -1,4 +1,4 @@
-module ruleslang.test.tokenizer;
+module ruleslang.test.syntax.tokenizer;
 
 import std.conv;
 import std.format;
@@ -6,6 +6,8 @@ import std.format;
 import ruleslang.syntax.dcharstream;
 import ruleslang.syntax.token;
 import ruleslang.syntax.tokenizer;
+
+import ruleslang.test.assertion;
 
 unittest {
     assertLexNoIndent("t", "Identifier(t)");
@@ -151,7 +153,7 @@ private void assertLexNoIndent(string source, string[] expected ...) {
         tokens ~= tokenizer.head().toString();
         tokenizer.advance();
     }
-    assert(expected == tokens);
+    assertEqual(expected, tokens);
 }
 
 private void assertLex(string source, string[] expected ...) {
@@ -161,5 +163,5 @@ private void assertLex(string source, string[] expected ...) {
         tokens ~= tokenizer.head().toString();
         tokenizer.advance();
     }
-    assert(expected == tokens);
+    assertEqual(expected, tokens);
 }

@@ -35,6 +35,6 @@ public class Assignment : Expression {
     }
 
     public override string toString() {
-        return format("Assignment(%s %s %s)", target.toString(), operator.toString(), value.toString());
+        return format("Assignment(%s %s %s)", target.toString(), operator.getSource(), value.toString());
     }
 }

@@ -20,7 +20,7 @@ public class NameReference : Expression {
     }
 
     public override string toString() {
-        return name.join!"."();
+        return name.join!(".", "getSource()")();
     }
 }
 
@@ -34,7 +34,7 @@ public class LabeledExpression {
     }
 
     public override string toString() {
-        return label.toString() ~ ": " ~ expression.toString();
+        return (label is null ? "" : label.getSource() ~ ": ") ~ expression.toString();
     }
 }
 
@@ -60,11 +60,11 @@ public class Initializer : Expression {
     }
 
     public override string toString() {
-        return format("Initializer(%s %s)", type.toString(), literal.toString());
+        return format("Initializer(%s{%s})", type.toString(), literal.values.join!", "());
     }
 }
 
-public class ContextFieldAccess : Expression {
+public class ContextMemberAccess : Expression {
     private Identifier name;
 
     public this(Identifier name) {
@@ -72,7 +72,7 @@ public class ContextFieldAccess : Expression {
     }
 
     public override string toString() {
-        return format("ContextFieldAccess(.%s)", name.toString());
+        return format("ContextMemberAccess(.%s)", name.getSource());
     }
 }
 
@@ -86,7 +86,7 @@ public class MemberAccess : Expression {
     }
 
     public override string toString() {
-        return format("MemberAccess(%s.%s)", value.toString(), name.toString());
+        return format("MemberAccess(%s.%s)", value.toString(), name.getSource());
     }
 }
 
@@ -94,7 +94,7 @@ public class ArrayAccess : Expression {
     private Expression value;
     private Expression index;
 
-    public this(Expression value, Expression name) {
+    public this(Expression value, Expression index) {
         this.value = value;
         this.index = index;
     }
@@ -129,13 +129,13 @@ public template Unary(string name, Op) {
         }
 
         public override string toString() {
-            return format(name ~ "(%s%s)", operator.toString(), inner.toString());
+            return format(name ~ "(%s%s)", operator.getSource(), inner.toString());
         }
     }
 }
 
 public alias Sign = Unary!("Sign", AddOperator);
-public alias BitwiseNot = Unary!("BitwiseNot", BitwiseNotOperator);
+public alias BitwiseNot = Unary!("BitwiseNot", ConcatenateOperator);
 public alias LogicalNot = Unary!("LogicalNot", LogicalNotOperator);
 
 public template Binary(string name, Op) {
@@ -151,12 +151,12 @@ public template Binary(string name, Op) {
         }
 
         public override string toString() {
-            return format(name ~ "(%s %s %s)", left.toString(), operator.toString(), right.toString());
+            return format(name ~ "(%s %s %s)", left.toString(), operator.getSource(), right.toString());
         }
     }
 }
 
-public alias Exponent = Binary!("Exponent", ExponentOpeartor);
+public alias Exponent = Binary!("Exponent", ExponentOperator);
 public alias Infix = Binary!("Infix", Identifier);
 public alias Multiply = Binary!("Multiply", MultiplyOperator);
 public alias Add = Binary!("Add", AddOperator);
@@ -185,12 +185,12 @@ public class Compare : Expression {
 
     public override string toString() {
         string compares = "";
-        foreach (i, op; valueOperators) {
-            compares ~= format("%s %s ", values[i].toString(), op.toString());
+        foreach (i, valueOperator; valueOperators) {
+            compares ~= format("%s %s ", values[i].toString(), valueOperator.getSource());
         }
         compares ~= values[$ - 1].toString();
         if (typeOperator !is null) {
-            compares ~= format(" %s %s", typeOperator.toString(), type.toString());
+            compares ~= format(" %s %s", typeOperator.getSource(), type.toString());
         }
         return format("Compare(%s)", compares);
     }

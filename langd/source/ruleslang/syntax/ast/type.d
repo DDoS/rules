@@ -20,7 +20,9 @@ public class NamedType : Type {
     }
 
     public override string toString() {
-        return name.join!"."() ~ (dimensions.map!"a is null ? \"\" : a.toString()"().
-            map!"\"[\" ~ a ~ \"]\""().reduce!"a ~ b"());
+        auto componentName = name.join!(".", "getSource()")();
+        auto dimensionsString = dimensions.length <= 0 ? "" :
+            dimensions.map!"a is null ? \"\" : a.toString()"().map!"\"[\" ~ a ~ \"]\""().reduce!"a ~ b"();
+        return componentName ~ dimensionsString;
     }
 }

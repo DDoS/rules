@@ -107,9 +107,9 @@ public dstring escapeChar(dchar c) {
         return c.to!dstring;
     }
     if (c > 0xFFFF) {
-        return format("\\u%08X"d, c);
+        return format("\\u%08X"d, c).to!dstring;
     }
-    return format("\\u%04X"d, c);
+    return format("\\u%04X"d, c).to!dstring;
 }
 
 public dstring escapeString(dstring source) {
@@ -117,6 +117,9 @@ public dstring escapeString(dstring source) {
     return source.map!escapeChar.reduce!"a ~ b";
 }
 
-public string join(string joiner, T)(T[] things ...) {
-    return things.map!"a.toString()".reduce!("a ~ \"" ~ joiner ~ "\" ~ b")();
+public string join(string joiner, string stringer = "toString()", T)(T[] things ...) {
+    if (things.length <= 0) {
+        return "";
+    }
+    return things.map!("a." ~ stringer).reduce!("a ~ \"" ~ joiner ~ "\" ~ b")();
 }
