@@ -3,6 +3,8 @@ module ruleslang.syntax.dcharstream;
 import std.stdio;
 import std.utf;
 
+import ruleslang.syntax.dchars;
+
 public interface DCharStream {
     public bool has();
     public dchar next();
@@ -53,11 +55,17 @@ public class ReadLineDCharStream : DCharStream {
                 headChar = '\u0004';
             } else {
                 auto size = read.stride();
-                read = file.rawRead(buffer[1 .. size]);
+                if (size > 1) {
+                    read = file.rawRead(buffer[1 .. size]);
+                }
                 if (read.length < size - 1) {
                     throw new Exception("Invalid unicode sequence, expected more bytes");
                 }
-                headChar = buffer.decodeFront();
+                auto sequence = buffer;
+                headChar = sequence.decodeFront();
+                if (headChar.isNewLineChar()) {
+                    headChar = '\u0004';
+                }
             }
             ahead = true;
         }

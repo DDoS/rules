@@ -106,10 +106,7 @@ public dstring escapeChar(dchar c) {
     if (c.isGraphical()) {
         return c.to!dstring;
     }
-    if (c > 0xFFFF) {
-        return format("\\u%08X"d, c).to!dstring;
-    }
-    return format("\\u%04X"d, c).to!dstring;
+    return format("\\u%08X"d, c).to!dstring;
 }
 
 public dstring escapeString(dstring source) {
