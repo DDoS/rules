@@ -179,8 +179,8 @@ public class StringLiteral : SourceToken!(Kind.STRING_LITERAL) {
     unittest {
         auto a = new StringLiteral("\"hello\\u0041\\nlol\""d);
         assert(a.getValue() == "helloA\nlol"d);
-        auto b = new StringLiteral("test\u0004he\ny"d, true);
-        assert(b.getSource() == "\"test\\u0004he\\ny\"");
+        auto b = new StringLiteral("te st\u0004he\ny"d, true);
+        assert(b.getSource() == "\"te st\\u0004he\\ny\"");
     }
 }
 

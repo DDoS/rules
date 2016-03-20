@@ -75,7 +75,8 @@ public dstring escapeChar(dchar c) {
     if (c > 0xFFFF) {
         return format("\\u%08X"d, c);
     }
-    return format("\\u%04X"d, c);}
+    return format("\\u%04X"d, c);
+}
 
 public dstring escapeString(dstring source) {
     // MAP-REDUCE! WHERE DOING BIG DATA CLOUD STUFF RIGHT HERE
