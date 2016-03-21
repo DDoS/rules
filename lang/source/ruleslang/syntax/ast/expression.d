@@ -9,6 +9,7 @@ import ruleslang.syntax.ast.type;
 import ruleslang.syntax.ast.statement;
 
 public interface Expression {
+    public Expression accept()
     public string toString();
 }
 

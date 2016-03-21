@@ -30,6 +30,6 @@ private void parseLine() {
 }
 
 private extern (C) void sigINT(int sig) @nogc nothrow {
-	cstdio.puts("\nbye\0".ptr);
+	cstdio.puts("\nbye".ptr);
 	exit(0);
 }
