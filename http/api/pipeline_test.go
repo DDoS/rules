@@ -1,7 +1,7 @@
 package api_test
 
 import (
-	"github.com/michael-golfi/rules/app/api"
+	"github.com/michael-golfi/rules/http/api"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

@@ -3,16 +3,16 @@ package main
 import (
 	"github.com/michael-golfi/go-http-utils"
 	"github.com/michael-golfi/log4go"
-	"github.com/michael-golfi/rules/app"
 	"github.com/spf13/viper"
 	"gopkg.in/fsnotify.v1"
 	"net/http"
+	"github.com/michael-golfi/rules/http/api"
 )
 
 func main() {
 	configure()
 
-	router := util.NewRouter(app.Routes)
+	router := util.NewRouter(api.Routes)
 	log4go.Crash(http.ListenAndServe(":8080", router))
 }
 

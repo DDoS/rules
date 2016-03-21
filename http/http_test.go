@@ -3,15 +3,14 @@ package main_test
 import (
 	"testing"
 	"net/http"
-	"github.com/michael-golfi/rules/app"
 	"github.com/michael-golfi/go-http-utils"
 	"github.com/stretchr/testify/assert"
-	"github.com/michael-golfi/rules/app/api"
+	"github.com/michael-golfi/rules/http/api"
 	"strings"
 )
 
 func TestMain(m *testing.M) {
-	router := util.NewRouter(app.Routes)
+	router := util.NewRouter(api.Routes)
 	go http.ListenAndServe(":8080", router)
 
 	m.Run()

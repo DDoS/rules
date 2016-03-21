@@ -1,4 +1,4 @@
-package app
+package api
 
 import "github.com/michael-golfi/go-http-utils"
 
