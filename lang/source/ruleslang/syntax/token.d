@@ -6,6 +6,7 @@ import std.conv;
 
 import ruleslang.syntax.dchars;
 import ruleslang.syntax.ast.expression;
+import ruleslang.syntax.ast.mapper;
 
 public enum Kind {
     INDENTATION,
@@ -122,6 +123,10 @@ public class BooleanLiteral : SourceToken!(Kind.BOOLEAN_LITERAL), Expression {
         evaluated = true;
     }
 
+    public override Expression accept(ExpresionMapper mapper) {
+        return mapper.mapBooleanLiteral(this);
+    }
+
     public bool getValue() {
         if (!evaluated) {
             switch (getSource()) {
@@ -170,6 +175,10 @@ public class StringLiteral : SourceToken!(Kind.STRING_LITERAL), Expression {
         this.original = s;
     }
 
+    public override Expression accept(ExpresionMapper mapper) {
+        return mapper.mapStringLiteral(this);
+    }
+
     public dstring getValue() {
         if (value is null) {
             auto length = original.length;
@@ -216,6 +225,7 @@ public class StringLiteral : SourceToken!(Kind.STRING_LITERAL), Expression {
 }
 
 public class IntegerLiteral : SourceToken!(Kind.INTEGER_LITERAL), Expression {
+    private bool sign = false;
     private long value;
     private bool evaluated = false;
 
@@ -227,6 +237,21 @@ public class IntegerLiteral : SourceToken!(Kind.INTEGER_LITERAL), Expression {
         super(value.to!dstring);
         this.value = value;
         evaluated = true;
+    }
+
+    public override Expression accept(ExpresionMapper mapper) {
+        return mapper.mapIntegerLiteral(this);
+    }
+
+    public void negateSign() {
+        sign ^= true;
+    }
+
+    public override string getSource() {
+        if (sign) {
+            return "-" ~ super.getSource();
+        }
+        return super.getSource();
     }
 
     public long getValue() {
@@ -281,6 +306,10 @@ public class FloatLiteral : SourceToken!(Kind.FLOAT_LITERAL), Expression {
         super(value.to!dstring);
         this.value = value;
         evaluated = true;
+    }
+
+    public override Expression accept(ExpresionMapper mapper) {
+        return mapper.mapFloatLiteral(this);
     }
 
     public real getValue() {

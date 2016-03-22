@@ -3,13 +3,6 @@ module ruleslang.semantic.litreduce;
 import ruleslang.syntax.ast.mapper;
 import ruleslang.syntax.ast.expression;
 
-public Expression reduceLiteral(Expression target) {
-    auto mapper = new AstMapper!(reduceAdd)();
+public Expression reduceLiterals(Expression target) {
     return target;
-}
-
-public Expression reduceAdd(Add add) {
-    import std.stdio;
-    writeln(add.toString());
-    return add;
 }
