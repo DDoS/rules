@@ -8,6 +8,7 @@ import ruleslang.syntax.dcharstream;
 import ruleslang.syntax.tokenizer;
 import ruleslang.syntax.ast.statement;
 import ruleslang.syntax.parser.statement;
+import ruleslang.semantic.litreduce;
 
 void main() {
 	signal(SIGINT, &sigINT);
@@ -25,6 +26,7 @@ private void parseLine() {
 	stdout.write("> ");
     auto tokenizer = new Tokenizer(new DCharReader(new ReadLineDCharStream(stdin)));
     foreach (statement; tokenizer.parseStatements()) {
+		statement = statement.reduceLiterals();
 		stdout.writeln(statement.toString());
     }
 }

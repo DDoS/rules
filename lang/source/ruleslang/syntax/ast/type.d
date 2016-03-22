@@ -8,7 +8,7 @@ import ruleslang.syntax.ast.expression;
 import ruleslang.syntax.ast.mapper;
 
 public interface Type {
-    public Type accept(ExpresionMapper mapper);
+    public Type accept(ExpressionMapper mapper);
     public string toString();
 }
 
@@ -21,7 +21,7 @@ public class NamedType : Type {
         this.dimensions = dimensions;
     }
 
-    public override Type accept(ExpresionMapper mapper) {
+    public override Type accept(ExpressionMapper mapper) {
         foreach (i, dimension; dimensions) {
             dimensions[i] = dimension.accept(mapper);
         }

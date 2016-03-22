@@ -79,11 +79,11 @@ public template SourceToken(Kind kind) {
         }
 
         public override bool opEquals(const string source) {
-            return this.source == source;
+            return getSource() == source;
         }
 
         public override string toString() {
-            return format("%s(%s)", getKind().toString(), source);
+            return format("%s(%s)", getKind().toString(), getSource());
         }
     }
 }
@@ -123,7 +123,7 @@ public class BooleanLiteral : SourceToken!(Kind.BOOLEAN_LITERAL), Expression {
         evaluated = true;
     }
 
-    public override Expression accept(ExpresionMapper mapper) {
+    public override Expression accept(ExpressionMapper mapper) {
         return mapper.mapBooleanLiteral(this);
     }
 
@@ -137,7 +137,7 @@ public class BooleanLiteral : SourceToken!(Kind.BOOLEAN_LITERAL), Expression {
                     value = false;
                     break;
                 default:
-                    throw new Exception("Not a boolean: " ~ source);
+                    throw new Exception("Not a boolean: " ~ getSource());
             }
             evaluated = true;
         }
@@ -175,7 +175,7 @@ public class StringLiteral : SourceToken!(Kind.STRING_LITERAL), Expression {
         this.original = s;
     }
 
-    public override Expression accept(ExpresionMapper mapper) {
+    public override Expression accept(ExpressionMapper mapper) {
         return mapper.mapStringLiteral(this);
     }
 
@@ -225,12 +225,27 @@ public class StringLiteral : SourceToken!(Kind.STRING_LITERAL), Expression {
 }
 
 public class IntegerLiteral : SourceToken!(Kind.INTEGER_LITERAL), Expression {
+    private uint _radix = 10;
     private bool sign = false;
     private long value;
     private bool evaluated = false;
 
     public this(dstring source) {
         super(source);
+        if (source.length > 2) {
+            switch (source[1]) {
+                case 'b':
+                case 'B':
+                    _radix = 2;
+                    break;
+                case 'x':
+                case 'X':
+                    _radix = 16;
+                    break;
+                default:
+                    break;
+            }
+        }
     }
 
     public this(long value) {
@@ -239,12 +254,20 @@ public class IntegerLiteral : SourceToken!(Kind.INTEGER_LITERAL), Expression {
         evaluated = true;
     }
 
-    public override Expression accept(ExpresionMapper mapper) {
+    @property public uint radix() {
+        return _radix;
+    }
+
+    public override Expression accept(ExpressionMapper mapper) {
         return mapper.mapIntegerLiteral(this);
     }
 
     public void negateSign() {
+        if (_radix != 10) {
+            throw new Exception("Cannot negate sign in source for non-decimal integers");
+        }
         sign ^= true;
+        evaluated = false;
     }
 
     public override string getSource() {
@@ -257,24 +280,10 @@ public class IntegerLiteral : SourceToken!(Kind.INTEGER_LITERAL), Expression {
     public long getValue() {
         if (!evaluated) {
             auto source = getSource().replace("_", "");
-            uint radix = 10;
-            if (source.length > 2) {
-                switch (source[1]) {
-                    case 'b':
-                    case 'B':
-                        radix = 2;
-                        source = source[2 .. $];
-                        break;
-                    case 'x':
-                    case 'X':
-                        radix = 16;
-                        source = source[2 .. $];
-                        break;
-                    default:
-                        break;
-                }
+            if (radix != 10) {
+                source = source[2 .. $];
             }
-            value = source.parse!long(radix);
+            value = source.to!long(_radix);
             evaluated = true;
         }
         return value;
@@ -287,6 +296,8 @@ public class IntegerLiteral : SourceToken!(Kind.INTEGER_LITERAL), Expression {
     unittest {
         auto a = new IntegerLiteral("424_32");
         assert(a.getValue() == 42432);
+        a.negateSign();
+        assert(a.getValue() == -42432);
     	auto b = new IntegerLiteral("0xFFFF");
         assert(b.getValue() == 0xFFFF);
     	auto c = new IntegerLiteral("0b1110");
@@ -308,7 +319,7 @@ public class FloatLiteral : SourceToken!(Kind.FLOAT_LITERAL), Expression {
         evaluated = true;
     }
 
-    public override Expression accept(ExpresionMapper mapper) {
+    public override Expression accept(ExpressionMapper mapper) {
         return mapper.mapFloatLiteral(this);
     }
 

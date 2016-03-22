@@ -10,7 +10,7 @@ import ruleslang.syntax.ast.statement;
 import ruleslang.syntax.ast.mapper;
 
 public interface Expression {
-    public Expression accept(ExpresionMapper mapper);
+    public Expression accept(ExpressionMapper mapper);
     public string toString();
 }
 
@@ -24,7 +24,7 @@ public class NameReference : Reference {
         this.name = name;
     }
 
-    public override Expression accept(ExpresionMapper mapper) {
+    public override Expression accept(ExpressionMapper mapper) {
         return mapper.mapNameReference(this);
     }
 
@@ -54,7 +54,7 @@ public class CompositeLiteral : Expression {
         this.values = values;
     }
 
-    public override Expression accept(ExpresionMapper mapper) {
+    public override Expression accept(ExpressionMapper mapper) {
         foreach (i, value; values) {
             values[i].expression = value.expression.accept(mapper);
         }
@@ -75,7 +75,7 @@ public class Initializer : Expression {
         this.literal = literal;
     }
 
-    public override Expression accept(ExpresionMapper mapper) {
+    public override Expression accept(ExpressionMapper mapper) {
         type = cast(NamedType) type.accept(mapper);
         literal = cast(CompositeLiteral) literal.accept(mapper);
         return mapper.mapInitializer(this);
@@ -93,7 +93,7 @@ public class ContextMemberAccess : Reference {
         this.name = name;
     }
 
-    public override Expression accept(ExpresionMapper mapper) {
+    public override Expression accept(ExpressionMapper mapper) {
         return mapper.mapContextMemberAccess(this);
     }
 
@@ -111,7 +111,7 @@ public class MemberAccess : Reference {
         this.name = name;
     }
 
-    public override Expression accept(ExpresionMapper mapper) {
+    public override Expression accept(ExpressionMapper mapper) {
         value = value.accept(mapper);
         return mapper.mapMemberAccess(this);
     }
@@ -130,7 +130,7 @@ public class ArrayAccess : Reference {
         this.index = index;
     }
 
-    public override Expression accept(ExpresionMapper mapper) {
+    public override Expression accept(ExpressionMapper mapper) {
         value = value.accept(mapper);
         index = index.accept(mapper);
         return mapper.mapArrayAccess(this);
@@ -150,12 +150,16 @@ public class FunctionCall : Expression, Statement {
         this.arguments = arguments;
     }
 
-    public override Expression accept(ExpresionMapper mapper) {
+    public override Expression accept(ExpressionMapper mapper) {
         value = value.accept(mapper);
         foreach (i, argument; arguments) {
             arguments[i] = argument.accept(mapper);
         }
         return mapper.mapFunctionCall(this);
+    }
+
+    public override Statement accept(StatementMapper mapper) {
+        return accept(mapper);
     }
 
     public override string toString() {
@@ -165,21 +169,29 @@ public class FunctionCall : Expression, Statement {
 
 public template Unary(string name, Op) {
     public class Unary : Expression {
-        private Expression inner;
-        private Op operator;
+        private Expression _inner;
+        private Op _operator;
 
         public this(Expression inner, Op operator) {
-            this.inner = inner;
-            this.operator = operator;
+            _inner = inner;
+            _operator = operator;
         }
 
-        public override Expression accept(ExpresionMapper mapper) {
-            inner = inner.accept(mapper);
+        @property public Expression inner() {
+            return _inner;
+        }
+
+        @property public Op operator() {
+            return _operator;
+        }
+
+        public override Expression accept(ExpressionMapper mapper) {
+            _inner = _inner.accept(mapper);
             mixin("return mapper.map" ~ name ~ "(this);");
         }
 
         public override string toString() {
-            return format(name ~ "(%s%s)", operator.getSource(), inner.toString());
+            return format(name ~ "(%s%s)", _operator.getSource(), _inner.toString());
         }
     }
 }
@@ -200,7 +212,7 @@ public template Binary(string name, Op) {
             this.operator = operator;
         }
 
-        public override Expression accept(ExpresionMapper mapper) {
+        public override Expression accept(ExpressionMapper mapper) {
             left = left.accept(mapper);
             right = right.accept(mapper);
             mixin("return mapper.map" ~ name ~ "(this);");
@@ -239,7 +251,7 @@ public class Compare : Expression {
         this.typeOperator = typeOperator;
     }
 
-    public override Expression accept(ExpresionMapper mapper) {
+    public override Expression accept(ExpressionMapper mapper) {
         foreach (i, value; values) {
             values[i] = value.accept(mapper);
         }
@@ -271,7 +283,7 @@ public class Conditional : Expression {
         this.falseValue = falseValue;
     }
 
-    public override Expression accept(ExpresionMapper mapper) {
+    public override Expression accept(ExpressionMapper mapper) {
         condition = condition.accept(mapper);
         trueValue = trueValue.accept(mapper);
         falseValue = falseValue.accept(mapper);
