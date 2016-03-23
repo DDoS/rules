@@ -36,14 +36,6 @@ private class LiteralReducer : StatementMapper {
         return sign;
     }
 
-    public override Expression mapLogicalNot(LogicalNot logicalNot) {
-        auto booleanLiteral = cast(BooleanLiteral) logicalNot.inner;
-        if (booleanLiteral) {
-            return new BooleanLiteral(!booleanLiteral.getValue());
-        }
-        return logicalNot;
-    }
-
     public override Expression mapBitwiseNot(BitwiseNot bitwiseNot) {
         auto integerLiteral = cast(IntegerLiteral) bitwiseNot.inner;
         if (integerLiteral) {
@@ -81,62 +73,27 @@ private class LiteralReducer : StatementMapper {
 
     public override Expression mapShift(Shift shift) {
         if (shift.operator == "<<") {
-            return reduceBinaryLogic!("<<", IntegerLiteral)(shift);
+            return reduceBinaryLogic!"<<"(shift);
         }
         if (shift.operator == ">>") {
-            return reduceBinaryLogic!(">>", IntegerLiteral)(shift);
+            return reduceBinaryLogic!">>"(shift);
         }
         if (shift.operator == ">>>") {
-            return reduceBinaryLogic!(">>>", IntegerLiteral)(shift);
+            return reduceBinaryLogic!">>>"(shift);
         }
         throw new Exception("Not a shift operator: " ~ shift.operator.toString());
     }
 
-    public override Expression mapCompare(Compare compare) {
-        return compare;
-    }
-
     public override Expression mapBitwiseAnd(BitwiseAnd bitwiseAnd) {
-        auto reduced = reduceBinaryLogic!("&", IntegerLiteral)(bitwiseAnd);
-        if (cast(BitwiseAnd) reduced) {
-            // Not reduced, try boolean
-            return reduceBinaryLogic!("&", BooleanLiteral)(bitwiseAnd);
-        }
-        return reduced;
+        return reduceBinaryLogic!"&"(bitwiseAnd);
     }
 
     public override Expression mapBitwiseXor(BitwiseXor bitwiseXor) {
-        auto reduced = reduceBinaryLogic!("^", IntegerLiteral)(bitwiseXor);
-        if (cast(BitwiseXor) reduced) {
-            // Not reduced, try boolean
-            return reduceBinaryLogic!("^", BooleanLiteral)(bitwiseXor);
-        }
-        return reduced;
+        return reduceBinaryLogic!"^"(bitwiseXor);
     }
 
     public override Expression mapBitwiseOr(BitwiseOr bitwiseOr) {
-        auto reduced = reduceBinaryLogic!("|", IntegerLiteral)(bitwiseOr);
-        if (cast(BitwiseOr) reduced) {
-            // Not reduced, try boolean
-            return reduceBinaryLogic!("|", BooleanLiteral)(bitwiseOr);
-        }
-        return reduced;
-    }
-
-    public override Expression mapLogicalAnd(LogicalAnd logicalAnd) {
-        return reduceBinaryLogic!("&&", BooleanLiteral)(logicalAnd);
-    }
-
-    public override Expression mapLogicalXor(LogicalXor logicalXor) {
-        return reduceBinaryLogic!("^", BooleanLiteral)(logicalXor);
-    }
-
-    public override Expression mapLogicalOr(LogicalOr logicalOr) {
-        return reduceBinaryLogic!("||", BooleanLiteral)(logicalOr);
-    }
-
-    public override Expression mapConcatenate(Concatenate concatenate) {
-        return reduceBinaryLogic!("~", StringLiteral)(concatenate);
+        return reduceBinaryLogic!"|"(bitwiseOr);
     }
 }
 
@@ -166,12 +123,11 @@ private Expression reduceBinaryArithmetic(string op, Binary)(Binary arithmetic) 
     return arithmetic;
 }
 
-private Expression reduceBinaryLogic(string op, Literal, Binary)(Binary logic) {
-    auto literalLeft = cast(Literal) logic.left;
-    auto literalRight = cast(Literal) logic.right;
+private Expression reduceBinaryLogic(string op, Binary)(Binary logic) {
+    auto literalLeft = cast(IntegerLiteral) logic.left;
+    auto literalRight = cast(IntegerLiteral) logic.right;
     if (literalLeft && literalRight) {
-        mixin("return new " ~ __traits(identifier, Literal) ~
-            "(literalLeft.getValue() " ~ op ~ " literalRight.getValue());");
+        mixin("return new IntegerLiteral(literalLeft.getValue() " ~ op ~ " literalRight.getValue());");
     }
     return logic;
 }
