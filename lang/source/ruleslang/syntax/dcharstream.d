@@ -32,10 +32,16 @@ public class ReadLineDCharStream : DCharStream {
     private char[] buffer;
     private dchar headChar;
     private bool ahead = false;
+    private bool closed = false;
 
     public this(File file) {
         this.file = file;
         buffer = new char[4];
+    }
+
+    public bool isClosed() {
+        head();
+        return closed;
     }
 
     public override bool has() {
@@ -52,6 +58,7 @@ public class ReadLineDCharStream : DCharStream {
         if (!ahead) {
             auto read = file.rawRead(buffer[0 .. 1]);
             if (read.length < 1) {
+                closed = true;
                 headChar = '\u0004';
             } else {
                 auto size = read.stride();
