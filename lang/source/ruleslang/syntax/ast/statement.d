@@ -32,23 +32,35 @@ public class InitializerAssignment : Statement {
 }
 
 public class Assignment : Statement {
-    private Expression target;
-    private Expression value;
-    private AssignmentOperator operator;
+    private Expression _target;
+    private Expression _value;
+    private AssignmentOperator _operator;
 
     public this(Expression target, Expression value, AssignmentOperator operator) {
-        this.target = target;
-        this.value = value;
-        this.operator = operator;
+        _target = target;
+        _value = value;
+        _operator = operator;
+    }
+
+    @property public Expression target() {
+        return _target;
+    }
+
+    @property public Expression value() {
+        return _value;
+    }
+
+    @property public AssignmentOperator operator() {
+        return _operator;
     }
 
     public override Statement accept(StatementMapper mapper) {
-        target = target.accept(mapper);
-        value = value.accept(mapper);
+        _target = _target.accept(mapper);
+        _value = _value.accept(mapper);
         return mapper.mapAssignment(this);
     }
 
     public override string toString() {
-        return format("Assignment(%s %s %s)", target.toString(), operator.getSource(), value.toString());
+        return format("Assignment(%s %s %s)", _target.toString(), _operator.getSource(), _value.toString());
     }
 }

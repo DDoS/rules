@@ -4,6 +4,7 @@ import ruleslang.syntax.dcharstream;
 import ruleslang.syntax.tokenizer;
 import ruleslang.syntax.ast.statement;
 import ruleslang.syntax.parser.statement;
+import ruleslang.semantic.opexpand;
 import ruleslang.semantic.litreduce;
 
 void main() {
@@ -15,6 +16,7 @@ void main() {
 			stdout.writeln(exception.msg);
 		}
 	}
+	// TODO: fix unsafe casts
 }
 
 private bool parseLine() {
@@ -26,6 +28,7 @@ private bool parseLine() {
 	}
     auto tokenizer = new Tokenizer(new DCharReader(stream));
     foreach (statement; tokenizer.parseStatements()) {
+		statement = statement.expandOperators();
 		statement = statement.reduceLiterals();
 		stdout.writeln(statement.toString());
     }

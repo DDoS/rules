@@ -9,7 +9,7 @@ import std.algorithm.iteration;
 private immutable dchar[dchar] ESCAPE_CHARS;
 private immutable dchar[dchar] CHAR_ESCAPES;
 
-static this() {
+public static this() {
     dchar[dchar] forward = [
         'a': '\a',
         'b': '\b',

@@ -425,7 +425,7 @@ private void addSourcesForOperator(Op)(dstring[] sources ...) {
     OPERATOR_SOURCES.rehash;
 }
 
-private static this() {
+public static this() {
     addSourcesForOperator!LogicalNotOperator("!"d);
     addSourcesForOperator!ExponentOperator("**"d);
     addSourcesForOperator!MultiplyOperator("*"d, "/"d, "%"d);
