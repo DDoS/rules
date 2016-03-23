@@ -202,24 +202,36 @@ public alias LogicalNot = Unary!("LogicalNot", LogicalNotOperator);
 
 public template Binary(string name, Op) {
     public class Binary : Expression {
-        private Expression left;
-        private Expression right;
-        private Op operator;
+        private Expression _left;
+        private Expression _right;
+        private Op _operator;
 
         public this(Expression left, Expression right, Op operator) {
-            this.left = left;
-            this.right = right;
-            this.operator = operator;
+            _left = left;
+            _right = right;
+            _operator = operator;
+        }
+
+        @property public Expression left() {
+            return _left;
+        }
+
+        @property public Expression right() {
+            return _right;
+        }
+
+        @property public Op operator() {
+            return _operator;
         }
 
         public override Expression accept(ExpressionMapper mapper) {
-            left = left.accept(mapper);
-            right = right.accept(mapper);
+            _left = _left.accept(mapper);
+            _right = _right.accept(mapper);
             mixin("return mapper.map" ~ name ~ "(this);");
         }
 
         public override string toString() {
-            return format(name ~ "(%s %s %s)", left.toString(), operator.getSource(), right.toString());
+            return format(name ~ "(%s %s %s)", _left.toString(), _operator.getSource(), _right.toString());
         }
     }
 }
@@ -273,24 +285,36 @@ public class Compare : Expression {
 }
 
 public class Conditional : Expression {
-    private Expression condition;
-    private Expression trueValue;
-    private Expression falseValue;
+    private Expression _condition;
+    private Expression _trueValue;
+    private Expression _falseValue;
 
     public this(Expression condition, Expression trueValue, Expression falseValue) {
-        this.condition = condition;
-        this.trueValue = trueValue;
-        this.falseValue = falseValue;
+        _condition = condition;
+        _trueValue = trueValue;
+        _falseValue = falseValue;
+    }
+
+    @property public Expression condition() {
+        return _condition;
+    }
+
+    @property public Expression trueValue() {
+        return _trueValue;
+    }
+
+    @property public Expression falseValue() {
+        return _falseValue;
     }
 
     public override Expression accept(ExpressionMapper mapper) {
-        condition = condition.accept(mapper);
-        trueValue = trueValue.accept(mapper);
-        falseValue = falseValue.accept(mapper);
+        _condition = _condition.accept(mapper);
+        _trueValue = _trueValue.accept(mapper);
+        _falseValue = _falseValue.accept(mapper);
         return mapper.mapConditional(this);
     }
 
     public override string toString() {
-        return format("Conditional(%s if %s else %s)", trueValue, condition, falseValue);
+        return format("Conditional(%s if %s else %s)", _trueValue, _condition, _falseValue);
     }
 }

@@ -314,7 +314,7 @@ public class FloatLiteral : SourceToken!(Kind.FLOAT_LITERAL), Expression {
     }
 
     public this(real value) {
-        super(value.to!dstring);
+        super(format("%.10g"d, value));
         this.value = value;
         evaluated = true;
     }
