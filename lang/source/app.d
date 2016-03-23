@@ -1,7 +1,3 @@
-import core.stdc.stdlib;
-import cstdio = core.stdc.stdio;
-import core.stdc.signal;
-
 import std.stdio;
 
 import ruleslang.syntax.dcharstream;
@@ -11,27 +7,27 @@ import ruleslang.syntax.parser.statement;
 import ruleslang.semantic.litreduce;
 
 void main() {
-	signal(SIGINT, &sigINT);
-
-	while (true) {
+	bool open = true;
+	while (open) {
 		try {
-			parseLine();
+			open = parseLine();
 		} catch (Exception exception) {
 			stdout.writeln(exception.msg);
 		}
 	}
 }
 
-private void parseLine() {
+private bool parseLine() {
 	stdout.write("> ");
-    auto tokenizer = new Tokenizer(new DCharReader(new ReadLineDCharStream(stdin)));
+	auto stream = new ReadLineDCharStream(stdin);
+	if (stream.isClosed()) {
+		stdout.writeln();
+		return false;
+	}
+    auto tokenizer = new Tokenizer(new DCharReader(stream));
     foreach (statement; tokenizer.parseStatements()) {
 		statement = statement.reduceLiterals();
 		stdout.writeln(statement.toString());
     }
-}
-
-private extern (C) void sigINT(int sig) @nogc nothrow {
-	cstdio.puts("\nbye".ptr);
-	exit(0);
+	return true;
 }
