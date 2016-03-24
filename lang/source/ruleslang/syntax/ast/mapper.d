@@ -1,7 +1,5 @@
 module ruleslang.syntax.ast.mapper;
 
-import std.traits;
-
 import ruleslang.syntax.token;
 import ruleslang.syntax.ast.type;
 import ruleslang.syntax.ast.expression;

@@ -1,6 +1,6 @@
 module ruleslang.syntax.parser.expression;
 
-import std.conv;
+import std.conv : to;
 
 import ruleslang.syntax.token;
 import ruleslang.syntax.tokenizer;

@@ -1,6 +1,6 @@
 module ruleslang.test.assertion;
 
-import std.format;
+import std.format : format;
 
 public void assertEqual(T)(T a, T b) {
     if (a != b) {

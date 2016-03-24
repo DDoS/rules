@@ -1,6 +1,6 @@
 module ruleslang.syntax.ast.type;
 
-import std.algorithm.iteration;
+import std.algorithm.iteration : map, reduce;
 
 import ruleslang.syntax.dchars;
 import ruleslang.syntax.token;

@@ -1,6 +1,6 @@
 module ruleslang.syntax.ast.statement;
 
-import std.format;
+import std.format : format;
 
 import ruleslang.syntax.token;
 import ruleslang.syntax.ast.expression;

@@ -1,6 +1,6 @@
 module ruleslang.syntax.tokenizer;
 
-import std.algorithm.searching;
+import std.algorithm.searching : canFind;
 
 import ruleslang.syntax.dchars;
 import ruleslang.syntax.dcharstream;

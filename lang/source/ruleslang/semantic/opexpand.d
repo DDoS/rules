@@ -1,6 +1,6 @@
 module ruleslang.semantic.opexpand;
 
-import std.conv;
+import std.conv : to;
 
 import ruleslang.syntax.token;
 import ruleslang.syntax.ast.expression;

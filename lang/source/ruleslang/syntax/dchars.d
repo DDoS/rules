@@ -1,10 +1,10 @@
 module ruleslang.syntax.dchars;
 
-import std.conv;
-import std.exception;
-import std.format;
-import std.uni;
-import std.algorithm.iteration;
+import std.conv : parse, to;
+import std.exception : assumeUnique;
+import std.format : format;
+import std.uni : isGraphical;
+import std.algorithm.iteration : map, reduce;
 
 private immutable dchar[dchar] ESCAPE_CHARS;
 private immutable dchar[dchar] CHAR_ESCAPES;

@@ -1,7 +1,7 @@
 module ruleslang.test.syntax.tokenizer;
 
-import std.conv;
-import std.format;
+import std.conv : to;
+import std.format : format;
 
 import ruleslang.syntax.dcharstream;
 import ruleslang.syntax.token;

@@ -1,7 +1,6 @@
 module ruleslang.syntax.ast.expression;
 
-import std.format;
-import std.algorithm.iteration;
+import std.format : format;
 
 import ruleslang.syntax.dchars;
 import ruleslang.syntax.token;
