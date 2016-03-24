@@ -1,7 +1,7 @@
 module ruleslang.test.syntax.parser.statement;
 
 import ruleslang.syntax.dchars;
-import ruleslang.syntax.dcharstream;
+import ruleslang.syntax.source;
 import ruleslang.syntax.tokenizer;
 import ruleslang.syntax.ast.statement;
 import ruleslang.syntax.parser.statement;
@@ -61,5 +61,5 @@ unittest {
 }
 
 private string parse(string source) {
-    return new Tokenizer(new DCharReader(new StringDCharStream(source))).parseStatements().join!"\n"();
+    return new Tokenizer(new DCharReader(source)).parseStatements().join!"\n"();
 }

@@ -3,7 +3,7 @@ module ruleslang.syntax.tokenizer;
 import std.algorithm.searching : canFind;
 
 import ruleslang.syntax.dchars;
-import ruleslang.syntax.dcharstream;
+import ruleslang.syntax.source;
 import ruleslang.syntax.token;
 
 public class Tokenizer {

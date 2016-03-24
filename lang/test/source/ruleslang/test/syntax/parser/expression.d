@@ -1,6 +1,6 @@
 module ruleslang.test.parser.expression;
 
-import ruleslang.syntax.dcharstream;
+import ruleslang.syntax.source;
 import ruleslang.syntax.token;
 import ruleslang.syntax.tokenizer;
 import ruleslang.syntax.parser.expression;
@@ -362,7 +362,7 @@ unittest {
 }
 
 private string parseTestExpression(string source) {
-    auto tokenizer = new Tokenizer(new DCharReader(new StringDCharStream(source)));
+    auto tokenizer = new Tokenizer(new DCharReader(source));
     if (tokenizer.head().getKind() == Kind.INDENTATION) {
         tokenizer.advance();
     }

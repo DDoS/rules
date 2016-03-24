@@ -3,7 +3,7 @@ module ruleslang.test.syntax.tokenizer;
 import std.conv : to;
 import std.format : format;
 
-import ruleslang.syntax.dcharstream;
+import ruleslang.syntax.source;
 import ruleslang.syntax.token;
 import ruleslang.syntax.tokenizer;
 
@@ -144,7 +144,7 @@ unittest {
 }
 
 private void assertLexNoIndent(string source, string[] expected ...) {
-    auto tokenizer = new Tokenizer(new DCharReader(new StringDCharStream(source)));
+    auto tokenizer = new Tokenizer(new DCharReader(source));
     string[] tokens = [];
     if (tokenizer.head().getKind() == Kind.INDENTATION) {
         tokenizer.advance();
@@ -157,7 +157,7 @@ private void assertLexNoIndent(string source, string[] expected ...) {
 }
 
 private void assertLex(string source, string[] expected ...) {
-    auto tokenizer = new Tokenizer(new DCharReader(new StringDCharStream(source)));
+    auto tokenizer = new Tokenizer(new DCharReader(source));
     string[] tokens = [];
     while (tokenizer.has()) {
         tokens ~= tokenizer.head().toString();

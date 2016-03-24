@@ -1,6 +1,6 @@
 import std.stdio;
 
-import ruleslang.syntax.dcharstream;
+import ruleslang.syntax.source;
 import ruleslang.syntax.token;
 import ruleslang.syntax.tokenizer;
 import ruleslang.syntax.ast.statement;
@@ -17,7 +17,7 @@ void main() {
 			break;
 		}
 		try {
-			auto tokenizer = new Tokenizer(new DCharReader(new StringDCharStream(source)));
+			auto tokenizer = new Tokenizer(new DCharReader(source));
 		    foreach (statement; tokenizer.parseStatements()) {
 				statement = statement.expandOperators();
 				statement = statement.reduceLiterals();
@@ -28,5 +28,4 @@ void main() {
 		}
 	}
 	// TODO: fix unsafe casts
-	//       Remove char stream stuff, just keep reader
 }
