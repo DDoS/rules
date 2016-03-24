@@ -1,5 +1,6 @@
 module ruleslang.test.syntax.parser.statement;
 
+import ruleslang.syntax.dchars;
 import ruleslang.syntax.dcharstream;
 import ruleslang.syntax.tokenizer;
 import ruleslang.syntax.ast.statement;
@@ -51,25 +52,14 @@ unittest {
 
 unittest {
     assertEqual(
-        "FunctionCall(a()); Assignment(a = IntegerLiteral(1)); FunctionCall(a.b()); Assignment(a.b *= v)",
-        parseList("a()\na = 1; a.b();\n\t\ra.b *= v")
+        "FunctionCall(a())\n" ~
+            "Assignment(a = IntegerLiteral(1))\n" ~
+            "FunctionCall(a.b())\n" ~
+            "Assignment(a.b *= v)",
+        parse("a()\na = 1; a.b();\n\t\ra.b *= v")
     );
 }
 
 private string parse(string source) {
-    return new Tokenizer(new DCharReader(new StringDCharStream(source))).parseStatement().toString();
-}
-
-private string parseList(string source) {
-    return new Tokenizer(new DCharReader(new StringDCharStream(source))).parseStatements().toString();
-}
-
-private string toString(Statement[] statements) {
-    auto s = "";
-    auto length = statements.length - 1;
-    foreach (i; 0 .. length) {
-        s ~= statements[i].toString() ~ "; ";
-    }
-    s ~= statements[length].toString();
-    return s;
+    return new Tokenizer(new DCharReader(new StringDCharStream(source))).parseStatements().join!"\n"();
 }

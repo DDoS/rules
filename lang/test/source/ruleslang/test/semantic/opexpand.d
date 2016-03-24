@@ -1,5 +1,6 @@
 module ruleslang.test.semantic.opexpand;
 
+import ruleslang.syntax.dchars;
 import ruleslang.syntax.dcharstream;
 import ruleslang.syntax.tokenizer;
 import ruleslang.syntax.parser.statement;
@@ -75,6 +76,9 @@ unittest {
 }
 
 private string parseAndExpand(string source) {
-    auto tokenizer = new Tokenizer(new DCharReader(new StringDCharStream(source)));
-    return tokenizer.parseStatement().expandOperators().toString();
+    auto statements = new Tokenizer(new DCharReader(new StringDCharStream(source))).parseStatements();
+    foreach (i, statement; statements) {
+        statements[i] = statement.expandOperators();
+    }
+    return statements.join!"\n"();
 }

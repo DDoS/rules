@@ -103,7 +103,7 @@ public class Tokenizer {
             } else if (chars.head().isDecimalDigit()) {
                 token = chars.collectNumberLiteral();
             } else {
-                throw new Exception("Unexpected character");
+                throw new SourceException("Unexpected character", chars.count);
             }
             while (chars.consumeIgnored()) {
                 // Remove trailing comments and whitespace
@@ -141,7 +141,7 @@ private bool consumeIgnored(DCharReader chars) {
         // Consume an escaped new line
         chars.advance();
         if (!chars.head().isNewLineChar()) {
-            throw new Exception("Expected new line character");
+            throw new SourceException("Expected new line character", chars.count);
         }
         chars.advance();
         // Consume more escaped new lines
@@ -169,7 +169,7 @@ private void completeBlockComment(DCharReader chars) {
         } else if (chars.head().isPrintChar() || chars.head().isWhiteSpace()) {
             trailing = 0;
         } else {
-            throw new Exception("Unexpected character");
+            throw new SourceException("Unexpected character", chars.count);
         }
         chars.advance();
     }
@@ -212,7 +212,7 @@ private dstring collectSymbol(DCharReader chars) {
 private dstring collectStringLiteral(DCharReader chars) {
     // Opening "
     if (chars.head() != '"') {
-        throw new Exception("Expected opening \"");
+        throw new SourceException("Expected opening \"", chars.count);
     }
     chars.collect();
     // String contents
@@ -230,7 +230,7 @@ private dstring collectStringLiteral(DCharReader chars) {
     }
     // Closing "
     if (chars.head() != '"') {
-        throw new Exception("Expected closing \"");
+        throw new SourceException("Expected closing \"", chars.count);
     }
     chars.collect();
     return chars.popCollected();
@@ -245,7 +245,7 @@ private bool collectEscapeSequence(DCharReader chars) {
         chars.collect();
         // Unicode sequence, collect at least 1 hex digit and at most 8
         if (!chars.head().isHexDigit()) {
-            throw new Exception("Expected at least one hexadecimal digit in Unicode sequence");
+            throw new SourceException("Expected at least one hexadecimal digit in Unicode sequence", chars.count);
         }
         chars.collect();
         for (size_t i = 1; i < 8 && chars.head().isHexDigit(); i++) {
@@ -329,7 +329,7 @@ private bool collectFloatLiteralExponent(DCharReader chars) {
 
 private void collectDigitSequence(alias isDigit)(DCharReader chars) {
     if (!isDigit(chars.head())) {
-        throw new Exception("Expected a digit");
+        throw new SourceException("Expected a digit", chars.count);
     }
     chars.collect();
     while (true) {
@@ -339,7 +339,7 @@ private void collectDigitSequence(alias isDigit)(DCharReader chars) {
                 chars.collect();
             }
             if (!isDigit(chars.head())) {
-                throw new Exception("Expected a digit");
+                throw new SourceException("Expected a digit", chars.count);
             }
             chars.collect();
         } else if (isDigit(chars.head())) {

@@ -39,5 +39,6 @@ assignment = referenceExpression,
 
 indentation = indentationToken, {indentationToken} ;
 
-statement = indentation, (assignment | functionCall),
-    (indentation | ";" | EOF) ;
+statement = assignment | functionCall ;
+
+statments = {indentation, (EOF | (statement, (indentation | ";" | EOF)))} ;

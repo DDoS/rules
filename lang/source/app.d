@@ -8,29 +8,23 @@ import ruleslang.semantic.opexpand;
 import ruleslang.semantic.litreduce;
 
 void main() {
-	bool open = true;
-	while (open) {
+	while (true) {
 		try {
-			open = parseLine();
+			stdout.write("> ");
+			auto source = stdin.readln();
+			if (source.length <= 0) {
+				stdout.writeln();
+				break;
+			}
+			auto tokenizer = new Tokenizer(new DCharReader(new StringDCharStream(source)));
+		    foreach (statement; tokenizer.parseStatements()) {
+				statement = statement.expandOperators();
+				statement = statement.reduceLiterals();
+				stdout.writeln(statement.toString());
+		    }
 		} catch (Exception exception) {
 			stdout.writeln(exception.msg);
 		}
 	}
 	// TODO: fix unsafe casts
-}
-
-private bool parseLine() {
-	stdout.write("> ");
-	auto stream = new ReadLineDCharStream(stdin);
-	if (stream.isClosed()) {
-		stdout.writeln();
-		return false;
-	}
-    auto tokenizer = new Tokenizer(new DCharReader(stream));
-    foreach (statement; tokenizer.parseStatements()) {
-		statement = statement.expandOperators();
-		statement = statement.reduceLiterals();
-		stdout.writeln(statement.toString());
-    }
-	return true;
 }

@@ -12,12 +12,10 @@ import ruleslang.syntax.parser.expression;
 private struct IndentSpec {
     private dchar w;
     private uint count;
-    private bool nextIgnored;
 
-    private this(dchar w, uint count, bool nextIgnored) {
+    private this(dchar w, uint count) {
         this.w = w;
         this.count = count;
-        this.nextIgnored = nextIgnored;
     }
 
     private bool validate(Indentation indentation) {
@@ -34,7 +32,7 @@ private struct IndentSpec {
 }
 
 private IndentSpec* noIndentation() {
-    return new IndentSpec(' ', 0, false);
+    return new IndentSpec(' ', 0);
 }
 
 private Statement parseAssigmnentOrFunctionCall(Tokenizer tokens) {
@@ -59,43 +57,46 @@ private Statement parseAssigmnentOrFunctionCall(Tokenizer tokens) {
 }
 
 public Statement parseStatement(Tokenizer tokens) {
-    return parseStatement(tokens, new IndentSpec());
-}
-
-private Statement parseStatement(Tokenizer tokens, IndentSpec* indentSpec) {
-    auto validIndent = indentSpec.nextIgnored;
-    indentSpec.nextIgnored = false;
-    // Consume indentation preceding the statement
-    while (tokens.head().getKind() == Kind.INDENTATION) {
-        validIndent = indentSpec.validate(cast(Indentation) tokens.head());
-        tokens.advance();
-    }
-    // Only the last indentation before the statement matters
-    if (!validIndent) {
-        throw new Exception(format("Expected %d of %s as indentation", indentSpec.count, indentSpec.w.escapeChar()));
-    }
     return parseAssigmnentOrFunctionCall(tokens);
 }
 
 public Statement[] parseStatements(Tokenizer tokens) {
-    return parseStatements(tokens, new IndentSpec());
+    return parseStatements(tokens, noIndentation());
 }
 
 private Statement[] parseStatements(Tokenizer tokens, IndentSpec* indentSpec) {
     Statement[] statements = [];
+    auto nextIndentIgnored = false;
     while (tokens.has()) {
-        statements ~= parseStatement(tokens, indentSpec);
+        auto validIndent = nextIndentIgnored;
+        nextIndentIgnored = false;
+        // Consume indentation preceding the statement
+        while (tokens.head().getKind() == Kind.INDENTATION) {
+            validIndent = indentSpec.validate(cast(Indentation) tokens.head());
+            tokens.advance();
+        }
+        // Indentation could precede end of source
+        if (!tokens.has()) {
+            break;
+        }
+        // Only the last indentation before the statement matters
+        if (!validIndent) {
+            throw new Exception(format("Expected %d of %s as indentation", indentSpec.count, indentSpec.w.escapeChar()));
+        }
+        // Parse the statement
+        statements ~= parseStatement(tokens);
+        // Check for termination
         if (tokens.head().getKind() == Kind.TERMINATOR) {
             tokens.advance();
             // Can ignore indentation for the next statement if on the same line
-            indentSpec.nextIgnored = true;
+            nextIndentIgnored = true;
             continue;
         }
         if (tokens.head().getKind() == Kind.INDENTATION) {
             // Indentation marks a new statement, so the end of the current one
             continue;
         }
-        if (tokens.head().getKind() == Kind.EOF) {
+        if (!tokens.has()) {
             // Nothing else to parse
             break;
         }

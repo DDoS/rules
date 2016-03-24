@@ -1,5 +1,6 @@
 module ruleslang.test.semantic.litreduce;
 
+import ruleslang.syntax.dchars;
 import ruleslang.syntax.dcharstream;
 import ruleslang.syntax.tokenizer;
 import ruleslang.syntax.parser.statement;
@@ -159,6 +160,9 @@ unittest {
 }
 
 private string parseAndReduce(string source) {
-    auto tokenizer = new Tokenizer(new DCharReader(new StringDCharStream(source)));
-    return tokenizer.parseStatement().reduceLiterals().toString();
+    auto statements = new Tokenizer(new DCharReader(new StringDCharStream(source))).parseStatements();
+    foreach (i, statement; statements) {
+        statements[i] = statement.reduceLiterals();
+    }
+    return statements.join!"\n"();
 }

@@ -46,7 +46,7 @@ public class SourceException : Exception, SourceIndexed {
     private size_t _start;
     private size_t _end;
 
-    public this(string message, site_t index) {
+    public this(string message, size_t index) {
         super(message);
         _start = index;
         _end = index;
