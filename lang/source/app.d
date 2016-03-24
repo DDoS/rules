@@ -28,4 +28,5 @@ void main() {
 		}
 	}
 	// TODO: fix unsafe casts
+	//       Remove char stream stuff, just keep reader
 }

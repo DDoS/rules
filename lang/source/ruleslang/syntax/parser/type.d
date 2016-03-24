@@ -8,14 +8,14 @@ import ruleslang.syntax.parser.expression;
 
 public Identifier[] parseName(Tokenizer tokens) {
     if (tokens.head().getKind() != Kind.IDENTIFIER) {
-        throw new Exception("Expected an identifier");
+        throw new SourceException("Expected an identifier", tokens.head());
     }
     Identifier[] name = [cast(Identifier) tokens.head()];
     tokens.advance();
     while (tokens.head() == ".") {
         tokens.advance();
         if (tokens.head().getKind() != Kind.IDENTIFIER) {
-            throw new Exception("Expected an identifier");
+            throw new SourceException("Expected an identifier", tokens.head());
         }
         name ~= cast(Identifier) tokens.head();
         tokens.advance();
@@ -25,7 +25,7 @@ public Identifier[] parseName(Tokenizer tokens) {
 
 private Expression parseArrayDimension(Tokenizer tokens, out size_t end) {
     if (tokens.head() != "[") {
-        throw new Exception("Expected '['");
+        throw new SourceException("Expected '['", tokens.head());
     }
     tokens.advance();
     if (tokens.head() == "]") {
@@ -35,7 +35,7 @@ private Expression parseArrayDimension(Tokenizer tokens, out size_t end) {
     }
     auto size = parseExpression(tokens);
     if (tokens.head() != "]") {
-        throw new Exception("Expected ']'");
+        throw new SourceException("Expected ']'", tokens.head());
     }
     end = tokens.head().end;
     tokens.advance();

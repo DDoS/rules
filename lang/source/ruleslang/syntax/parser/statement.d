@@ -1,6 +1,6 @@
 module ruleslang.syntax.parser.statement;
 
-import std.format;
+import std.format : format;
 
 import ruleslang.syntax.dchars;
 import ruleslang.syntax.token;
@@ -43,10 +43,10 @@ private Statement parseAssigmnentOrFunctionCall(Tokenizer tokens) {
     }
     auto reference = cast(Reference) access;
     if (reference is null) {
-        throw new Exception("Not a reference expression");
+        throw new SourceException("Not a reference expression", access);
     }
     if (tokens.head().getKind() != Kind.ASSIGNMENT_OPERATOR) {
-        throw new Exception("Expected an assignment operator");
+        throw new SourceException("Expected an assignment operator", tokens.head());
     }
     auto operator = cast(AssignmentOperator) tokens.head();
     tokens.advance();
@@ -68,11 +68,10 @@ private Statement[] parseStatements(Tokenizer tokens, IndentSpec* indentSpec) {
     Statement[] statements = [];
     auto nextIndentIgnored = false;
     while (tokens.has()) {
-        auto validIndent = nextIndentIgnored;
-        nextIndentIgnored = false;
+        Indentation lastIndent = null;
         // Consume indentation preceding the statement
         while (tokens.head().getKind() == Kind.INDENTATION) {
-            validIndent = indentSpec.validate(cast(Indentation) tokens.head());
+            lastIndent = cast(Indentation) tokens.head();
             tokens.advance();
         }
         // Indentation could precede end of source
@@ -80,9 +79,14 @@ private Statement[] parseStatements(Tokenizer tokens, IndentSpec* indentSpec) {
             break;
         }
         // Only the last indentation before the statement matters
-        if (!validIndent) {
-            throw new Exception(format("Expected %d of %s as indentation", indentSpec.count, indentSpec.w.escapeChar()));
+        if (!nextIndentIgnored && (lastIndent is null || !indentSpec.validate(lastIndent))) {
+            auto problem = lastIndent is null ? tokens.head() : lastIndent;
+            throw new SourceException(
+                format("Expected %d of '%s' as indentation", indentSpec.count, indentSpec.w.escapeChar()),
+                problem
+            );
         }
+        nextIndentIgnored = false;
         // Parse the statement
         statements ~= parseStatement(tokens);
         // Check for termination
@@ -100,7 +104,7 @@ private Statement[] parseStatements(Tokenizer tokens, IndentSpec* indentSpec) {
             // Nothing else to parse
             break;
         }
-        throw new Exception("Expected end of statement");
+        throw new SourceException("Expected end of statement", tokens.head());
     }
     return statements;
 }

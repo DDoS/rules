@@ -1,8 +1,10 @@
 module ruleslang.syntax.token;
 
-import std.format;
-import std.array;
-import std.conv;
+import std.format : format;
+import std.array : replace;
+import std.conv : to;
+import std.string : stripRight;
+import std.algorithm.comparison : min;
 
 import ruleslang.syntax.dchars;
 import ruleslang.syntax.ast.expression;
@@ -69,18 +71,17 @@ public class SourceException : Exception, SourceIndexed {
     }
 
     public immutable(ErrorInformation)* getErrorInformation(string source) {
-        import std.algorithm.comparison : min;
         // find the line number the error occurred on
         size_t lineNumber = findLine(source, min(_start, source.length - 1));
         // find start and end of line containing the offender
-        long lineStart = _start, lineEnd = _start;
+        ptrdiff_t lineStart = _start, lineEnd = _start;
         while (--lineStart >= 0 && !source[lineStart].isNewLineChar()) {
         }
         lineStart++;
         while (++lineEnd < source.length && !source[lineEnd].isNewLineChar()) {
         }
         lineEnd--;
-        string line = source[lineStart .. min(lineEnd + 1, $)];
+        string line = source[lineStart .. min(lineEnd + 1, $)].stripRight();
         return new ErrorInformation(this.msg, offender, line, lineNumber, _start - lineStart, _end - lineStart);
     }
 
@@ -190,11 +191,14 @@ public template SourceToken(Kind kind) {
         private size_t _end;
 
         public this(dstring source, size_t start) {
-            this(source, start, start + source.length);
+            this(source, start, start + source.length - 1);
         }
 
         public this(dstring source, size_t start, size_t end) {
             this.source = source.to!string;
+            if (end < start) {
+                throw new Exception("A token cannot end before it has started");
+            }
             _start = start;
             _end = end;
         }
@@ -310,7 +314,7 @@ public class StringLiteral : SourceToken!(Kind.STRING_LITERAL), Expression {
     private dstring value = null;
 
     public this(dstring source, size_t start) {
-        this(source, start, start + source.length, false);
+        this(source, start, start + source.length - 1, false);
     }
 
     public this(dstring source, size_t start, size_t end) {
@@ -392,7 +396,7 @@ public class IntegerLiteral : SourceToken!(Kind.INTEGER_LITERAL), Expression {
     private bool evaluated = false;
 
     public this(dstring source, size_t start) {
-        this(source, start, start + source.length);
+        this(source, start, start + source.length - 1);
     }
 
     public this(dstring source, size_t start, size_t end) {

@@ -56,8 +56,10 @@ public class Tokenizer {
         if (firstToken && chars.has()) {
             // First token is indentation, which in this case
             // is not after a new line
-            auto position = chars.count;
-            token = new Indentation(chars.collectIndentation(), position);
+            auto start = chars.count;
+            auto indentation = chars.collectIndentation();
+            auto end = chars.count - 1 < start ? start : chars.count - 1;
+            token = new Indentation(indentation, start, end);
             while (chars.consumeIgnored()) {
                 // Remove trailing comments and whitespace
             }
@@ -65,10 +67,12 @@ public class Tokenizer {
         }
         while (chars.has() && token is null) {
             if (chars.head().isNewLineChar()) {
+                auto start = chars.count;
                 chars.consumeNewLine();
                 // Just after a new line, consume indentation of next line
-                auto position = chars.count;
-                token = new Indentation(chars.collectIndentation(), position);
+                auto indentation = chars.collectIndentation();
+                auto end = chars.count - 1;
+                token = new Indentation(indentation, start, end);
             } else if (chars.head() == ';') {
                 // A terminator breaks a line but doesn't need indentation
                 chars.advance();

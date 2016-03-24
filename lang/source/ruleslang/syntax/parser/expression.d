@@ -43,7 +43,7 @@ private LabeledExpression[] parseCompositeLiteralBody(Tokenizer tokens) {
 
 public CompositeLiteral parseCompositeLiteral(Tokenizer tokens) {
     if (tokens.head() != "{") {
-        throw new Exception("Expected '{'");
+        throw new SourceException("Expected '{'", tokens.head());
     }
     auto start = tokens.head().start;
     tokens.advance();
@@ -56,7 +56,7 @@ public CompositeLiteral parseCompositeLiteral(Tokenizer tokens) {
     } else {
         values = parseCompositeLiteralBody(tokens);
         if (tokens.head() != "}") {
-            throw new Exception("Expected '}'");
+            throw new SourceException("Expected '}'", tokens.head());
         }
         end = tokens.head().end;
         tokens.advance();
@@ -70,7 +70,7 @@ private Expression parseAtom(Tokenizer tokens) {
         auto start = tokens.head().start;
         tokens.advance();
         if (tokens.head().getKind() != Kind.IDENTIFIER) {
-            throw new Exception("Expected an identifier");
+            throw new SourceException("Expected an identifier", tokens.head());
         }
         auto identifier = cast(Identifier) tokens.head();
         tokens.advance();
@@ -95,7 +95,7 @@ private Expression parseAtom(Tokenizer tokens) {
         tokens.advance();
         auto expression = parseExpression(tokens);
         if (tokens.head() != ")") {
-            throw new Exception("Expected ')'");
+            throw new SourceException("Expected ')'", tokens.head());
         }
         tokens.advance();
         return expression;
@@ -106,7 +106,7 @@ private Expression parseAtom(Tokenizer tokens) {
         tokens.advance();
         return literal;
     }
-    throw new Exception("Expected a literal, a name or '('");
+    throw new SourceException("Expected a literal, a name or '('", tokens.head());
 }
 
 public Expression parseAccess(Tokenizer tokens) {
@@ -117,7 +117,7 @@ private Expression parseAccess(Tokenizer tokens, Expression value) {
     if (tokens.head() == ".") {
         tokens.advance();
         if (tokens.head().getKind() != Kind.IDENTIFIER) {
-            throw new Exception("Expected an identifier");
+            throw new SourceException("Expected an identifier", tokens.head());
         }
         auto name = cast(Identifier) tokens.head();
         tokens.advance();
@@ -127,7 +127,7 @@ private Expression parseAccess(Tokenizer tokens, Expression value) {
         tokens.advance();
         auto index = parseExpression(tokens);
         if (tokens.head() != "]") {
-            throw new Exception("Expected ']'");
+            throw new SourceException("Expected ']'", tokens.head());
         }
         auto end = tokens.head().end;
         tokens.advance();
@@ -144,7 +144,7 @@ private Expression parseAccess(Tokenizer tokens, Expression value) {
         } else {
             arguments = parseExpressionList(tokens);
             if (tokens.head() != ")") {
-                throw new Exception("Expected ')'");
+                throw new SourceException("Expected ')'", tokens.head());
             }
             end = tokens.head().end;
             tokens.advance();
@@ -254,7 +254,7 @@ private Expression parseConditional(Tokenizer tokens) {
     tokens.advance();
     auto condition = parseRange(tokens);
     if (tokens.head() != "else") {
-        throw new Exception("Expected \"else\"");
+        throw new SourceException("Expected \"else\"", tokens.head());
     }
     tokens.advance();
     auto falseValue = parseConditional(tokens);
