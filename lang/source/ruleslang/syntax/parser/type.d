@@ -6,19 +6,20 @@ import ruleslang.syntax.tokenizer;
 import ruleslang.syntax.ast.type;
 import ruleslang.syntax.ast.expression;
 import ruleslang.syntax.parser.expression;
+import ruleslang.util;
 
 public Identifier[] parseName(Tokenizer tokens) {
     if (tokens.head().getKind() != Kind.IDENTIFIER) {
         throw new SourceException("Expected an identifier", tokens.head());
     }
-    Identifier[] name = [cast(Identifier) tokens.head()];
+    Identifier[] name = [tokens.head().castOrFail!Identifier()];
     tokens.advance();
     while (tokens.head() == ".") {
         tokens.advance();
         if (tokens.head().getKind() != Kind.IDENTIFIER) {
             throw new SourceException("Expected an identifier", tokens.head());
         }
-        name ~= cast(Identifier) tokens.head();
+        name ~= tokens.head().castOrFail!Identifier();
         tokens.advance();
     }
     return name;

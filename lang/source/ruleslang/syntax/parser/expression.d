@@ -8,6 +8,7 @@ import ruleslang.syntax.tokenizer;
 import ruleslang.syntax.ast.type;
 import ruleslang.syntax.ast.expression;
 import ruleslang.syntax.parser.type;
+import ruleslang.util;
 
 private LabeledExpression parseCompositeLiteralPart(Tokenizer tokens) {
     Token label = null;
@@ -73,7 +74,7 @@ private Expression parseAtom(Tokenizer tokens) {
         if (tokens.head().getKind() != Kind.IDENTIFIER) {
             throw new SourceException("Expected an identifier", tokens.head());
         }
-        auto identifier = cast(Identifier) tokens.head();
+        auto identifier = tokens.head().castOrFail!Identifier();
         tokens.advance();
         return new ContextMemberAccess(identifier, start);
     }
@@ -120,7 +121,7 @@ private Expression parseAccess(Tokenizer tokens, Expression value) {
         if (tokens.head().getKind() != Kind.IDENTIFIER) {
             throw new SourceException("Expected an identifier", tokens.head());
         }
-        auto name = cast(Identifier) tokens.head();
+        auto name = tokens.head().castOrFail!Identifier();
         tokens.advance();
         return parseAccess(tokens, new MemberAccess(value, name));
     }
@@ -156,7 +157,7 @@ private Expression parseAccess(Tokenizer tokens, Expression value) {
     // and an integer with a field access
     auto token = cast(FloatLiteral) value;
     if (token !is null && tokens.head().getKind() == Kind.IDENTIFIER && token.getSource()[$ - 1] == '.') {
-        auto name = cast(Identifier) tokens.head();
+        auto name = tokens.head().castOrFail!Identifier();
         tokens.advance();
         // The form decimalInt.identifier is lexed as float(numberSeq.)identifier
         // We detect it and convert it to first form here
@@ -170,20 +171,20 @@ private Expression parseUnary(Tokenizer tokens) {
     switch (tokens.head().getSource()) {
         case "+":
         case "-": {
-            auto operator = cast(AddOperator) tokens.head();
+            auto operator = tokens.head().castOrFail!AddOperator();
             tokens.advance();
             auto inner = parseUnary(tokens);
             return new Sign(inner, operator);
         }
         case "~": {
-            auto operator = cast(ConcatenateOperator) tokens.head();
+            auto operator = tokens.head().castOrFail!ConcatenateOperator();
             tokens.advance();
             auto inner = parseUnary(tokens);
             auto a = new BitwiseNot(inner, operator);
             return a;
         }
         case "!": {
-            auto operator = cast(LogicalNotOperator) tokens.head();
+            auto operator = tokens.head().castOrFail!LogicalNotOperator();
             tokens.advance();
             auto inner = parseUnary(tokens);
             return new LogicalNot(inner, operator);
@@ -224,14 +225,14 @@ private Expression parseCompare(Tokenizer tokens) {
     ValueCompareOperator[] valueOperators = [];
     Expression[] values = [value];
     while (tokens.head().getKind() == Kind.VALUE_COMPARE_OPERATOR) {
-        valueOperators ~= cast(ValueCompareOperator) tokens.head();
+        valueOperators ~= tokens.head().castOrFail!ValueCompareOperator();
         tokens.advance();
         values ~= parseShift(tokens);
     }
     TypeCompareOperator typeOperator = null;
     Type type = null;
     if (tokens.head().getKind() == Kind.TYPE_COMPARE_OPERATOR) {
-        typeOperator = cast(TypeCompareOperator) tokens.head();
+        typeOperator = tokens.head().castOrFail!TypeCompareOperator();
         tokens.advance();
         type = parseType(tokens);
     }

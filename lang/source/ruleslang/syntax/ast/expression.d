@@ -113,8 +113,8 @@ public class Initializer : Expression {
     }
 
     public override Expression accept(ExpressionMapper mapper) {
-        type = cast(NamedType) type.accept(mapper);
-        literal = cast(CompositeLiteral) literal.accept(mapper);
+        type = type.accept(mapper).castOrFail!NamedType();
+        literal = literal.accept(mapper).castOrFail!CompositeLiteral();
         return mapper.mapInitializer(this);
     }
 

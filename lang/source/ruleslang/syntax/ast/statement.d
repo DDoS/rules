@@ -6,6 +6,7 @@ import ruleslang.syntax.source;
 import ruleslang.syntax.token;
 import ruleslang.syntax.ast.expression;
 import ruleslang.syntax.ast.mapper;
+import ruleslang.util;
 
 public interface Statement : SourceIndexed {
     public Statement accept(StatementMapper mapper);
@@ -31,7 +32,7 @@ public class InitializerAssignment : Statement {
 
     public override Statement accept(StatementMapper mapper) {
         target = target.accept(mapper);
-        literal = cast(CompositeLiteral) literal.accept(mapper);
+        literal = literal.accept(mapper).castOrFail!CompositeLiteral();
         return mapper.mapInitializerAssignment(this);
     }
 

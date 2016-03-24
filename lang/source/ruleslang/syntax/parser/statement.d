@@ -9,6 +9,7 @@ import ruleslang.syntax.tokenizer;
 import ruleslang.syntax.ast.expression;
 import ruleslang.syntax.ast.statement;
 import ruleslang.syntax.parser.expression;
+import ruleslang.util;
 
 private struct IndentSpec {
     private dchar w;
@@ -49,7 +50,7 @@ private Statement parseAssigmnentOrFunctionCall(Tokenizer tokens) {
     if (tokens.head().getKind() != Kind.ASSIGNMENT_OPERATOR) {
         throw new SourceException("Expected an assignment operator", tokens.head());
     }
-    auto operator = cast(AssignmentOperator) tokens.head();
+    auto operator = tokens.head().castOrFail!AssignmentOperator();
     tokens.advance();
     if (operator == "=" && tokens.head() == "{") {
         return new InitializerAssignment(access, parseCompositeLiteral(tokens));
@@ -72,7 +73,7 @@ private Statement[] parseStatements(Tokenizer tokens, IndentSpec* indentSpec) {
         Indentation lastIndent = null;
         // Consume indentation preceding the statement
         while (tokens.head().getKind() == Kind.INDENTATION) {
-            lastIndent = cast(Indentation) tokens.head();
+            lastIndent = tokens.head().castOrFail!Indentation();
             tokens.advance();
         }
         // Indentation could precede end of source
