@@ -3,6 +3,7 @@ module ruleslang.syntax.ast.expression;
 import std.format : format;
 
 import ruleslang.syntax.dchars;
+import ruleslang.syntax.source;
 import ruleslang.syntax.token;
 import ruleslang.syntax.ast.type;
 import ruleslang.syntax.ast.statement;

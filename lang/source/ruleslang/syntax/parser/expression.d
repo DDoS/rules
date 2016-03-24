@@ -2,6 +2,7 @@ module ruleslang.syntax.parser.expression;
 
 import std.conv : to;
 
+import ruleslang.syntax.source;
 import ruleslang.syntax.token;
 import ruleslang.syntax.tokenizer;
 import ruleslang.syntax.ast.type;

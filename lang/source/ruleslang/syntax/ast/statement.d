@@ -2,6 +2,7 @@ module ruleslang.syntax.ast.statement;
 
 import std.format : format;
 
+import ruleslang.syntax.source;
 import ruleslang.syntax.token;
 import ruleslang.syntax.ast.expression;
 import ruleslang.syntax.ast.mapper;

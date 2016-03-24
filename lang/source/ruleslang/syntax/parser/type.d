@@ -1,5 +1,6 @@
 module ruleslang.syntax.parser.type;
 
+import ruleslang.syntax.source;
 import ruleslang.syntax.token;
 import ruleslang.syntax.tokenizer;
 import ruleslang.syntax.ast.type;
