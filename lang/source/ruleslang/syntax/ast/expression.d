@@ -8,6 +8,7 @@ import ruleslang.syntax.token;
 import ruleslang.syntax.ast.type;
 import ruleslang.syntax.ast.statement;
 import ruleslang.syntax.ast.mapper;
+import ruleslang.util;
 
 public interface Expression : SourceIndexed {
     public Expression accept(ExpressionMapper mapper);
@@ -233,7 +234,7 @@ public class FunctionCall : Expression, Statement {
     }
 
     public override Statement accept(StatementMapper mapper) {
-        return accept(mapper);
+        return accept(mapper.castOrFail!ExpressionMapper()).castOrFail!Statement();
     }
 
     public override string toString() {

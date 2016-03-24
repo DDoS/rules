@@ -159,6 +159,13 @@ unittest {
     );
 }
 
+unittest {
+    assertEqual(
+        "FunctionCall(a())",
+        parseAndReduce("a()")
+    );
+}
+
 private string parseAndReduce(string source) {
     auto statements = new Tokenizer(new DCharReader(source)).parseStatements();
     foreach (i, statement; statements) {
