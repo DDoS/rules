@@ -23,12 +23,13 @@ public Identifier[] parseName(Tokenizer tokens) {
     return name;
 }
 
-private Expression parseArrayDimension(Tokenizer tokens) {
+private Expression parseArrayDimension(Tokenizer tokens, out size_t end) {
     if (tokens.head() != "[") {
         throw new Exception("Expected '['");
     }
     tokens.advance();
     if (tokens.head() == "]") {
+        end = tokens.head().end;
         tokens.advance();
         return null;
     }
@@ -36,6 +37,7 @@ private Expression parseArrayDimension(Tokenizer tokens) {
     if (tokens.head() != "]") {
         throw new Exception("Expected ']'");
     }
+    end = tokens.head().end;
     tokens.advance();
     return size;
 }
@@ -43,10 +45,11 @@ private Expression parseArrayDimension(Tokenizer tokens) {
 public NamedType parseNamedType(Tokenizer tokens) {
     auto name = parseName(tokens);
     Expression[] dimensions = [];
+    auto end = name[$ - 1].end;
     while (tokens.head() == "[") {
-        dimensions ~= parseArrayDimension(tokens);
+        dimensions ~= parseArrayDimension(tokens, end);
     }
-    return new NamedType(name, dimensions);
+    return new NamedType(name, dimensions, end);
 }
 
 public Type parseType(Tokenizer tokens) {

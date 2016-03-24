@@ -45,9 +45,12 @@ public CompositeLiteral parseCompositeLiteral(Tokenizer tokens) {
     if (tokens.head() != "{") {
         throw new Exception("Expected '{'");
     }
+    auto start = tokens.head().start;
     tokens.advance();
     LabeledExpression[] values = void;
+    size_t end = void;
     if (tokens.head() == "}") {
+        end = tokens.head().end;
         tokens.advance();
         values = [];
     } else {
@@ -55,20 +58,23 @@ public CompositeLiteral parseCompositeLiteral(Tokenizer tokens) {
         if (tokens.head() != "}") {
             throw new Exception("Expected '}'");
         }
+        end = tokens.head().end;
+        tokens.advance();
     }
-    return new CompositeLiteral(values);
+    return new CompositeLiteral(values, start, end);
 }
 
 private Expression parseAtom(Tokenizer tokens) {
     if (tokens.head() == ".") {
         // Context field access
+        auto start = tokens.head().start;
         tokens.advance();
         if (tokens.head().getKind() != Kind.IDENTIFIER) {
             throw new Exception("Expected an identifier");
         }
         auto identifier = cast(Identifier) tokens.head();
         tokens.advance();
-        return new ContextMemberAccess(identifier);
+        return new ContextMemberAccess(identifier, start);
     }
     if (tokens.head().getKind() == Kind.IDENTIFIER) {
         // Name, or initializer
@@ -123,13 +129,16 @@ private Expression parseAccess(Tokenizer tokens, Expression value) {
         if (tokens.head() != "]") {
             throw new Exception("Expected ']'");
         }
+        auto end = tokens.head().end;
         tokens.advance();
-        return parseAccess(tokens, new ArrayAccess(value, index));
+        return parseAccess(tokens, new ArrayAccess(value, index, end));
     }
     if (tokens.head() == "(") {
         tokens.advance();
         Expression[] arguments = void;
+        size_t end = void;
         if (tokens.head() == ")") {
+            end = tokens.head().end;
             tokens.advance();
             arguments = [];
         } else {
@@ -137,9 +146,10 @@ private Expression parseAccess(Tokenizer tokens, Expression value) {
             if (tokens.head() != ")") {
                 throw new Exception("Expected ')'");
             }
+            end = tokens.head().end;
             tokens.advance();
         }
-        return parseAccess(tokens, new FunctionCall(value, arguments));
+        return parseAccess(tokens, new FunctionCall(value, arguments, end));
     }
     // Disambiguate between a float without decimal digits
     // and an integer with a field access
@@ -149,7 +159,7 @@ private Expression parseAccess(Tokenizer tokens, Expression value) {
         tokens.advance();
         // The form decimalInt.identifier is lexed as float(numberSeq.)identifier
         // We detect it and convert it to first form here
-        auto decimalInt = new IntegerLiteral(token.getSource()[0 .. $ - 1].to!dstring);
+        auto decimalInt = new IntegerLiteral(token.getSource()[0 .. $ - 1].to!dstring, token.start);
         return parseAccess(tokens, new MemberAccess(decimalInt, name));
     }
     return value;

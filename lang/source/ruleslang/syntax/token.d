@@ -37,7 +37,37 @@ public enum Kind {
     EOF
 }
 
-public interface Token {
+public interface SourceIndexed {
+    @property public size_t start();
+    @property public size_t end();
+}
+
+public class SourceException : Exception, SourceIndexed {
+    private size_t _start;
+    private size_t _end;
+
+    public this(string message, site_t index) {
+        super(message);
+        _start = index;
+        _end = index;
+    }
+
+    public this(string message, SourceIndexed problem) {
+        super(message);
+        _start = problem.start;
+        _end = problem.end;
+    }
+
+    @property public override size_t start() {
+        return _start;
+    }
+
+    @property public override size_t end() {
+        return _start;
+    }
+}
+
+public interface Token : SourceIndexed {
     public string getSource();
     public Kind getKind();
     public bool opEquals(const string source);
@@ -45,12 +75,26 @@ public interface Token {
 }
 
 public class Terminator : Token {
+    private size_t _start;
+
+    public this(size_t start) {
+        _start = start;
+    }
+
     public override string getSource() {
         return ";";
     }
 
     public Kind getKind() {
         return Kind.TERMINATOR;
+    }
+
+    @property public override size_t start() {
+        return _start;
+    }
+
+    @property public override size_t end() {
+        return _start;
     }
 
     public override bool opEquals(const string source) {
@@ -65,9 +109,17 @@ public class Terminator : Token {
 public template SourceToken(Kind kind) {
     public class SourceToken : Token {
         private string source;
+        private size_t _start;
+        private size_t _end;
 
-        public this(dstring source) {
+        public this(dstring source, size_t start) {
+            this(source, start, start + source.length);
+        }
+
+        public this(dstring source, size_t start, size_t end) {
             this.source = source.to!string;
+            _start = start;
+            _end = end;
         }
 
         public override string getSource() {
@@ -76,6 +128,14 @@ public template SourceToken(Kind kind) {
 
         public override Kind getKind() {
             return kind;
+        }
+
+        @property public override size_t start() {
+            return _start;
+        }
+
+        @property public override size_t end() {
+            return _end;
         }
 
         public override bool opEquals(const string source) {
@@ -113,14 +173,26 @@ public class BooleanLiteral : SourceToken!(Kind.BOOLEAN_LITERAL), Expression {
     private bool value;
     private bool evaluated = false;
 
-    public this(dstring source) {
-        super(source);
+    public this(dstring source, size_t start) {
+        super(source, start);
     }
 
-    public this(bool value) {
-        super(value.to!dstring);
+    public this(dstring source, size_t start, size_t end) {
+        super(source, start, end);
+    }
+
+    public this(bool value, size_t start, size_t end) {
+        super(value.to!dstring, start, end);
         this.value = value;
         evaluated = true;
+    }
+
+    @property public override size_t start() {
+        return super.start;
+    }
+
+    @property public override size_t end() {
+        return super.end;
     }
 
     public override Expression accept(ExpressionMapper mapper) {
@@ -149,9 +221,9 @@ public class BooleanLiteral : SourceToken!(Kind.BOOLEAN_LITERAL), Expression {
     }
 
     unittest {
-        auto a = new BooleanLiteral("true");
+        auto a = new BooleanLiteral("true", 0);
         assert(a.getValue());
-        auto b = new BooleanLiteral("false");
+        auto b = new BooleanLiteral("false", 0);
         assert(!b.getValue());
     }
 }
@@ -160,19 +232,31 @@ public class StringLiteral : SourceToken!(Kind.STRING_LITERAL), Expression {
     private dstring original;
     private dstring value = null;
 
-    public this(dstring source) {
-        this(source, false);
+    public this(dstring source, size_t start) {
+        this(source, start, start + source.length, false);
     }
 
-    public this(dstring s, bool value) {
+    public this(dstring source, size_t start, size_t end) {
+        this(source, start, end, false);
+    }
+
+    public this(dstring s, size_t start, size_t end, bool value) {
         if (value) {
             auto source = '"' ~ escapeString(s) ~ '"';
-            super(source);
+            super(source, start, end);
             this.value = s;
         } else {
-            super(s);
+            super(s, start, end);
         }
         this.original = s;
+    }
+
+    @property public override size_t start() {
+        return super.start;
+    }
+
+    @property public override size_t end() {
+        return super.end;
     }
 
     public override Expression accept(ExpressionMapper mapper) {
@@ -217,9 +301,9 @@ public class StringLiteral : SourceToken!(Kind.STRING_LITERAL), Expression {
     }
 
     unittest {
-        auto a = new StringLiteral("\"hello\\u0041\\nlol\""d);
+        auto a = new StringLiteral("\"hello\\u0041\\nlol\""d, 0);
         assert(a.getValue() == "helloA\nlol"d);
-        auto b = new StringLiteral("te st\u0004he\ny"d, true);
+        auto b = new StringLiteral("te st\u0004he\ny"d, 0, 0, true);
         assert(b.getSource() == "\"te st\\u00000004he\\ny\"");
     }
 }
@@ -230,8 +314,12 @@ public class IntegerLiteral : SourceToken!(Kind.INTEGER_LITERAL), Expression {
     private long value;
     private bool evaluated = false;
 
-    public this(dstring source) {
-        super(source);
+    public this(dstring source, size_t start) {
+        this(source, start, start + source.length);
+    }
+
+    public this(dstring source, size_t start, size_t end) {
+        super(source, start, end);
         if (source.length > 2) {
             switch (source[1]) {
                 case 'b':
@@ -248,14 +336,22 @@ public class IntegerLiteral : SourceToken!(Kind.INTEGER_LITERAL), Expression {
         }
     }
 
-    public this(long value) {
-        super(value.to!dstring);
+    public this(long value, size_t start, size_t end) {
+        super(value.to!dstring, start, end);
         this.value = value;
         evaluated = true;
     }
 
     @property public uint radix() {
         return _radix;
+    }
+
+    @property public override size_t start() {
+        return super.start;
+    }
+
+    @property public override size_t end() {
+        return super.end;
     }
 
     public override Expression accept(ExpressionMapper mapper) {
@@ -294,13 +390,13 @@ public class IntegerLiteral : SourceToken!(Kind.INTEGER_LITERAL), Expression {
     }
 
     unittest {
-        auto a = new IntegerLiteral("424_32");
+        auto a = new IntegerLiteral("424_32", 0);
         assert(a.getValue() == 42432);
         a.negateSign();
         assert(a.getValue() == -42432);
-    	auto b = new IntegerLiteral("0xFFFF");
+    	auto b = new IntegerLiteral("0xFFFF", 0);
         assert(b.getValue() == 0xFFFF);
-    	auto c = new IntegerLiteral("0b1110");
+    	auto c = new IntegerLiteral("0b1110", 0);
         assert(c.getValue() == 0b1110);
     }
 }
@@ -309,14 +405,26 @@ public class FloatLiteral : SourceToken!(Kind.FLOAT_LITERAL), Expression {
     private real value;
     private bool evaluated = false;
 
-    public this(dstring source) {
-        super(source);
+    public this(dstring source, size_t start) {
+        super(source, start);
     }
 
-    public this(real value) {
-        super(format("%.10g"d, value));
+    public this(dstring source, size_t start, size_t end) {
+        super(source, start, end);
+    }
+
+    public this(real value, size_t start, size_t end) {
+        super(format("%.10g"d, value), start, end);
         this.value = value;
         evaluated = true;
+    }
+
+    @property public override size_t start() {
+        return super.start;
+    }
+
+    @property public override size_t end() {
+        return super.end;
     }
 
     public override Expression accept(ExpressionMapper mapper) {
@@ -336,22 +444,36 @@ public class FloatLiteral : SourceToken!(Kind.FLOAT_LITERAL), Expression {
     }
 
     unittest {
-        auto a = new FloatLiteral("1_10e12");
+        auto a = new FloatLiteral("1_10e12", 0);
         assert(a.getValue() == 1_10e12);
-    	auto b = new FloatLiteral("1.1");
+    	auto b = new FloatLiteral("1.1", 0);
         assert(b.getValue() == 1.1);
-    	auto c = new FloatLiteral(".1");
+    	auto c = new FloatLiteral(".1", 0);
         assert(c.getValue() == 0.1);
     }
 }
 
 public class Eof : Token {
+    private size_t _start;
+
+    public this(size_t start) {
+        _start = start;
+    }
+
     public override string getSource() {
         return "\u0004";
     }
 
     public Kind getKind() {
         return Kind.EOF;
+    }
+
+    @property public override size_t start() {
+        return _start;
+    }
+
+    @property public override size_t end() {
+        return _start;
     }
 
     public override bool opEquals(const string source) {
@@ -404,18 +526,18 @@ public string toString(Kind kind) {
     }
 }
 
-public Token newSymbol(dstring source) {
+public Token newSymbol(dstring source, size_t start) {
     auto constructor = source in OPERATOR_SOURCES;
     if (constructor !is null) {
-        return (*constructor)(source);
+        return (*constructor)(source, start);
     }
-    return new OtherSymbol(source);
+    return new OtherSymbol(source, start);
 }
 
-private Token function(dstring)[dstring] OPERATOR_SOURCES;
+private Token function(dstring, size_t)[dstring] OPERATOR_SOURCES;
 
 private void addSourcesForOperator(Op)(dstring[] sources ...) {
-    Token function(dstring) constructor = (dstring source) => new Op(source);
+    Token function(dstring, size_t) constructor = (dstring source, size_t start) => new Op(source, start);
     foreach (source; sources) {
         if (source in OPERATOR_SOURCES) {
             throw new Exception("Symbol is declared for two different operators: " ~ source.to!string);

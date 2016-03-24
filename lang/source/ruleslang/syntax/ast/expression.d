@@ -9,7 +9,7 @@ import ruleslang.syntax.ast.type;
 import ruleslang.syntax.ast.statement;
 import ruleslang.syntax.ast.mapper;
 
-public interface Expression {
+public interface Expression : SourceIndexed {
     public Expression accept(ExpressionMapper mapper);
     public string toString();
 }
@@ -22,6 +22,14 @@ public class NameReference : Reference {
 
     public this(Identifier[] name) {
         this.name = name;
+    }
+
+    @property public override size_t start() {
+        return name[0].start;
+    }
+
+    @property public override size_t end() {
+        return name[$ - 1].end;
     }
 
     public override Expression accept(ExpressionMapper mapper) {
@@ -42,6 +50,14 @@ public class LabeledExpression {
         this.expression = expression;
     }
 
+    @property public size_t start() {
+        return label is null ? expression.start : label.start;
+    }
+
+    @property public size_t end() {
+        return expression.end;
+    }
+
     public override string toString() {
         return (label is null ? "" : label.getSource() ~ ": ") ~ expression.toString();
     }
@@ -49,9 +65,21 @@ public class LabeledExpression {
 
 public class CompositeLiteral : Expression {
     private LabeledExpression[] values;
+    private size_t _start;
+    private size_t _end;
 
-    public this(LabeledExpression[] values) {
+    public this(LabeledExpression[] values, size_t start, size_t end) {
         this.values = values;
+        _start = start;
+        _end = end;
+    }
+
+    @property public override size_t start() {
+        return _start;
+    }
+
+    @property public override size_t end() {
+        return _end;
     }
 
     public override Expression accept(ExpressionMapper mapper) {
@@ -75,6 +103,14 @@ public class Initializer : Expression {
         this.literal = literal;
     }
 
+    @property public override size_t start() {
+        return type.start;
+    }
+
+    @property public override size_t end() {
+        return literal.end;
+    }
+
     public override Expression accept(ExpressionMapper mapper) {
         type = cast(NamedType) type.accept(mapper);
         literal = cast(CompositeLiteral) literal.accept(mapper);
@@ -88,9 +124,19 @@ public class Initializer : Expression {
 
 public class ContextMemberAccess : Reference {
     private Identifier name;
+    private size_t _start;
 
-    public this(Identifier name) {
+    public this(Identifier name, size_t start) {
         this.name = name;
+        _start = start;
+    }
+
+    @property public override size_t start() {
+        return _start;
+    }
+
+    @property public override size_t end() {
+        return name.end;
     }
 
     public override Expression accept(ExpressionMapper mapper) {
@@ -111,6 +157,14 @@ public class MemberAccess : Reference {
         this.name = name;
     }
 
+    @property public override size_t start() {
+        return value.start;
+    }
+
+    @property public override size_t end() {
+        return name.end;
+    }
+
     public override Expression accept(ExpressionMapper mapper) {
         value = value.accept(mapper);
         return mapper.mapMemberAccess(this);
@@ -124,10 +178,20 @@ public class MemberAccess : Reference {
 public class ArrayAccess : Reference {
     private Expression value;
     private Expression index;
+    private size_t _end;
 
-    public this(Expression value, Expression index) {
+    public this(Expression value, Expression index, size_t end) {
         this.value = value;
         this.index = index;
+        _end = end;
+    }
+
+    @property public override size_t start() {
+        return value.start;
+    }
+
+    @property public override size_t end() {
+        return _end;
     }
 
     public override Expression accept(ExpressionMapper mapper) {
@@ -144,10 +208,20 @@ public class ArrayAccess : Reference {
 public class FunctionCall : Expression, Statement {
     private Expression value;
     private Expression[] arguments;
+    private size_t _end;
 
-    public this(Expression value, Expression[] arguments) {
+    public this(Expression value, Expression[] arguments, size_t end) {
         this.value = value;
         this.arguments = arguments;
+        _end = end;
+    }
+
+    @property public override size_t start() {
+        return value.start;
+    }
+
+    @property public override size_t end() {
+        return _end;
     }
 
     public override Expression accept(ExpressionMapper mapper) {
@@ -183,6 +257,14 @@ public template Unary(string name, Op) {
 
         @property public Op operator() {
             return _operator;
+        }
+
+        @property public override size_t start() {
+            return _operator.start;
+        }
+
+        @property public override size_t end() {
+            return _inner.end;
         }
 
         public override Expression accept(ExpressionMapper mapper) {
@@ -224,6 +306,14 @@ public template Binary(string name, Op) {
             return _operator;
         }
 
+        @property public override size_t start() {
+            return _left.start;
+        }
+
+        @property public override size_t end() {
+            return _right.end;
+        }
+
         public override Expression accept(ExpressionMapper mapper) {
             _left = _left.accept(mapper);
             _right = _right.accept(mapper);
@@ -261,6 +351,14 @@ public class Compare : Expression {
         this.valueOperators = valueOperators;
         this.type = type;
         this.typeOperator = typeOperator;
+    }
+
+    @property public override size_t start() {
+        return values[0].start;
+    }
+
+    @property public override size_t end() {
+        return type is null ? values[$ - 1].end : type.end;
     }
 
     public override Expression accept(ExpressionMapper mapper) {
@@ -305,6 +403,14 @@ public class Conditional : Expression {
 
     @property public Expression falseValue() {
         return _falseValue;
+    }
+
+    @property public override size_t start() {
+        return _trueValue.start;
+    }
+
+    @property public override size_t end() {
+        return _falseValue.end;
     }
 
     public override Expression accept(ExpressionMapper mapper) {

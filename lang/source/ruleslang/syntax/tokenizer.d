@@ -7,8 +7,6 @@ import ruleslang.syntax.dcharstream;
 import ruleslang.syntax.token;
 
 public class Tokenizer {
-    private Terminator terminator;
-    private Eof eof;
     private DCharReader chars;
     private Token[] headTokens;
     private uint position = 0;
@@ -17,8 +15,6 @@ public class Tokenizer {
 
     public this(DCharReader chars) {
         this.chars = chars;
-        terminator = new Terminator();
-        eof = new Eof();
         headTokens = new Token[0];
         headTokens.reserve(32);
         savedPositions = new uint[0];
@@ -56,48 +52,54 @@ public class Tokenizer {
     }
 
     public Token next() {
-        Token token = eof;
+        Token token = null;
         if (firstToken && chars.has()) {
             // First token is indentation, which in this case
             // is not after a new line
-            token = new Indentation(chars.collectIndentation());
+            auto position = chars.count;
+            token = new Indentation(chars.collectIndentation(), position);
             while (chars.consumeIgnored()) {
                 // Remove trailing comments and whitespace
             }
             firstToken = false;
         }
-        while (chars.has() && token is eof) {
+        while (chars.has() && token is null) {
             if (chars.head().isNewLineChar()) {
                 chars.consumeNewLine();
                 // Just after a new line, consume indentation of next line
-                token = new Indentation(chars.collectIndentation());
+                auto position = chars.count;
+                token = new Indentation(chars.collectIndentation(), position);
             } else if (chars.head() == ';') {
                 // A terminator breaks a line but doesn't need indentation
                 chars.advance();
-                token = terminator;
+                token = new Terminator(chars.count - 1);
             } else if (chars.head().isIdentifierStart()) {
+                auto position = chars.count;
                 chars.collect();
                 auto identifier = collectIdentifierBody(chars);
                 // An indentifier can also be a keyword
                 if (identifier.isKeyword()) {
-                    token = new Keyword(identifier);
+                    token = new Keyword(identifier, position);
                 } else if (identifier.isBooleanLiteral()) {
-                    token = new BooleanLiteral(identifier);
+                    token = new BooleanLiteral(identifier, position);
                 } else {
-                    token = new Identifier(identifier);
+                    token = new Identifier(identifier, position);
                 }
             } else if (chars.head() == '.') {
                 // Could be a float starting with a decimal separator or a symbol
+                auto position = chars.count;
                 chars.collect();
                 if (chars.head().isDecimalDigit()) {
-                    token = chars.completeFloatLiteralStartingWithDecimalSeparator();
+                    token = chars.completeFloatLiteralStartingWithDecimalSeparator(position);
                 } else {
-                    token = newSymbol(chars.collectSymbol());
+                    token = newSymbol(chars.collectSymbol(), position);
                 }
             } else if (chars.head().isSymbolChar()) {
-                token = newSymbol(chars.collectSymbol());
+                auto position = chars.count;
+                token = newSymbol(chars.collectSymbol(), position);
             } else if (chars.head() == '"') {
-                token = new StringLiteral(chars.collectStringLiteral());
+                auto position = chars.count;
+                token = new StringLiteral(chars.collectStringLiteral(), position);
             } else if (chars.head().isDecimalDigit()) {
                 token = chars.collectNumberLiteral();
             } else {
@@ -107,7 +109,7 @@ public class Tokenizer {
                 // Remove trailing comments and whitespace
             }
         }
-        return token;
+        return token is null ? new Eof(chars.count - 1) : token;
     }
 }
 
@@ -259,6 +261,7 @@ private bool collectEscapeSequence(DCharReader chars) {
 }
 
 private Token collectNumberLiteral(DCharReader chars) {
+    auto position = chars.count;
     if (chars.head() == '0') {
         chars.collect();
         // Start with non-decimal integers
@@ -266,13 +269,13 @@ private Token collectNumberLiteral(DCharReader chars) {
             // Binary integer
             chars.collect();
             chars.collectDigitSequence!isBinaryDigit();
-            return new IntegerLiteral(chars.popCollected());
+            return new IntegerLiteral(chars.popCollected(), position);
         }
         if (chars.head() == 'x' || chars.head() == 'X') {
             // Hexadecimal integer
             chars.collect();
             chars.collectDigitSequence!isHexDigit();
-            return new IntegerLiteral(chars.popCollected());
+            return new IntegerLiteral(chars.popCollected(), position);
         }
         if (chars.head().isDecimalDigit()) {
             // Not just a zero, collect more digits
@@ -291,22 +294,22 @@ private Token collectNumberLiteral(DCharReader chars) {
         }
         // We can have an optional exponent
         chars.collectFloatLiteralExponent();
-        return new FloatLiteral(chars.popCollected());
+        return new FloatLiteral(chars.popCollected(), position);
     }
     // Or we can have an exponent marker, again making it a float
     if (chars.collectFloatLiteralExponent()) {
-        return new FloatLiteral(chars.popCollected());
+        return new FloatLiteral(chars.popCollected(), position);
     }
     // Else it's a decimal integer and there's nothing more to do
-    return new IntegerLiteral(chars.popCollected());
+    return new IntegerLiteral(chars.popCollected(), position);
 }
 
-private Token completeFloatLiteralStartingWithDecimalSeparator(DCharReader chars) {
+private Token completeFloatLiteralStartingWithDecimalSeparator(DCharReader chars, size_t position) {
     // Must have a decimal digit sequence next after the decimal
     chars.collectDigitSequence!isDecimalDigit();
     // We can have an optional exponent
     chars.collectFloatLiteralExponent();
-    return new FloatLiteral(chars.popCollected());
+    return new FloatLiteral(chars.popCollected(), position);
 }
 
 private bool collectFloatLiteralExponent(DCharReader chars) {

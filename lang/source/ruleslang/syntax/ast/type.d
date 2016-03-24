@@ -7,7 +7,7 @@ import ruleslang.syntax.token;
 import ruleslang.syntax.ast.expression;
 import ruleslang.syntax.ast.mapper;
 
-public interface Type {
+public interface Type : SourceIndexed {
     public Type accept(ExpressionMapper mapper);
     public string toString();
 }
@@ -15,10 +15,20 @@ public interface Type {
 public class NamedType : Type {
     private Identifier[] name;
     private Expression[] dimensions;
+    private size_t _end;
 
-    public this(Identifier[] name, Expression[] dimensions) {
+    public this(Identifier[] name, Expression[] dimensions, size_t end) {
         this.name = name;
         this.dimensions = dimensions;
+        _end = end;
+    }
+
+    @property public override size_t start() {
+        return name[0].start;
+    }
+
+    @property public override size_t end() {
+        return _end;
     }
 
     public override Type accept(ExpressionMapper mapper) {

@@ -106,7 +106,7 @@ public class DCharReader {
         return headChar;
     }
 
-    public size_t count() {
+    @property public size_t count() {
         return charCount;
     }
 

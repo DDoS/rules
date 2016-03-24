@@ -53,6 +53,6 @@ private class OperatorExpander : StatementMapper {
 }
 
 private Statement expandOperator(Bin, BinOp, string op)(Assignment assignment) {
-    auto value = new Bin(assignment.target, assignment.value, new BinOp(op.to!dstring));
-    return new Assignment(assignment.target, value, new AssignmentOperator("="));
+    auto value = new Bin(assignment.target, assignment.value, new BinOp(op.to!dstring, assignment.operator.start));
+    return new Assignment(assignment.target, value, new AssignmentOperator("=", assignment.operator.start));
 }

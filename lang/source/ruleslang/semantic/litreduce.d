@@ -19,7 +19,7 @@ private class LiteralReducer : StatementMapper {
                 if (integerLiteral.radix == 10) {
                     integerLiteral.negateSign();
                 } else {
-                    return new IntegerLiteral(-integerLiteral.getValue());
+                    return new IntegerLiteral(-integerLiteral.getValue(), sign.start, integerLiteral.end);
                 }
             }
             return integerLiteral;
@@ -28,7 +28,7 @@ private class LiteralReducer : StatementMapper {
         auto floatLiteral = cast(FloatLiteral) sign.inner;
         if (floatLiteral) {
             if (sign.operator == "-") {
-                return new FloatLiteral(-floatLiteral.getValue());
+                return new FloatLiteral(-floatLiteral.getValue(), sign.start, floatLiteral.end);
             }
             return floatLiteral;
         }
@@ -39,7 +39,7 @@ private class LiteralReducer : StatementMapper {
     public override Expression mapBitwiseNot(BitwiseNot bitwiseNot) {
         auto integerLiteral = cast(IntegerLiteral) bitwiseNot.inner;
         if (integerLiteral) {
-            return new IntegerLiteral(~integerLiteral.getValue());
+            return new IntegerLiteral(~integerLiteral.getValue(), bitwiseNot.start, integerLiteral.end);
         }
         return bitwiseNot;
     }
@@ -102,22 +102,26 @@ private Expression reduceBinaryArithmetic(string op, Binary)(Binary arithmetic) 
     if (integerLiteralLeft) {
         auto integerLiteralRight = cast(IntegerLiteral) arithmetic.right;
         if (integerLiteralRight) {
-            mixin("return new IntegerLiteral(integerLiteralLeft.getValue() " ~ op ~ " integerLiteralRight.getValue());");
+            mixin("return new IntegerLiteral(integerLiteralLeft.getValue() " ~ op ~
+                " integerLiteralRight.getValue(), integerLiteralLeft.start, integerLiteralRight.end);");
         }
         auto floatLiteralRight = cast(FloatLiteral) arithmetic.right;
         if (floatLiteralRight) {
-            mixin("return new FloatLiteral(integerLiteralLeft.getValue() " ~ op ~ " floatLiteralRight.getValue());");
+            mixin("return new FloatLiteral(integerLiteralLeft.getValue() " ~ op ~
+                " floatLiteralRight.getValue(), integerLiteralLeft.start, floatLiteralRight.end);");
         }
     }
     auto floatLiteralLeft = cast(FloatLiteral) arithmetic.left;
     if (floatLiteralLeft) {
         auto integerLiteralRight = cast(IntegerLiteral) arithmetic.right;
         if (integerLiteralRight) {
-            mixin("return new FloatLiteral(floatLiteralLeft.getValue() " ~ op ~ " integerLiteralRight.getValue());");
+            mixin("return new FloatLiteral(floatLiteralLeft.getValue() " ~ op ~
+                " integerLiteralRight.getValue(), floatLiteralLeft.start, integerLiteralRight.end);");
         }
         auto floatLiteralRight = cast(FloatLiteral) arithmetic.right;
         if (floatLiteralRight) {
-            mixin("return new FloatLiteral(floatLiteralLeft.getValue() " ~ op ~ " floatLiteralRight.getValue());");
+            mixin("return new FloatLiteral(floatLiteralLeft.getValue() " ~ op ~
+                " floatLiteralRight.getValue(), floatLiteralLeft.start, floatLiteralRight.end);");
         }
     }
     return arithmetic;
@@ -127,7 +131,8 @@ private Expression reduceBinaryLogic(string op, Binary)(Binary logic) {
     auto literalLeft = cast(IntegerLiteral) logic.left;
     auto literalRight = cast(IntegerLiteral) logic.right;
     if (literalLeft && literalRight) {
-        mixin("return new IntegerLiteral(literalLeft.getValue() " ~ op ~ " literalRight.getValue());");
+        mixin("return new IntegerLiteral(literalLeft.getValue() " ~ op ~
+            " literalRight.getValue(), literalLeft.start, literalRight.end);");
     }
     return logic;
 }

@@ -6,7 +6,7 @@ import ruleslang.syntax.token;
 import ruleslang.syntax.ast.expression;
 import ruleslang.syntax.ast.mapper;
 
-public interface Statement {
+public interface Statement : SourceIndexed {
     public Statement accept(StatementMapper mapper);
     public string toString();
 }
@@ -18,6 +18,14 @@ public class InitializerAssignment : Statement {
     public this(Expression target, CompositeLiteral literal) {
         this.target = target;
         this.literal = literal;
+    }
+
+    @property public override size_t start() {
+        return target.start;
+    }
+
+    @property public override size_t end() {
+        return literal.end;
     }
 
     public override Statement accept(StatementMapper mapper) {
@@ -52,6 +60,14 @@ public class Assignment : Statement {
 
     @property public AssignmentOperator operator() {
         return _operator;
+    }
+
+    @property public override size_t start() {
+        return _target.start;
+    }
+
+    @property public override size_t end() {
+        return _value.end;
     }
 
     public override Statement accept(StatementMapper mapper) {
