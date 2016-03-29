@@ -209,16 +209,22 @@ public class ArrayAccess : Reference {
 public class FunctionCall : Expression, Statement {
     private Expression value;
     private Expression[] arguments;
+    private size_t _start;
     private size_t _end;
 
     public this(Expression value, Expression[] arguments, size_t end) {
+        this(value, arguments, value.start, end);
+    }
+
+    public this(Expression value, Expression[] arguments, size_t start, size_t end) {
         this.value = value;
         this.arguments = arguments;
+        _start = start;
         _end = end;
     }
 
     @property public override size_t start() {
-        return value.start;
+        return _start;
     }
 
     @property public override size_t end() {
