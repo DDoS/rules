@@ -340,46 +340,107 @@ public alias LogicalXor = Binary!("LogicalXor", LogicalXorOperator);
 public alias LogicalOr = Binary!("LogicalOr", LogicalOrOperator);
 public alias Concatenate = Binary!("Concatenate", ConcatenateOperator);
 public alias Range = Binary!("Range", RangOperator);
+public alias ValueCompare = Binary!("ValueCompare", ValueCompareOperator);
 
 public class Compare : Expression {
-    private Expression[] values;
-    private ValueCompareOperator[] valueOperators;
-    private Type type;
-    private TypeCompareOperator typeOperator;
+    private Expression[] _values;
+    private ValueCompareOperator[] _valueOperators;
+    private Type _type;
+    private TypeCompareOperator _typeOperator;
 
     public this(Expression[] values, ValueCompareOperator[] valueOperators, Type type, TypeCompareOperator typeOperator) {
-        this.values = values;
-        this.valueOperators = valueOperators;
-        this.type = type;
-        this.typeOperator = typeOperator;
+        _values = values;
+        _valueOperators = valueOperators;
+        _type = type;
+        _typeOperator = typeOperator;
+    }
+
+    @property public Expression[] values() {
+        return _values;
+    }
+
+    @property public ValueCompareOperator[] valueOperators() {
+        return _valueOperators;
+    }
+
+    @property public Type type() {
+        return _type;
+    }
+
+    @property public TypeCompareOperator typeOperator() {
+        return _typeOperator;
     }
 
     @property public override size_t start() {
-        return values[0].start;
+        return _values[0].start;
     }
 
     @property public override size_t end() {
-        return type is null ? values[$ - 1].end : type.end;
+        return _type is null ? _values[$ - 1].end : _type.end;
     }
 
     public override Expression accept(ExpressionMapper mapper) {
-        foreach (i, value; values) {
-            values[i] = value.accept(mapper);
+        foreach (i, value; _values) {
+            _values[i] = value.accept(mapper);
         }
-        type = type.accept(mapper);
+        if (type !is null) {
+            _type = _type.accept(mapper);
+        }
         return mapper.mapCompare(this);
     }
 
     public override string toString() {
         string compares = "";
-        foreach (i, valueOperator; valueOperators) {
-            compares ~= format("%s %s ", values[i].toString(), valueOperator.getSource());
+        foreach (i, valueOperator; _valueOperators) {
+            compares ~= format("%s %s ", _values[i].toString(), valueOperator.getSource());
         }
         compares ~= values[$ - 1].toString();
-        if (typeOperator !is null) {
-            compares ~= format(" %s %s", typeOperator.getSource(), type.toString());
+        if (_typeOperator !is null) {
+            compares ~= format(" %s %s", _typeOperator.getSource(), _type.toString());
         }
         return format("Compare(%s)", compares);
+    }
+}
+
+public class TypeCompare : Expression {
+    private Expression _value;
+    private Type _type;
+    private TypeCompareOperator _operator;
+
+    public this(Expression value, Type type, TypeCompareOperator operator) {
+        _value = value;
+        _type = type;
+        _operator = operator;
+    }
+
+    @property public Expression value() {
+        return _value;
+    }
+
+    @property public Type type() {
+        return _type;
+    }
+
+    @property public TypeCompareOperator operator() {
+        return _operator;
+    }
+
+    @property public override size_t start() {
+        return _value.start;
+    }
+
+    @property public override size_t end() {
+        return _type.end;
+    }
+
+    public override Expression accept(ExpressionMapper mapper) {
+        _value = _value.accept(mapper);
+        _type = _type.accept(mapper);
+        return mapper.mapTypeCompare(this);
+    }
+
+    public override string toString() {
+        return format("TypeCompare(%s %s %s)", _value.toString(), _operator.getSource(), _type.toString());
     }
 }
 

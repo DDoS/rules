@@ -50,6 +50,39 @@ private class OperatorExpander : StatementMapper {
                 return assignment;
         }
     }
+
+    public override Expression mapCompare(Compare compare) {
+        Expression compareChain = null;
+        foreach (i, operator; compare.valueOperators) {
+            auto element = new ValueCompare(compare.values[i], compare.values[i + 1], operator);
+            if (compareChain is null) {
+                compareChain = element;
+            } else {
+                compareChain = new LogicalAnd(compareChain, element, new LogicalAndOperator("&&"d, operator.start));
+            }
+        }
+        if (compare.type !is null) {
+            auto element = new TypeCompare(compare.values[$ - 1], compare.type, compare.typeOperator);
+            if (compareChain is null) {
+                compareChain = element;
+            } else {
+                compareChain = new LogicalAnd(compareChain, element, new LogicalAndOperator("&&"d, compare.typeOperator.start));
+            }
+        }
+        return compareChain;
+    }
+
+    /*public override Expression mapExponent(Exponent exponent) {
+
+    }
+
+    public override Expression mapRange(Range range) {
+
+    }
+
+    public override Expression mapInfix(Infix range) {
+
+    }*/
 }
 
 private Statement expandOperator(Bin, BinOp, string op)(Assignment assignment) {

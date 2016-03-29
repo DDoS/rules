@@ -20,12 +20,10 @@ void main() {
 			auto tokenizer = new Tokenizer(new DCharReader(source));
 		    foreach (statement; tokenizer.parseStatements()) {
 				statement = statement.expandOperators();
-				statement = statement.reduceLiterals();
 				stdout.writeln(statement.toString());
 		    }
 		} catch (SourceException exception) {
 			writeln(exception.getErrorInformation(source).toString());
 		}
 	}
-	// TODO: fix unsafe casts
 }

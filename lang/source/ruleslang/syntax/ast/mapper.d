@@ -90,6 +90,14 @@ public abstract class ExpressionMapper {
         return expression;
     }
 
+    public Expression mapValueCompare(ValueCompare expression) {
+        return expression;
+    }
+
+    public Expression mapTypeCompare(TypeCompare expression) {
+        return expression;
+    }
+
     public Expression mapBitwiseAnd(BitwiseAnd expression) {
         return expression;
     }

@@ -77,6 +77,25 @@ unittest {
 
 unittest {
     assertEqual(
+        "Assignment(a = ValueCompare(IntegerLiteral(1) > IntegerLiteral(2)))",
+        parseAndExpand("a = 1 > 2")
+    );
+    assertEqual(
+        "Assignment(a = LogicalAnd(LogicalAnd(ValueCompare(c == b) && ValueCompare(b != m)) && ValueCompare(m < j)))",
+        parseAndExpand("a = c == b != m < j")
+    );
+    assertEqual(
+        "Assignment(a = TypeCompare(a :: b))",
+        parseAndExpand("a = a :: b")
+    );
+    assertEqual(
+        "Assignment(a = LogicalAnd(ValueCompare(m == b) && TypeCompare(b !: o)))",
+        parseAndExpand("a = m == b !: o")
+    );
+}
+
+unittest {
+    assertEqual(
         "FunctionCall(a())",
         parseAndExpand("a()")
     );
