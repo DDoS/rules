@@ -5,11 +5,13 @@ import ruleslang.syntax.ast.type;
 import ruleslang.syntax.ast.expression;
 import ruleslang.syntax.ast.statement;
 
-public abstract class ExpressionMapper {
-    public Type mapNamedType(NamedType expression) {
-        return expression;
+public abstract class TypeMapper {
+    public Type mapNamedType(NamedType type) {
+        return type;
     }
+}
 
+public abstract class ExpressionMapper : TypeMapper {
     public Expression mapBooleanLiteral(BooleanLiteral expression) {
         return expression;
     }
