@@ -2,11 +2,11 @@ package rule
 
 import (
 	"net/http"
-	"github.com/docker/docker/vendor/src/github.com/gorilla/mux"
+	"github.com/gorilla/mux"
 )
 
 type RuleHandler struct {
-
+	rules Repository
 }
 
 func (rh *RuleHandler) SetRoutes(r *mux.Router) {
@@ -15,9 +15,9 @@ func (rh *RuleHandler) SetRoutes(r *mux.Router) {
 }
 
 func (rh *RuleHandler) GetRules(w http.ResponseWriter, r *http.Request) {
-
+	w.Write([]byte("Not Implemented"))
 }
 
 func (rh *RuleHandler) SetRules(w http.ResponseWriter, r *http.Request) {
-	
+	w.Write([]byte("Not Implemented"))
 }

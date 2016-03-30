@@ -4,7 +4,6 @@ import (
 	"github.com/michael-golfi/log4go"
 	"errors"
 	"sync"
-	"github.com/gorilla/mux"
 )
 
 const (

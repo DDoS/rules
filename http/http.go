@@ -1,13 +1,10 @@
 package main
 
 import (
-	"github.com/michael-golfi/go-http-utils"
 	"github.com/michael-golfi/log4go"
 	"net/http"
 	"github.com/michael-golfi/rules/http/api"
-	"github.com/docker/docker/vendor/src/github.com/gorilla/mux"
-	"github.com/michael-golfi/rules/http/api/pipeline"
-	"github.com/michael-golfi/rules/http/api/rule"
+	"github.com/gorilla/mux"
 )
 
 func main() {
