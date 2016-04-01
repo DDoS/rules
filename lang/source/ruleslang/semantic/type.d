@@ -1,7 +1,9 @@
 module ruleslang.semantic.type;
 
+import std.format : format;
 import std.algorithm.searching : canFind;
 import std.exception : assumeUnique;
+import std.math: isNaN, isInfinity;
 
 import ruleslang.util;
 
@@ -11,20 +13,26 @@ public interface Type {
 }
 
 public const class AtomicType : Type {
-    public static const AtomicType BOOL = new const AtomicType("bool");
-    public static const AtomicType SINT8 = new const AtomicType("sint8");
-    public static const AtomicType UINT8 = new const AtomicType("uint8");
-    public static const AtomicType SINT16 = new const AtomicType("sint16");
-    public static const AtomicType UINT16 = new const AtomicType("uint16");
-    public static const AtomicType SINT32 = new const AtomicType("sint32");
-    public static const AtomicType UINT32 = new const AtomicType("uint32");
-    public static const AtomicType SINT64 = new const AtomicType("sint64");
-    public static const AtomicType UINT64 = new const AtomicType("uint64");
-    public static const AtomicType FP16 = new const AtomicType("fp16");
-    public static const AtomicType FP32 = new const AtomicType("fp32");
-    public static const AtomicType FP64 = new const AtomicType("fp64");
+    public static const AtomicType BOOL = new const AtomicType("bool", 1, false, false);
+    public static const AtomicType SINT8 = new const AtomicType("sint8", 8, true, false);
+    public static const AtomicType UINT8 = new const AtomicType("uint8", 8, false, false);
+    public static const AtomicType SINT16 = new const AtomicType("sint16", 16, true, false);
+    public static const AtomicType UINT16 = new const AtomicType("uint16", 16, false, false);
+    public static const AtomicType SINT32 = new const AtomicType("sint32", 32, true, false);
+    public static const AtomicType UINT32 = new const AtomicType("uint32", 32, false, false);
+    public static const AtomicType SINT64 = new const AtomicType("sint64", 64, true, false);
+    public static const AtomicType UINT64 = new const AtomicType("uint64", 64, false, false);
+    public static const AtomicType FP16 = new const AtomicType("fp16", 16, true, true);
+    public static const AtomicType FP32 = new const AtomicType("fp32", 32, true, true);
+    public static const AtomicType FP64 = new const AtomicType("fp64", 64, true, true);
     private static immutable const(AtomicType)[][const(AtomicType)] CONVERSIONS;
+    private static const const(AtomicType)[] INTEGERS = [
+        SINT8, UINT8, SINT16, UINT16, SINT32, UINT32, SINT64, UINT64
+    ];
     private string name;
+    private uint bitCount;
+    private bool signed;
+    private bool fp;
 
     public static this() {
         const(AtomicType)[][const(AtomicType)] subtypes = [
@@ -46,8 +54,60 @@ public const class AtomicType : Type {
         CONVERSIONS = conv.assumeUnique();
     }
 
-    private this(string name) {
+    private this(string name, uint bitCount, bool signed, bool fp) {
         this.name = name;
+        this.bitCount = bitCount;
+        this.signed = signed;
+        this.fp = fp;
+    }
+
+    public bool isBoolean() {
+        return bitCount == 1;
+    }
+
+    public bool isInteger() {
+        return bitCount > 1 && !fp;
+    }
+
+    public bool isSigned() {
+        return signed;
+    }
+
+    public bool isFloat() {
+        return fp;
+    }
+
+    public bool inRange(T)(T value) if (!__traits(isIntegral, T) || !__traits(isFloating, T)) {
+        // Signed int
+        if (signed && !fp) {
+            static if (__traits(isFloating, T)) {
+                return false;
+            } else {
+                return value >= (cast(long) -1 << (bitCount - 1)) && value <= (cast(long) -1 >>> (65 - bitCount));
+            }
+        }
+        // Unsigned int
+        if (!fp) {
+            static if (__traits(isFloating, T)) {
+                return false;
+            } else {
+                return value >= 0 && value <= (cast(ulong) -1 >>> (64 - bitCount));
+            }
+        }
+        // Float
+        static if (__traits(isFloating, T)) {
+            if (isNaN(value) || isInfinity(value)) {
+                return true;
+            }
+        }
+        final switch (bitCount) {
+            case 16:
+                return value >= -65504.0f && value <= 65504.0f;
+            case 32:
+                return value >= -0x1.fffffeP+127f && value <= 0x1.fffffeP+127f;
+            case 64:
+                return value >= -0x1.fffffffffffffP+1023 && value <= 0x1.fffffffffffffP+1023;
+        }
     }
 
     public override bool convertibleTo(inout Type type) {
@@ -60,5 +120,86 @@ public const class AtomicType : Type {
 
     public override string toString() {
         return name;
+    }
+}
+
+public const class LiteralSignedIntegerType : Type {
+    private long _value;
+
+    public this(long value) {
+        _value = value;
+    }
+
+    @property public long value() {
+        return _value;
+    }
+
+    public override bool convertibleTo(inout Type type) {
+        if (cast(const(LiteralSignedIntegerType)) type) {
+            return true;
+        }
+        auto atomic = cast(const(AtomicType)) type;
+        if (atomic is null) {
+            return false;
+        }
+        return atomic.isInteger() && atomic.inRange(value);
+    }
+
+    public override string toString() {
+        return format("lit_sint64(%d)", _value);
+    }
+}
+
+public const class LiteralUnsignedIntegerType : Type {
+    private ulong _value;
+
+    public this(ulong value) {
+        _value = value;
+    }
+
+    @property public ulong value() {
+        return _value;
+    }
+
+    public override bool convertibleTo(inout Type type) {
+        if (cast(const(LiteralUnsignedIntegerType)) type) {
+            return true;
+        }
+        auto atomic = cast(const(AtomicType)) type;
+        if (atomic is null) {
+            return false;
+        }
+        return atomic.isInteger() && atomic.inRange(_value);
+    }
+
+    public override string toString() {
+        return format("lit_uint64(%d)", _value);
+    }
+}
+
+public const class LiteralFloatType : Type {
+    private double _value;
+
+    public this(double value) {
+        _value = value;
+    }
+
+    @property public double value() {
+        return _value;
+    }
+
+    public override bool convertibleTo(inout Type type) {
+        if (cast(const(LiteralFloatType)) type) {
+            return true;
+        }
+        auto atomic = cast(const(AtomicType)) type;
+        if (atomic is null) {
+            return false;
+        }
+        return atomic.isFloat() && atomic.inRange(_value);
+    }
+
+    public override string toString() {
+        return format("lit_fp64(%d)", _value);
     }
 }
