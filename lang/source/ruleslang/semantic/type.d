@@ -150,7 +150,7 @@ public immutable class SignedIntegerLiteralType : Type {
     }
 }
 
-public immutable class UnsignedLiteralIntegerType : Type {
+public immutable class UnsignedIntegerLiteralType : Type {
     private ulong _value;
 
     public this(ulong value) {
@@ -162,7 +162,7 @@ public immutable class UnsignedLiteralIntegerType : Type {
     }
 
     public override bool convertibleTo(inout Type type) {
-        if (cast(immutable(UnsignedLiteralIntegerType)) type) {
+        if (cast(immutable(UnsignedIntegerLiteralType)) type) {
             return true;
         }
         auto atomic = cast(immutable(AtomicType)) type;

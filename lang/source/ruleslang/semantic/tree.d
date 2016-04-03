@@ -44,11 +44,11 @@ public immutable class SignedIntegerLiteralNode : TypedNode {
 
 public immutable class UnsignedIntegerLiteralNode : TypedNode {
     private ulong _value;
-    private UnsignedLiteralIntegerType type;
+    private UnsignedIntegerLiteralType type;
 
     public this(ulong value) {
         _value = value;
-        type = new immutable UnsignedLiteralIntegerType(value);
+        type = new immutable UnsignedIntegerLiteralType(value);
     }
 
     public override Node[] getChildren() {

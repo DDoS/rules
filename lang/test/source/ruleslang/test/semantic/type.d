@@ -65,14 +65,14 @@ unittest {
 }
 
 unittest {
-    assert(new immutable LiteralSignedIntegerType(323).convertibleTo(AtomicType.UINT16));
-    assert(!new immutable LiteralSignedIntegerType(323).convertibleTo(AtomicType.UINT8));
-    assert(new immutable LiteralSignedIntegerType(323).convertibleTo(AtomicType.SINT16));
-    assert(!new immutable LiteralSignedIntegerType(323).convertibleTo(AtomicType.SINT8));
-    assert(!new immutable LiteralSignedIntegerType(-1).convertibleTo(AtomicType.UINT64));
-    assert(new immutable LiteralUnsignedIntegerType(127).convertibleTo(AtomicType.SINT8));
-    assert(new immutable LiteralFloatType(10.0e10).convertibleTo(AtomicType.FP32));
-    assert(!new immutable LiteralFloatType(10.0e10).convertibleTo(AtomicType.FP16));
-    assert(new immutable LiteralFloatType(0.0 / 0.0).convertibleTo(AtomicType.FP16));
-    assert(new immutable LiteralFloatType(-1.0 / 0.0).convertibleTo(AtomicType.FP16));
+    assert(new immutable SignedIntegerLiteralType(323).convertibleTo(AtomicType.UINT16));
+    assert(!new immutable SignedIntegerLiteralType(323).convertibleTo(AtomicType.UINT8));
+    assert(new immutable SignedIntegerLiteralType(323).convertibleTo(AtomicType.SINT16));
+    assert(!new immutable SignedIntegerLiteralType(323).convertibleTo(AtomicType.SINT8));
+    assert(!new immutable SignedIntegerLiteralType(-1).convertibleTo(AtomicType.UINT64));
+    assert(new immutable UnsignedIntegerLiteralType(127).convertibleTo(AtomicType.SINT8));
+    assert(new immutable FloatLiteralType(10.0e10).convertibleTo(AtomicType.FP32));
+    assert(!new immutable FloatLiteralType(10.0e10).convertibleTo(AtomicType.FP16));
+    assert(new immutable FloatLiteralType(0.0 / 0.0).convertibleTo(AtomicType.FP16));
+    assert(new immutable FloatLiteralType(-1.0 / 0.0).convertibleTo(AtomicType.FP16));
 }
