@@ -10,7 +10,7 @@ import ruleslang.test.assertion;
 
 unittest {
     assertEqual(
-        "Assignment(a = FunctionCall(std.math.pow(a, b)))",
+        "Assignment(a = Exponent(a ** b))",
         parseAndExpand("a **= b")
     );
     assertEqual(
@@ -102,32 +102,6 @@ unittest {
     assertEqual(
         "Assignment(a = FunctionCall(e(FunctionCall(c(b, d)), f)))",
         parseAndExpand("a = b c d e f")
-    );
-}
-
-unittest {
-    assertEqual(
-        "Assignment(a = FunctionCall(std.math.pow(b, c)))",
-        parseAndExpand("a = b ** c")
-    );
-    assertEqual(
-        "Assignment(a = FunctionCall(std.math.pow(FunctionCall(std.math.pow(c, m)), d)))",
-        parseAndExpand("a = c ** m ** d")
-    );
-}
-
-unittest {
-    assertEqual(
-        "Assignment(a = Initializer(std.range.Range{b, c}))",
-        parseAndExpand("a = b .. c")
-    );
-    assertEqual(
-        "Assignment(a = Initializer(std.range.Range{b, Add(c + d)}))",
-        parseAndExpand("a = b .. c + d")
-    );
-    assertEqual(
-        "Assignment(a = Initializer(std.range.Range{Initializer(std.range.Range{b, c}), d}))",
-        parseAndExpand("a = b .. c .. d")
     );
 }
 

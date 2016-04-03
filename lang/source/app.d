@@ -6,7 +6,6 @@ import ruleslang.syntax.tokenizer;
 import ruleslang.syntax.ast.statement;
 import ruleslang.syntax.parser.statement;
 import ruleslang.semantic.opexpand;
-import ruleslang.semantic.litreduce;
 
 void main() {
 	while (true) {

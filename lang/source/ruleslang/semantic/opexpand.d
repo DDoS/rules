@@ -9,7 +9,7 @@ import ruleslang.syntax.ast.statement;
 import ruleslang.syntax.ast.mapper;
 
 public Statement expandOperators(Statement target) {
-    return target.accept(new OperatorExpander()).accept(new OperatorRewriter());
+    return target.accept(new OperatorExpander());
 }
 
 private class OperatorExpander : StatementMapper {
@@ -71,34 +71,6 @@ private class OperatorExpander : StatementMapper {
             }
         }
         return compareChain;
-    }
-}
-
-private class OperatorRewriter : StatementMapper {
-    public override Expression mapExponent(Exponent exponent) {
-        auto stdPow = new NameReference([
-            new Identifier("std", exponent.operator.start, exponent.operator.end),
-            new Identifier("math", exponent.operator.start, exponent.operator.end),
-            new Identifier("pow", exponent.operator.start, exponent.operator.end)
-        ]);
-        return new FunctionCall(stdPow, [exponent.left, exponent.right], exponent.start, exponent.end);
-    }
-
-    public override Expression mapRange(Range range) {
-        auto stdRange = new NamedType(
-            [
-                new Identifier("std", range.start, range.end),
-                new Identifier("range", range.start, range.end),
-                new Identifier("Range", range.start, range.end)
-            ],
-            new Expression[0],
-            range.end
-        );
-        auto literal = new CompositeLiteral([
-            new LabeledExpression(null, range.left),
-            new LabeledExpression(null, range.right),
-        ], range.start, range.end);
-        return new Initializer(stdRange, literal);
     }
 
     public override Expression mapInfix(Infix infix) {
