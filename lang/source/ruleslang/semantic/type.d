@@ -7,26 +7,26 @@ import std.math: isNaN, isInfinity;
 
 import ruleslang.util;
 
-public interface Type {
+public immutable interface Type {
     public bool convertibleTo(inout Type type);
     public string toString();
 }
 
-public const class AtomicType : Type {
-    public static const AtomicType BOOL = new const AtomicType("bool", 1, false, false);
-    public static const AtomicType SINT8 = new const AtomicType("sint8", 8, true, false);
-    public static const AtomicType UINT8 = new const AtomicType("uint8", 8, false, false);
-    public static const AtomicType SINT16 = new const AtomicType("sint16", 16, true, false);
-    public static const AtomicType UINT16 = new const AtomicType("uint16", 16, false, false);
-    public static const AtomicType SINT32 = new const AtomicType("sint32", 32, true, false);
-    public static const AtomicType UINT32 = new const AtomicType("uint32", 32, false, false);
-    public static const AtomicType SINT64 = new const AtomicType("sint64", 64, true, false);
-    public static const AtomicType UINT64 = new const AtomicType("uint64", 64, false, false);
-    public static const AtomicType FP16 = new const AtomicType("fp16", 16, true, true);
-    public static const AtomicType FP32 = new const AtomicType("fp32", 32, true, true);
-    public static const AtomicType FP64 = new const AtomicType("fp64", 64, true, true);
-    private static immutable const(AtomicType)[][const(AtomicType)] CONVERSIONS;
-    private static const const(AtomicType)[] INTEGERS = [
+public immutable class AtomicType : Type {
+    public static immutable AtomicType BOOL = new immutable AtomicType("bool", 1, false, false);
+    public static immutable AtomicType SINT8 = new immutable AtomicType("sint8", 8, true, false);
+    public static immutable AtomicType UINT8 = new immutable AtomicType("uint8", 8, false, false);
+    public static immutable AtomicType SINT16 = new immutable AtomicType("sint16", 16, true, false);
+    public static immutable AtomicType UINT16 = new immutable AtomicType("uint16", 16, false, false);
+    public static immutable AtomicType SINT32 = new immutable AtomicType("sint32", 32, true, false);
+    public static immutable AtomicType UINT32 = new immutable AtomicType("uint32", 32, false, false);
+    public static immutable AtomicType SINT64 = new immutable AtomicType("sint64", 64, true, false);
+    public static immutable AtomicType UINT64 = new immutable AtomicType("uint64", 64, false, false);
+    public static immutable AtomicType FP16 = new immutable AtomicType("fp16", 16, true, true);
+    public static immutable AtomicType FP32 = new immutable AtomicType("fp32", 32, true, true);
+    public static immutable AtomicType FP64 = new immutable AtomicType("fp64", 64, true, true);
+    private static immutable immutable(AtomicType)[][immutable(AtomicType)] CONVERSIONS;
+    private static immutable immutable(AtomicType)[] INTEGERS = [
         SINT8, UINT8, SINT16, UINT16, SINT32, UINT32, SINT64, UINT64
     ];
     private string name;
@@ -35,7 +35,7 @@ public const class AtomicType : Type {
     private bool fp;
 
     public static this() {
-        const(AtomicType)[][const(AtomicType)] subtypes = [
+        immutable(AtomicType)[][immutable(AtomicType)] subtypes = [
             BOOL: [],
             SINT8: [SINT16],
             UINT8: [UINT16, SINT16],
@@ -111,7 +111,7 @@ public const class AtomicType : Type {
     }
 
     public override bool convertibleTo(inout Type type) {
-        auto atomic = cast(const(AtomicType)) type;
+        auto atomic = cast(immutable(AtomicType)) type;
         if (atomic is null) {
             return false;
         }
@@ -123,7 +123,7 @@ public const class AtomicType : Type {
     }
 }
 
-public const class LiteralSignedIntegerType : Type {
+public immutable class LiteralSignedIntegerType : Type {
     private long _value;
 
     public this(long value) {
@@ -135,10 +135,10 @@ public const class LiteralSignedIntegerType : Type {
     }
 
     public override bool convertibleTo(inout Type type) {
-        if (cast(const(LiteralSignedIntegerType)) type) {
+        if (cast(immutable(LiteralSignedIntegerType)) type) {
             return true;
         }
-        auto atomic = cast(const(AtomicType)) type;
+        auto atomic = cast(immutable(AtomicType)) type;
         if (atomic is null) {
             return false;
         }
@@ -150,7 +150,7 @@ public const class LiteralSignedIntegerType : Type {
     }
 }
 
-public const class LiteralUnsignedIntegerType : Type {
+public immutable class LiteralUnsignedIntegerType : Type {
     private ulong _value;
 
     public this(ulong value) {
@@ -162,10 +162,10 @@ public const class LiteralUnsignedIntegerType : Type {
     }
 
     public override bool convertibleTo(inout Type type) {
-        if (cast(const(LiteralUnsignedIntegerType)) type) {
+        if (cast(immutable(LiteralUnsignedIntegerType)) type) {
             return true;
         }
-        auto atomic = cast(const(AtomicType)) type;
+        auto atomic = cast(immutable(AtomicType)) type;
         if (atomic is null) {
             return false;
         }
@@ -177,7 +177,7 @@ public const class LiteralUnsignedIntegerType : Type {
     }
 }
 
-public const class LiteralFloatType : Type {
+public immutable class LiteralFloatType : Type {
     private double _value;
 
     public this(double value) {
@@ -189,10 +189,10 @@ public const class LiteralFloatType : Type {
     }
 
     public override bool convertibleTo(inout Type type) {
-        if (cast(const(LiteralFloatType)) type) {
+        if (cast(immutable(LiteralFloatType)) type) {
             return true;
         }
-        auto atomic = cast(const(AtomicType)) type;
+        auto atomic = cast(immutable(AtomicType)) type;
         if (atomic is null) {
             return false;
         }

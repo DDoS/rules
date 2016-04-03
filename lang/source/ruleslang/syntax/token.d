@@ -2,12 +2,17 @@ module ruleslang.syntax.token;
 
 import std.format : format;
 import std.array : replace;
-import std.conv : to;
+import std.conv : to, ConvOverflowException;
+import std.math: isInfinity;
+import std.string : indexOf, CaseSensitive;
+import std.algorithm.searching : findAmong;
 
 import ruleslang.syntax.dchars;
 import ruleslang.syntax.source;
 import ruleslang.syntax.ast.expression;
 import ruleslang.syntax.ast.mapper;
+import ruleslang.semantic.tree;
+import ruleslang.semantic.interpret;
 
 public enum Kind {
     INDENTATION,
@@ -169,25 +174,21 @@ public class BooleanLiteral : SourceToken!(Kind.BOOLEAN_LITERAL), Expression {
         return super.end;
     }
 
-    public override Expression accept(ExpressionMapper mapper) {
+    public override Expression map(ExpressionMapper mapper) {
         return mapper.mapBooleanLiteral(this);
     }
 
+    public override immutable(Node) interpret() {
+        return Interpreter.INSTANCE.interpretBooleanLiteral(this);
+    }
+
     public bool getValue() {
-        if (!evaluated) {
-            switch (getSource()) {
-                case "true":
-                    value = true;
-                    break;
-                case "false":
-                    value = false;
-                    break;
-                default:
-                    throw new Exception("Not a boolean: " ~ getSource());
-            }
-            evaluated = true;
+        final switch (getSource()) {
+            case "true":
+                return true;
+            case "false":
+                return false;
         }
-        return value;
     }
 
     public override string toString() {
@@ -204,25 +205,14 @@ public class BooleanLiteral : SourceToken!(Kind.BOOLEAN_LITERAL), Expression {
 
 public class StringLiteral : SourceToken!(Kind.STRING_LITERAL), Expression {
     private dstring original;
-    private dstring value = null;
 
     public this(dstring source, size_t start) {
-        this(source, start, start + source.length - 1, false);
+        this(source, start, start + source.length - 1);
     }
 
     public this(dstring source, size_t start, size_t end) {
-        this(source, start, end, false);
-    }
-
-    public this(dstring s, size_t start, size_t end, bool value) {
-        if (value) {
-            auto source = '"' ~ escapeString(s) ~ '"';
-            super(source, start, end);
-            this.value = s;
-        } else {
-            super(s, start, end);
-        }
-        this.original = s;
+        super(source, start, end);
+        original = source;
     }
 
     @property public override size_t start() {
@@ -233,41 +223,42 @@ public class StringLiteral : SourceToken!(Kind.STRING_LITERAL), Expression {
         return super.end;
     }
 
-    public override Expression accept(ExpressionMapper mapper) {
+    public override Expression map(ExpressionMapper mapper) {
         return mapper.mapStringLiteral(this);
     }
 
+    public override immutable(Node) interpret() {
+        return Interpreter.INSTANCE.interpretStringLiteral(this);
+    }
+
     public dstring getValue() {
-        if (value is null) {
-            auto length = original.length;
-            if (length < 2) {
-                throw new Exception("String is missing enclosing quotes");
-            }
-            if (original[0] != '"') {
-                throw new Exception("String is missing beginning quote");
-            }
-            dchar[] buffer = [];
-            buffer.reserve(64);
-            for (size_t i = 1; i < length - 1; ) {
-                dchar c = original[i];
-                i += 1;
-                if (c == '\\') {
-                    c = original[i];
-                    i += 1;
-                    if (c == 'u') {
-                        c = original[i - 1 .. $].decodeUnicodeEscape(i);
-                    } else {
-                        c = c.decodeCharEscape();
-                    }
-                }
-                buffer ~= c;
-            }
-            if (original[length - 1] != '"') {
-                throw new Exception("String is missing ending quote");
-            }
-            value = buffer.idup;
+        auto length = original.length;
+        if (length < 2) {
+            throw new Exception("String is missing enclosing quotes");
         }
-        return value;
+        if (original[0] != '"') {
+            throw new Exception("String is missing beginning quote");
+        }
+        dchar[] buffer = [];
+        buffer.reserve(64);
+        for (size_t i = 1; i < length - 1; ) {
+            dchar c = original[i];
+            i += 1;
+            if (c == '\\') {
+                c = original[i];
+                i += 1;
+                if (c == 'u') {
+                    c = original[i - 1 .. $].decodeUnicodeEscape(i);
+                } else {
+                    c = c.decodeCharEscape();
+                }
+            }
+            buffer ~= c;
+        }
+        if (original[length - 1] != '"') {
+            throw new Exception("String is missing ending quote");
+        }
+        return buffer.idup;
     }
 
     public override string toString() {
@@ -277,16 +268,11 @@ public class StringLiteral : SourceToken!(Kind.STRING_LITERAL), Expression {
     unittest {
         auto a = new StringLiteral("\"hello\\u0041\\nlol\""d, 0);
         assert(a.getValue() == "helloA\nlol"d);
-        auto b = new StringLiteral("te st\u0004he\ny"d, 0, 0, true);
-        assert(b.getSource() == "\"te st\\u00000004he\\ny\"");
     }
 }
 
 public class IntegerLiteral : SourceToken!(Kind.INTEGER_LITERAL), Expression {
-    private uint _radix = 10;
-    private bool sign = false;
-    private long value;
-    private bool evaluated = false;
+    private uint _radix;
 
     public this(dstring source, size_t start) {
         this(source, start, start + source.length - 1);
@@ -305,15 +291,12 @@ public class IntegerLiteral : SourceToken!(Kind.INTEGER_LITERAL), Expression {
                     _radix = 16;
                     break;
                 default:
+                    _radix = 10;
                     break;
             }
+        } else {
+            _radix = 10;
         }
-    }
-
-    public this(long value, size_t start, size_t end) {
-        super(value.to!dstring, start, end);
-        this.value = value;
-        evaluated = true;
     }
 
     @property public uint radix() {
@@ -328,35 +311,42 @@ public class IntegerLiteral : SourceToken!(Kind.INTEGER_LITERAL), Expression {
         return super.end;
     }
 
-    public override Expression accept(ExpressionMapper mapper) {
+    public override Expression map(ExpressionMapper mapper) {
         return mapper.mapIntegerLiteral(this);
     }
 
-    public void negateSign() {
-        if (_radix != 10) {
-            throw new Exception("Cannot negate sign in source for non-decimal integers");
-        }
-        sign ^= true;
-        evaluated = false;
+    public override immutable(Node) interpret() {
+        return Interpreter.INSTANCE.interpretIntegerLiteral(this);
     }
 
     public override string getSource() {
-        if (sign) {
-            return "-" ~ super.getSource();
-        }
         return super.getSource();
     }
 
-    public long getValue() {
-        if (!evaluated) {
-            auto source = getSource().replace("_", "");
-            if (radix != 10) {
-                source = source[2 .. $];
+    public L getValue(L)(bool sign, ref bool overflow) if (is(L == long) || is(L == ulong)) {
+        static if (is(L == ulong)) {
+            if (sign) {
+                throw new Exception("Can't apply a sign to an unsigned integer");
             }
-            value = source.to!long(_radix);
-            evaluated = true;
         }
-        return value;
+        auto source = getSource().replace("_", "");
+        if (radix != 10) {
+            source = source[2 .. $];
+        }
+        if (sign) {
+            if (radix == 10) {
+                source = "-" ~ source;
+            } else {
+                throw new Exception("Can't apply a sign to a non-decimal integer");
+            }
+        }
+        try {
+            overflow = false;
+            return source.to!L(_radix);
+        } catch (ConvOverflowException) {
+            overflow = true;
+            return -1;
+        }
     }
 
     public override string toString() {
@@ -364,33 +354,31 @@ public class IntegerLiteral : SourceToken!(Kind.INTEGER_LITERAL), Expression {
     }
 
     unittest {
+        bool overflow;
         auto a = new IntegerLiteral("424_32", 0);
-        assert(a.getValue() == 42432);
-        a.negateSign();
-        assert(a.getValue() == -42432);
+        assert(a.getValue!long(false, overflow) == 42432);
+        assert(a.getValue!long(true, overflow) == -42432);
+        assert(!overflow);
     	auto b = new IntegerLiteral("0xFFFF", 0);
-        assert(b.getValue() == 0xFFFF);
+        assert(b.getValue!long(false, overflow) == 0xFFFF);
     	auto c = new IntegerLiteral("0b1110", 0);
-        assert(c.getValue() == 0b1110);
+        assert(c.getValue!long(false, overflow) == 0b1110);
+        auto d = new IntegerLiteral("9223372036854775808", 0);
+        assert(d.getValue!ulong(false, overflow) == 9223372036854775808uL);
+        assert(d.getValue!long(true, overflow) == 0x8000000000000000L);
+        assert(!overflow);
+        d.getValue!long(false, overflow);
+        assert(overflow);
     }
 }
 
 public class FloatLiteral : SourceToken!(Kind.FLOAT_LITERAL), Expression {
-    private real value;
-    private bool evaluated = false;
-
     public this(dstring source, size_t start) {
         super(source, start);
     }
 
     public this(dstring source, size_t start, size_t end) {
         super(source, start, end);
-    }
-
-    public this(real value, size_t start, size_t end) {
-        super(format("%.10g"d, value), start, end);
-        this.value = value;
-        evaluated = true;
     }
 
     @property public override size_t start() {
@@ -401,16 +389,27 @@ public class FloatLiteral : SourceToken!(Kind.FLOAT_LITERAL), Expression {
         return super.end;
     }
 
-    public override Expression accept(ExpressionMapper mapper) {
+    public override Expression map(ExpressionMapper mapper) {
         return mapper.mapFloatLiteral(this);
     }
 
-    public real getValue() {
-        if (!evaluated) {
-            value = getSource().to!real;
-            evaluated = true;
-        }
+    public override immutable(Node) interpret() {
+        return Interpreter.INSTANCE.interpretFloatLiteral(this);
+    }
+
+    public double getValue(ref bool overflow) {
+        auto value = getSource().to!double;
+        overflow = isInfinity(value) || value == 0 && !isZero();
         return value;
+    }
+
+    private bool isZero() {
+        auto source = getSource();
+        auto mantissaEnd = source.indexOf('e', CaseSensitive.no);
+        if (mantissaEnd < 0) {
+            mantissaEnd = source.length;
+        }
+        return source[0 .. mantissaEnd].findAmong(['1', '2', '3', '4', '5', '6', '7', '8', '9']).length <= 0;
     }
 
     public override string toString() {
@@ -418,12 +417,26 @@ public class FloatLiteral : SourceToken!(Kind.FLOAT_LITERAL), Expression {
     }
 
     unittest {
+        bool overflow;
         auto a = new FloatLiteral("1_10e12", 0);
-        assert(a.getValue() == 1_10e12);
+        assert(a.getValue(overflow) == 1_10e12);
+        assert(!overflow);
     	auto b = new FloatLiteral("1.1", 0);
-        assert(b.getValue() == 1.1);
+        assert(b.getValue(overflow) == 1.1);
     	auto c = new FloatLiteral(".1", 0);
-        assert(c.getValue() == 0.1);
+        assert(c.getValue(overflow) == 0.1);
+        auto d = new FloatLiteral("-1e1000", 0);
+        d.getValue(overflow);
+        assert(overflow);
+        auto e = new FloatLiteral("1e-1000", 0);
+        e.getValue(overflow);
+        assert(overflow);
+        auto f = new FloatLiteral("00_0e12", 0);
+        assert(f.getValue(overflow) == 0);
+        assert(!overflow);
+        auto g = new FloatLiteral("0", 0);
+        assert(g.getValue(overflow) == 0);
+        assert(!overflow);
     }
 }
 

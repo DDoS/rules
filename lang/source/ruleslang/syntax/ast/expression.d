@@ -8,10 +8,13 @@ import ruleslang.syntax.token;
 import ruleslang.syntax.ast.type;
 import ruleslang.syntax.ast.statement;
 import ruleslang.syntax.ast.mapper;
+import ruleslang.semantic.tree;
+import ruleslang.semantic.interpret;
 import ruleslang.util;
 
 public interface Expression : SourceIndexed {
-    public Expression accept(ExpressionMapper mapper);
+    public Expression map(ExpressionMapper mapper);
+    public immutable(Node) interpret();
     public string toString();
 }
 
@@ -33,8 +36,12 @@ public class NameReference : Reference {
         return name[$ - 1].end;
     }
 
-    public override Expression accept(ExpressionMapper mapper) {
+    public override Expression map(ExpressionMapper mapper) {
         return mapper.mapNameReference(this);
+    }
+
+    public override immutable(Node) interpret() {
+        return Interpreter.INSTANCE.interpretNameReference(this);
     }
 
     public override string toString() {
@@ -83,11 +90,15 @@ public class CompositeLiteral : Expression {
         return _end;
     }
 
-    public override Expression accept(ExpressionMapper mapper) {
+    public override Expression map(ExpressionMapper mapper) {
         foreach (i, value; values) {
-            values[i].expression = value.expression.accept(mapper);
+            values[i].expression = value.expression.map(mapper);
         }
         return mapper.mapCompositeLiteral(this);
+    }
+
+    public override immutable(Node) interpret() {
+        return Interpreter.INSTANCE.interpretCompositeLiteral(this);
     }
 
     public override string toString() {
@@ -112,10 +123,14 @@ public class Initializer : Expression {
         return literal.end;
     }
 
-    public override Expression accept(ExpressionMapper mapper) {
-        type = type.accept(mapper).castOrFail!NamedType();
-        literal = literal.accept(mapper).castOrFail!CompositeLiteral();
+    public override Expression map(ExpressionMapper mapper) {
+        type = type.map(mapper).castOrFail!NamedType();
+        literal = literal.map(mapper).castOrFail!CompositeLiteral();
         return mapper.mapInitializer(this);
+    }
+
+    public override immutable(Node) interpret() {
+        return Interpreter.INSTANCE.interpretInitializer(this);
     }
 
     public override string toString() {
@@ -140,8 +155,12 @@ public class ContextMemberAccess : Reference {
         return name.end;
     }
 
-    public override Expression accept(ExpressionMapper mapper) {
+    public override Expression map(ExpressionMapper mapper) {
         return mapper.mapContextMemberAccess(this);
+    }
+
+    public override immutable(Node) interpret() {
+        return Interpreter.INSTANCE.interpretContextMemberAccess(this);
     }
 
     public override string toString() {
@@ -166,9 +185,13 @@ public class MemberAccess : Reference {
         return name.end;
     }
 
-    public override Expression accept(ExpressionMapper mapper) {
-        value = value.accept(mapper);
+    public override Expression map(ExpressionMapper mapper) {
+        value = value.map(mapper);
         return mapper.mapMemberAccess(this);
+    }
+
+    public override immutable(Node) interpret() {
+        return Interpreter.INSTANCE.interpretMemberAccess(this);
     }
 
     public override string toString() {
@@ -195,10 +218,14 @@ public class ArrayAccess : Reference {
         return _end;
     }
 
-    public override Expression accept(ExpressionMapper mapper) {
-        value = value.accept(mapper);
-        index = index.accept(mapper);
+    public override Expression map(ExpressionMapper mapper) {
+        value = value.map(mapper);
+        index = index.map(mapper);
         return mapper.mapArrayAccess(this);
+    }
+
+    public override immutable(Node) interpret() {
+        return Interpreter.INSTANCE.interpretArrayAccess(this);
     }
 
     public override string toString() {
@@ -231,16 +258,20 @@ public class FunctionCall : Expression, Statement {
         return _end;
     }
 
-    public override Expression accept(ExpressionMapper mapper) {
-        value = value.accept(mapper);
+    public override Expression map(ExpressionMapper mapper) {
+        value = value.map(mapper);
         foreach (i, argument; arguments) {
-            arguments[i] = argument.accept(mapper);
+            arguments[i] = argument.map(mapper);
         }
         return mapper.mapFunctionCall(this);
     }
 
-    public override Statement accept(StatementMapper mapper) {
-        return accept(mapper.castOrFail!ExpressionMapper()).castOrFail!Statement();
+    public override immutable(Node) interpret() {
+        return Interpreter.INSTANCE.interpretFunctionCall(this);
+    }
+
+    public override Statement map(StatementMapper mapper) {
+        return map(mapper.castOrFail!ExpressionMapper()).castOrFail!Statement();
     }
 
     public override string toString() {
@@ -274,9 +305,13 @@ public template Unary(string name, Op) {
             return _inner.end;
         }
 
-        public override Expression accept(ExpressionMapper mapper) {
-            _inner = _inner.accept(mapper);
+        public override Expression map(ExpressionMapper mapper) {
+            _inner = _inner.map(mapper);
             mixin("return mapper.map" ~ name ~ "(this);");
+        }
+
+        public override immutable(Node) interpret() {
+            mixin("return Interpreter.INSTANCE.interpret" ~ name ~ "(this);");
         }
 
         public override string toString() {
@@ -321,10 +356,14 @@ public template Binary(string name, Op) {
             return _right.end;
         }
 
-        public override Expression accept(ExpressionMapper mapper) {
-            _left = _left.accept(mapper);
-            _right = _right.accept(mapper);
+        public override Expression map(ExpressionMapper mapper) {
+            _left = _left.map(mapper);
+            _right = _right.map(mapper);
             mixin("return mapper.map" ~ name ~ "(this);");
+        }
+
+        public override immutable(Node) interpret() {
+            mixin("return Interpreter.INSTANCE.interpret" ~ name ~ "(this);");
         }
 
         public override string toString() {
@@ -385,14 +424,18 @@ public class Compare : Expression {
         return _type is null ? _values[$ - 1].end : _type.end;
     }
 
-    public override Expression accept(ExpressionMapper mapper) {
+    public override Expression map(ExpressionMapper mapper) {
         foreach (i, value; _values) {
-            _values[i] = value.accept(mapper);
+            _values[i] = value.map(mapper);
         }
         if (type !is null) {
-            _type = _type.accept(mapper);
+            _type = _type.map(mapper);
         }
         return mapper.mapCompare(this);
+    }
+
+    public override immutable(Node) interpret() {
+        return Interpreter.INSTANCE.interpretCompare(this);
     }
 
     public override string toString() {
@@ -439,10 +482,14 @@ public class TypeCompare : Expression {
         return _type.end;
     }
 
-    public override Expression accept(ExpressionMapper mapper) {
-        _value = _value.accept(mapper);
-        _type = _type.accept(mapper);
+    public override Expression map(ExpressionMapper mapper) {
+        _value = _value.map(mapper);
+        _type = _type.map(mapper);
         return mapper.mapTypeCompare(this);
+    }
+
+    public override immutable(Node) interpret() {
+        return Interpreter.INSTANCE.interpretTypeCompare(this);
     }
 
     public override string toString() {
@@ -481,11 +528,15 @@ public class Conditional : Expression {
         return _falseValue.end;
     }
 
-    public override Expression accept(ExpressionMapper mapper) {
-        _condition = _condition.accept(mapper);
-        _trueValue = _trueValue.accept(mapper);
-        _falseValue = _falseValue.accept(mapper);
+    public override Expression map(ExpressionMapper mapper) {
+        _condition = _condition.map(mapper);
+        _trueValue = _trueValue.map(mapper);
+        _falseValue = _falseValue.map(mapper);
         return mapper.mapConditional(this);
+    }
+
+    public override immutable(Node) interpret() {
+        return Interpreter.INSTANCE.interpretConditional(this);
     }
 
     public override string toString() {

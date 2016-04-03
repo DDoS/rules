@@ -9,7 +9,7 @@ import ruleslang.syntax.ast.statement;
 import ruleslang.syntax.ast.mapper;
 
 public Statement expandOperators(Statement target) {
-    return target.accept(new OperatorExpander());
+    return target.map(new OperatorExpander());
 }
 
 private class OperatorExpander : StatementMapper {
