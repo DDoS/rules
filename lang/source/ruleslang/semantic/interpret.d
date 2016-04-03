@@ -1,5 +1,6 @@
 module ruleslang.semantic.interpret;
 
+import ruleslang.syntax.source;
 import ruleslang.syntax.token;
 import ruleslang.syntax.ast.expression;
 import ruleslang.semantic.tree;
@@ -18,13 +19,22 @@ public immutable class Interpreter {
         return NullNode.INSTANCE;
     }
 
-    public immutable(Node) interpretIntegerLiteral(IntegerLiteral expression) {
-        
-        return NullNode.INSTANCE;
+    public immutable(Node) interpretIntegerLiteral(IntegerLiteral integer) {
+        bool overflow;
+        auto value = integer.getValue!ulong(false, overflow);
+        if (overflow) {
+            throw new SourceException("Unsigned integer overflow", integer);
+        }
+        return new immutable UnsignedIntegerLiteralNode(value);
     }
 
-    public immutable(Node) interpretFloatLiteral(FloatLiteral expression) {
-        return NullNode.INSTANCE;
+    public immutable(Node) interpretFloatLiteral(FloatLiteral floating) {
+        bool overflow;
+        auto value = floating.getValue(overflow);
+        if (overflow) {
+            throw new SourceException("Floating point overflow/underflow", floating);
+        }
+        return new immutable FloatLiteralNode(value);
     }
 
     public immutable(Node) interpretNameReference(NameReference expression) {

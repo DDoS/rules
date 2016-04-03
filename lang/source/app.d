@@ -6,6 +6,7 @@ import ruleslang.syntax.tokenizer;
 import ruleslang.syntax.ast.statement;
 import ruleslang.syntax.parser.statement;
 import ruleslang.semantic.opexpand;
+import ruleslang.semantic.tree;
 import ruleslang.semantic.interpret;
 
 void main() {
@@ -23,7 +24,14 @@ void main() {
 				stdout.writeln(statement.toString());
 				auto assignment = cast(Assignment) statement;
 				if (assignment) {
-					stdout.writeln(assignment.value.interpret());
+					auto node = assignment.value.interpret();
+					if (cast(NullNode) node is null) {
+						stdout.writeln("RHS semantic: ", node.toString());
+					}
+					auto typedNode = cast(immutable(TypedNode)) node;
+					if (typedNode) {
+						stdout.writeln("RHS type: ", typedNode.getType().toString());
+					}
 				}
 		    }
 		} catch (SourceException exception) {

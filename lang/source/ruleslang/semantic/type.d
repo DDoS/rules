@@ -83,7 +83,7 @@ public immutable class AtomicType : Type {
             static if (__traits(isFloating, T)) {
                 return false;
             } else {
-                return value >= (cast(long) -1 << (bitCount - 1)) && value <= (cast(long) -1 >>> (65 - bitCount));
+                return cast(long) value >= (cast(long) -1 << (bitCount - 1)) && value <= (cast(long) -1 >>> (65 - bitCount));
             }
         }
         // Unsigned int
@@ -123,7 +123,7 @@ public immutable class AtomicType : Type {
     }
 }
 
-public immutable class LiteralSignedIntegerType : Type {
+public immutable class SignedIntegerLiteralType : Type {
     private long _value;
 
     public this(long value) {
@@ -135,7 +135,7 @@ public immutable class LiteralSignedIntegerType : Type {
     }
 
     public override bool convertibleTo(inout Type type) {
-        if (cast(immutable(LiteralSignedIntegerType)) type) {
+        if (cast(immutable(SignedIntegerLiteralType)) type) {
             return true;
         }
         auto atomic = cast(immutable(AtomicType)) type;
@@ -150,7 +150,7 @@ public immutable class LiteralSignedIntegerType : Type {
     }
 }
 
-public immutable class LiteralUnsignedIntegerType : Type {
+public immutable class UnsignedLiteralIntegerType : Type {
     private ulong _value;
 
     public this(ulong value) {
@@ -162,7 +162,7 @@ public immutable class LiteralUnsignedIntegerType : Type {
     }
 
     public override bool convertibleTo(inout Type type) {
-        if (cast(immutable(LiteralUnsignedIntegerType)) type) {
+        if (cast(immutable(UnsignedLiteralIntegerType)) type) {
             return true;
         }
         auto atomic = cast(immutable(AtomicType)) type;
@@ -177,7 +177,7 @@ public immutable class LiteralUnsignedIntegerType : Type {
     }
 }
 
-public immutable class LiteralFloatType : Type {
+public immutable class FloatLiteralType : Type {
     private double _value;
 
     public this(double value) {
@@ -189,7 +189,7 @@ public immutable class LiteralFloatType : Type {
     }
 
     public override bool convertibleTo(inout Type type) {
-        if (cast(immutable(LiteralFloatType)) type) {
+        if (cast(immutable(FloatLiteralType)) type) {
             return true;
         }
         auto atomic = cast(immutable(AtomicType)) type;
@@ -200,6 +200,6 @@ public immutable class LiteralFloatType : Type {
     }
 
     public override string toString() {
-        return format("lit_fp64(%d)", _value);
+        return format("lit_fp64(%g)", _value);
     }
 }

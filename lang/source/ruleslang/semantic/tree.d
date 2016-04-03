@@ -1,5 +1,7 @@
 module ruleslang.semantic.tree;
 
+import std.format : format;
+
 import ruleslang.semantic.type;
 
 public immutable interface Node {
@@ -37,5 +39,49 @@ public immutable class SignedIntegerLiteralNode : TypedNode {
 
     public override string toString() {
         return "";
+    }
+}
+
+public immutable class UnsignedIntegerLiteralNode : TypedNode {
+    private ulong _value;
+    private UnsignedLiteralIntegerType type;
+
+    public this(ulong value) {
+        _value = value;
+        type = new immutable UnsignedLiteralIntegerType(value);
+    }
+
+    public override Node[] getChildren() {
+        return [];
+    }
+
+    public override immutable(Type) getType() {
+        return type;
+    }
+
+    public override string toString() {
+        return format("UnsignedIntegerLiteral(%d)", _value);
+    }
+}
+
+public immutable class FloatLiteralNode : TypedNode {
+    private double _value;
+    private FloatLiteralType type;
+
+    public this(double value) {
+        _value = value;
+        type = new immutable FloatLiteralType(value);
+    }
+
+    public override Node[] getChildren() {
+        return [];
+    }
+
+    public override immutable(Type) getType() {
+        return type;
+    }
+
+    public override string toString() {
+        return format("FloatLiteral(%g)", _value);
     }
 }

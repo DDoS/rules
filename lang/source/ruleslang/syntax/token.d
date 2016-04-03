@@ -2,7 +2,7 @@ module ruleslang.syntax.token;
 
 import std.format : format;
 import std.array : replace;
-import std.conv : to, ConvOverflowException;
+import std.conv : to, ConvException, ConvOverflowException;
 import std.math: isInfinity;
 import std.string : indexOf, CaseSensitive;
 import std.algorithm.searching : findAmong;
@@ -369,6 +369,9 @@ public class IntegerLiteral : SourceToken!(Kind.INTEGER_LITERAL), Expression {
         assert(!overflow);
         d.getValue!long(false, overflow);
         assert(overflow);
+        auto e = new IntegerLiteral("9223372036854775809", 0);
+        e.getValue!long(true, overflow);
+        assert(overflow);
     }
 }
 
@@ -398,7 +401,13 @@ public class FloatLiteral : SourceToken!(Kind.FLOAT_LITERAL), Expression {
     }
 
     public double getValue(ref bool overflow) {
-        auto value = getSource().to!double;
+        double value = void;
+        try {
+            value = getSource().to!double;
+        } catch (ConvException) {
+            overflow = true;
+            return -1;
+        }
         overflow = isInfinity(value) || value == 0 && !isZero();
         return value;
     }
@@ -437,6 +446,9 @@ public class FloatLiteral : SourceToken!(Kind.FLOAT_LITERAL), Expression {
         auto g = new FloatLiteral("0", 0);
         assert(g.getValue(overflow) == 0);
         assert(!overflow);
+        auto h = new FloatLiteral("1e-10000000", 0);
+        h.getValue(overflow);
+        assert(overflow);
     }
 }
 
