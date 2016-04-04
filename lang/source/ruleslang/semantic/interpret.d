@@ -11,8 +11,8 @@ public immutable class Interpreter {
     private this() {
     }
 
-    public immutable(Node) interpretBooleanLiteral(BooleanLiteral expression) {
-        return NullNode.INSTANCE;
+    public immutable(Node) interpretBooleanLiteral(BooleanLiteral boolean) {
+        return new immutable BooleanLiteralNode(boolean.getValue());
     }
 
     public immutable(Node) interpretStringLiteral(StringLiteral expression) {
@@ -65,7 +65,16 @@ public immutable class Interpreter {
         return NullNode.INSTANCE;
     }
 
-    public immutable(Node) interpretSign(Sign expression) {
+    public immutable(Node) interpretSign(Sign sign) {
+        auto integer = cast(IntegerLiteral) sign.inner;
+        if (integer && integer.radix == 10) {
+            bool overflow;
+            auto value = integer.getValue!long(sign.operator == "-", overflow);
+            if (overflow) {
+                throw new SourceException("Signed integer overflow", sign);
+            }
+            return new immutable SignedIntegerLiteralNode(value);
+        }
         return NullNode.INSTANCE;
     }
 

@@ -28,17 +28,45 @@ public immutable class NullNode : Node {
     }
 }
 
-public immutable class SignedIntegerLiteralNode : TypedNode {
+public immutable class BooleanLiteralNode : TypedNode {
+    private bool _value;
+
+    public this(bool value) {
+        _value = value;
+    }
+
     public override Node[] getChildren() {
         return [];
     }
 
     public override immutable(Type) getType() {
-        return AtomicType.UINT8;
+        return AtomicType.BOOL;
     }
 
     public override string toString() {
-        return "";
+        return format("BooleanLiteral(%s)", _value);
+    }
+}
+
+public immutable class SignedIntegerLiteralNode : TypedNode {
+    private long _value;
+    private SignedIntegerLiteralType type;
+
+    public this(long value) {
+        _value = value;
+        type = new immutable SignedIntegerLiteralType(value);
+    }
+
+    public override Node[] getChildren() {
+        return [];
+    }
+
+    public override immutable(Type) getType() {
+        return type;
+    }
+
+    public override string toString() {
+        return format("SignedIntegerLiteral(%d)", _value);
     }
 }
 
