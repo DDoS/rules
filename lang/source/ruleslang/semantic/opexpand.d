@@ -3,56 +3,82 @@ module ruleslang.semantic.opexpand;
 import std.conv : to;
 
 import ruleslang.syntax.token;
+import ruleslang.syntax.ast.type;
 import ruleslang.syntax.ast.expression;
 import ruleslang.syntax.ast.statement;
 import ruleslang.syntax.ast.mapper;
 
 public Statement expandOperators(Statement target) {
-    return target.accept(new OperatorExpander());
+    return target.map(new OperatorExpander());
 }
 
 private class OperatorExpander : StatementMapper {
     public override Statement mapAssignment(Assignment assignment) {
         switch (assignment.operator.getSource()) {
             case "**=":
-                return expandOperator!(Exponent, ExponentOperator, "**")(assignment);
+                return expandAssignment!(Exponent, ExponentOperator, "**")(assignment);
             case "*=":
-                return expandOperator!(Multiply, MultiplyOperator, "*")(assignment);
+                return expandAssignment!(Multiply, MultiplyOperator, "*")(assignment);
             case "/=":
-                return expandOperator!(Multiply, MultiplyOperator, "/")(assignment);
+                return expandAssignment!(Multiply, MultiplyOperator, "/")(assignment);
             case "%=":
-                return expandOperator!(Multiply, MultiplyOperator, "%")(assignment);
+                return expandAssignment!(Multiply, MultiplyOperator, "%")(assignment);
             case "+=":
-                return expandOperator!(Add, AddOperator, "+")(assignment);
+                return expandAssignment!(Add, AddOperator, "+")(assignment);
             case "-=":
-                return expandOperator!(Add, AddOperator, "-")(assignment);
+                return expandAssignment!(Add, AddOperator, "-")(assignment);
             case "<<=":
-                return expandOperator!(Shift, ShiftOperator, "<<")(assignment);
+                return expandAssignment!(Shift, ShiftOperator, "<<")(assignment);
             case ">>=":
-                return expandOperator!(Shift, ShiftOperator, ">>")(assignment);
+                return expandAssignment!(Shift, ShiftOperator, ">>")(assignment);
             case ">>>=":
-                return expandOperator!(Shift, ShiftOperator, ">>>")(assignment);
+                return expandAssignment!(Shift, ShiftOperator, ">>>")(assignment);
             case "&=":
-                return expandOperator!(BitwiseAnd, BitwiseAndOperator, "&")(assignment);
+                return expandAssignment!(BitwiseAnd, BitwiseAndOperator, "&")(assignment);
             case "^=":
-                return expandOperator!(BitwiseXor, BitwiseXorOperator, "^")(assignment);
+                return expandAssignment!(BitwiseXor, BitwiseXorOperator, "^")(assignment);
             case "|=":
-                return expandOperator!(BitwiseOr, BitwiseOrOperator, "|")(assignment);
+                return expandAssignment!(BitwiseOr, BitwiseOrOperator, "|")(assignment);
             case "&&=":
-                return expandOperator!(LogicalAnd, LogicalAndOperator, "&&")(assignment);
+                return expandAssignment!(LogicalAnd, LogicalAndOperator, "&&")(assignment);
             case "^^=":
-                return expandOperator!(LogicalXor, LogicalXorOperator, "^^")(assignment);
+                return expandAssignment!(LogicalXor, LogicalXorOperator, "^^")(assignment);
             case "||=":
-                return expandOperator!(LogicalOr, LogicalOrOperator, "||")(assignment);
+                return expandAssignment!(LogicalOr, LogicalOrOperator, "||")(assignment);
             case "~=":
-                return expandOperator!(Concatenate, ConcatenateOperator, "~")(assignment);
+                return expandAssignment!(Concatenate, ConcatenateOperator, "~")(assignment);
             default:
                 return assignment;
         }
     }
+
+    public override Expression mapCompare(Compare compare) {
+        Expression compareChain = null;
+        foreach (i, operator; compare.valueOperators) {
+            auto element = new ValueCompare(compare.values[i], compare.values[i + 1], operator);
+            if (compareChain is null) {
+                compareChain = element;
+            } else {
+                compareChain = new LogicalAnd(compareChain, element, new LogicalAndOperator("&&"d, operator.start));
+            }
+        }
+        if (compare.type !is null) {
+            auto element = new TypeCompare(compare.values[$ - 1], compare.type, compare.typeOperator);
+            if (compareChain is null) {
+                compareChain = element;
+            } else {
+                compareChain = new LogicalAnd(compareChain, element, new LogicalAndOperator("&&"d, compare.typeOperator.start));
+            }
+        }
+        return compareChain;
+    }
+
+    public override Expression mapInfix(Infix infix) {
+        return new FunctionCall(new NameReference([infix.operator]), [infix.left, infix.right], infix.start, infix.end);
+    }
 }
 
-private Statement expandOperator(Bin, BinOp, string op)(Assignment assignment) {
+private Statement expandAssignment(Bin, BinOp, string op)(Assignment assignment) {
     auto value = new Bin(assignment.target, assignment.value, new BinOp(op.to!dstring, assignment.operator.start));
     return new Assignment(assignment.target, value, new AssignmentOperator("=", assignment.operator.start));
 }

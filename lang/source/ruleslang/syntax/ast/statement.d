@@ -9,7 +9,7 @@ import ruleslang.syntax.ast.mapper;
 import ruleslang.util;
 
 public interface Statement : SourceIndexed {
-    public Statement accept(StatementMapper mapper);
+    public Statement map(StatementMapper mapper);
     public string toString();
 }
 
@@ -30,9 +30,9 @@ public class InitializerAssignment : Statement {
         return literal.end;
     }
 
-    public override Statement accept(StatementMapper mapper) {
-        target = target.accept(mapper);
-        literal = literal.accept(mapper).castOrFail!CompositeLiteral();
+    public override Statement map(StatementMapper mapper) {
+        target = target.map(mapper);
+        literal = literal.map(mapper).castOrFail!CompositeLiteral();
         return mapper.mapInitializerAssignment(this);
     }
 
@@ -72,9 +72,9 @@ public class Assignment : Statement {
         return _value.end;
     }
 
-    public override Statement accept(StatementMapper mapper) {
-        _target = _target.accept(mapper);
-        _value = _value.accept(mapper);
+    public override Statement map(StatementMapper mapper) {
+        _target = _target.map(mapper);
+        _value = _value.map(mapper);
         return mapper.mapAssignment(this);
     }
 

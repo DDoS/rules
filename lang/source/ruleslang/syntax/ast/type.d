@@ -9,7 +9,7 @@ import ruleslang.syntax.ast.expression;
 import ruleslang.syntax.ast.mapper;
 
 public interface Type : SourceIndexed {
-    public Type accept(ExpressionMapper mapper);
+    public Type map(ExpressionMapper mapper);
     public string toString();
 }
 
@@ -32,9 +32,9 @@ public class NamedType : Type {
         return _end;
     }
 
-    public override Type accept(ExpressionMapper mapper) {
+    public override Type map(ExpressionMapper mapper) {
         foreach (i, dimension; dimensions) {
-            dimensions[i] = dimension.accept(mapper);
+            dimensions[i] = dimension.map(mapper);
         }
         return mapper.mapNamedType(this);
     }
