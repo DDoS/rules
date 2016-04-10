@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"fmt"
 	"encoding/json"
+"time"
 )
 
 const (
@@ -36,7 +37,6 @@ func process(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Printf("Processing Insurance Policy For Customer: %s\n", ins.Name)
-
 	ins.Premium = 100
 
 	if ins.MaritalStatus == MARRIED {
@@ -62,6 +62,8 @@ func process(w http.ResponseWriter, r *http.Request) {
 	} else {
 		ins.Premium += 25
 	}
+
+	time.Sleep(time.Second)
 
 	if err := json.NewEncoder(w).Encode(&ins); err != nil {
 		fmt.Errorf("Error Encoding: %s", err.Error())
