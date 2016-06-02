@@ -48,6 +48,28 @@ public immutable class BooleanLiteralNode : TypedNode {
     }
 }
 
+public immutable class StringLiteralNode : TypedNode {
+    private dstring _value;
+    private StringLiteralType type;
+
+    public this(dstring value) {
+        _value = value;
+        type = new immutable StringLiteralType(value);
+    }
+
+    public override Node[] getChildren() {
+        return [];
+    }
+
+    public override immutable(Type) getType() {
+        return type;
+    }
+
+    public override string toString() {
+        return format("StringLiteral(%s)", _value);
+    }
+}
+
 public immutable class SignedIntegerLiteralNode : TypedNode {
     private long _value;
     private SignedIntegerLiteralType type;

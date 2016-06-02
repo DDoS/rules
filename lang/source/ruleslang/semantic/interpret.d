@@ -16,7 +16,7 @@ public immutable class Interpreter {
     }
 
     public immutable(Node) interpretStringLiteral(StringLiteral expression) {
-        return NullNode.INSTANCE;
+        return new immutable StringLiteralNode(expression.getValue());
     }
 
     public immutable(Node) interpretIntegerLiteral(IntegerLiteral integer) {

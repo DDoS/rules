@@ -123,6 +123,37 @@ public immutable class AtomicType : Type {
     }
 }
 
+public immutable class StringLiteralType : Type {
+    private dstring _value;
+
+    public this(dstring value) {
+        _value = value;
+    }
+
+    @property public dstring value() {
+        return _value;
+    }
+
+    public override bool convertibleTo(inout Type type) {
+        if (cast(immutable(StringLiteralType)) type) {
+            return true;
+        }
+        // Can convert to atomic types if the string contains only a single character
+        if (_value.length != 1) {
+            return false;
+        }
+        auto atomic = cast(immutable(AtomicType)) type;
+        if (atomic is null) {
+            return false;
+        }
+        return atomic.isInteger() && atomic.inRange(_value[0]);
+    }
+
+    public override string toString() {
+        return format("lit_string(%s)", _value);
+    }
+}
+
 public immutable class SignedIntegerLiteralType : Type {
     private long _value;
 
@@ -142,7 +173,7 @@ public immutable class SignedIntegerLiteralType : Type {
         if (atomic is null) {
             return false;
         }
-        return atomic.isInteger() && atomic.inRange(value);
+        return atomic.isInteger() && atomic.inRange(_value);
     }
 
     public override string toString() {

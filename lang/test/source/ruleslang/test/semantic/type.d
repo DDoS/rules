@@ -78,3 +78,11 @@ unittest {
     assert(new immutable FloatLiteralType(0.0 / 0.0).convertibleTo(AtomicType.FP16));
     assert(new immutable FloatLiteralType(-1.0 / 0.0).convertibleTo(AtomicType.FP16));
 }
+
+unittest {
+    assert(new immutable StringLiteralType("1"d).convertibleTo(AtomicType.UINT8));
+    assert(new immutable StringLiteralType("ç"d).convertibleTo(AtomicType.UINT8));
+    assert(!new immutable StringLiteralType("11"d).convertibleTo(AtomicType.UINT8));
+    assert(!new immutable StringLiteralType("Ʃ"d).convertibleTo(AtomicType.UINT8));
+    assert(new immutable StringLiteralType("Ʃ"d).convertibleTo(AtomicType.UINT16));
+}
