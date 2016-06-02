@@ -1,6 +1,7 @@
 module ruleslang.syntax.source;
 
-import std.utf : decode;
+import std.uni : normalize, NFC;
+import std.utf : toUTF32;
 import std.string : stripRight;
 import std.algorithm.comparison : min;
 
@@ -8,52 +9,41 @@ import ruleslang.syntax.dchars;
 
 public class DCharReader {
     private enum size_t DEFAULT_COLLECT_SIZE = 16;
-    private string source;
+    private dstring chars;
     private size_t index = 0;
-    private dchar headChar;
-    private bool ahead = false;
-    private size_t charCount = 0;
     private dchar[] collected;
     private size_t collectedCount = 0;
 
     public this(string source) {
-        this.source = source;
+        chars = normalize!NFC(toUTF32(source));
         collected = new dchar[DEFAULT_COLLECT_SIZE];
     }
 
     public bool has() {
-        return index < source.length || ahead && headChar != '\u0004';
+        return index < chars.length;
     }
 
     public dchar head() {
-        if (!ahead) {
-            if (index < source.length) {
-                headChar = source.decode(index);
-            } else {
-                headChar = '\u0004';
-            }
-            ahead = true;
+        if (!has()) {
+            return '\u0004';
         }
-        return headChar;
+        return chars[index];
     }
 
     @property public size_t count() {
-        return charCount;
+        return index;
     }
 
     public void advance() {
-        head();
-        ahead = false;
-        charCount = index;
+        index++;
     }
 
     public void collect() {
         collected[collectedCount++] = head();
         if (collectedCount >= collected.length) {
-            collected.length *= 2;
+            collected.length += DEFAULT_COLLECT_SIZE;
         }
-        ahead = false;
-        charCount = index;
+        advance();
     }
 
     public dstring peekCollected() {
@@ -62,7 +52,7 @@ public class DCharReader {
 
     public dstring popCollected() {
         auto cs = peekCollected();
-        collected = new dchar[DEFAULT_COLLECT_SIZE];
+        collected.length = DEFAULT_COLLECT_SIZE;
         collectedCount = 0;
         return cs;
     }
@@ -81,6 +71,13 @@ unittest {
         reader.collect();
     }
     assert(reader.popCollected() == "héhé∑"d);
+
+    auto combining = new DCharReader("ç\u0063\u0327");
+    assert(combining.head() == 'ç');
+    combining.advance();
+    assert(combining.head() == 'ç');
+    combining.advance();
+    assert(!combining.has());
 }
 
 public interface SourceIndexed {
