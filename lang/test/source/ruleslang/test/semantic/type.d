@@ -93,13 +93,15 @@ unittest {
     assert(!new immutable StringLiteralType("21"d).convertibleTo(new immutable StringLiteralType("1"d)));
     assert(new immutable StringLiteralType("12"d).convertibleTo(new immutable StringLiteralType("1"d)));
     assert(new immutable StringLiteralType("1"d).convertibleTo(AtomicType.UINT8));
-    assert(new immutable StringLiteralType("ç"d).convertibleTo(AtomicType.UINT8));
+    assert(!new immutable StringLiteralType("ç"d).convertibleTo(AtomicType.UINT8));
+    assert(new immutable StringLiteralType("ç"d).convertibleTo(AtomicType.UINT16));
     assert(!new immutable StringLiteralType("11"d).convertibleTo(AtomicType.UINT8));
     assert(!new immutable StringLiteralType("Ʃ"d).convertibleTo(AtomicType.UINT8));
     assert(new immutable StringLiteralType("Ʃ"d).convertibleTo(AtomicType.UINT16));
     assert(new immutable StringLiteralType("1"d).convertibleTo(new immutable SizedArrayType(AtomicType.UINT32, 1)));
     assert(new immutable StringLiteralType("1"d).convertibleTo(new immutable SizedArrayType(AtomicType.UINT16, 1)));
     assert(new immutable StringLiteralType("1"d).convertibleTo(new immutable SizedArrayType(AtomicType.UINT8, 1)));
+    assert(!new immutable StringLiteralType("1"d).convertibleTo(new immutable SizedArrayType(AtomicType.UINT8, 2)));
     assert(new immutable StringLiteralType("1"d).convertibleTo(new immutable SizedArrayType(AtomicType.UINT32, 0)));
     assert(!new immutable StringLiteralType("1"d).convertibleTo(new immutable SizedArrayType(AtomicType.UINT32, 2)));
     assert(new immutable StringLiteralType("11"d).convertibleTo(new immutable SizedArrayType(AtomicType.UINT32, 2)));
@@ -107,8 +109,9 @@ unittest {
     assert(new immutable StringLiteralType("11"d).convertibleTo(new immutable SizedArrayType(AtomicType.UINT8, 2)));
     assert(new immutable StringLiteralType("Ʃ"d).convertibleTo(new immutable SizedArrayType(AtomicType.UINT32, 1)));
     assert(new immutable StringLiteralType("Ʃ"d).convertibleTo(new immutable SizedArrayType(AtomicType.UINT16, 1)));
-    assert(!new immutable StringLiteralType("Ʃ"d).convertibleTo(new immutable SizedArrayType(AtomicType.UINT8, 1)));
+    assert(new immutable StringLiteralType("Ʃ"d).convertibleTo(new immutable SizedArrayType(AtomicType.UINT8, 1)));
     assert(new immutable StringLiteralType("Ʃ"d).convertibleTo(new immutable SizedArrayType(AtomicType.UINT8, 2)));
+    assert(!new immutable StringLiteralType("Ʃ"d).convertibleTo(new immutable SizedArrayType(AtomicType.UINT8, 3)));
 }
 
 unittest {

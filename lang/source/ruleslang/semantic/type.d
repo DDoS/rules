@@ -4,6 +4,7 @@ import std.format : format;
 import std.algorithm.searching : canFind;
 import std.exception : assumeUnique;
 import std.math: isNaN, isInfinity;
+import std.utf : codeLength;
 
 import ruleslang.util;
 
@@ -317,10 +318,14 @@ public immutable class SizedArrayType : ArrayType {
 
 public immutable class StringLiteralType : SizedArrayType {
     private dstring _value;
+    private ulong utf8Length;
+    private ulong utf16Length;
 
     public this(dstring value) {
         super(AtomicType.UINT32, value.length);
         _value = value;
+        utf8Length = value.codeLength!char;
+        utf16Length = value.codeLength!wchar;
     }
 
     @property public dstring value() {
@@ -332,16 +337,22 @@ public immutable class StringLiteralType : SizedArrayType {
         if (opEquals(type)) {
             return true;
         }
+        // Allow conversion to shorter or equal string literals
+        auto literalType = cast(immutable StringLiteralType) type;
+        if (literalType !is null) {
+            if (typeid(literalType) != typeid(StringLiteralType)) {
+                return false;
+            }
+            auto literalLength = literalType.value.length;
+            return _value.length >= literalLength && _value[0 .. literalLength] == literalType.value[0 .. literalLength];
+        }
         // Allow sized array conversions
         if (super.convertibleTo(type)) {
             return true;
         }
-        // Can interpret as an unsigned integer literal type if the string contains only a single character
-        if (_value.length != 1) {
-            return false;
-        }
-        auto character = new immutable UnsignedIntegerLiteralType(_value[0]);
-        return character.convertibleTo(type);
+        // Can convert the string to UTF-16 or 8
+        return new immutable SizedArrayType(AtomicType.UINT16, utf16Length).convertibleTo(type) ||
+                new immutable SizedArrayType(AtomicType.UINT8, utf8Length).convertibleTo(type);
     }
 
     public override string toString() {
