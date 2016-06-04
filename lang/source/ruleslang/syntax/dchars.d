@@ -113,10 +113,3 @@ public dstring escapeString(dstring source) {
     // MAP-REDUCE! WHERE DOING BIG DATA CLOUD STUFF RIGHT HERE
     return source.map!escapeChar.reduce!"a ~ b";
 }
-
-public string join(string joiner, string stringer = "toString()", T)(T[] things ...) {
-    if (things.length <= 0) {
-        return "";
-    }
-    return things.map!("a." ~ stringer).reduce!("a ~ \"" ~ joiner ~ "\" ~ b")();
-}

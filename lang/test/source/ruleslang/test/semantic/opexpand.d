@@ -1,10 +1,10 @@
 module ruleslang.test.semantic.opexpand;
 
-import ruleslang.syntax.dchars;
 import ruleslang.syntax.source;
 import ruleslang.syntax.tokenizer;
 import ruleslang.syntax.parser.statement;
 import ruleslang.semantic.opexpand;
+import ruleslang.util;
 
 import ruleslang.test.assertion;
 

@@ -2,11 +2,12 @@ module ruleslang.syntax.ast.type;
 
 import std.algorithm.iteration : map, reduce;
 
-import ruleslang.syntax.dchars;
 import ruleslang.syntax.source;
 import ruleslang.syntax.token;
 import ruleslang.syntax.ast.expression;
 import ruleslang.syntax.ast.mapper;
+
+import ruleslang.util;
 
 public interface Type : SourceIndexed {
     public Type map(ExpressionMapper mapper);

@@ -8,8 +8,63 @@ import std.utf : codeLength;
 
 import ruleslang.util;
 
+public enum TypeConversion {
+    IDENTITY,
+    INTEGER_WIDEN,
+    INTEGER_TO_FLOAT,
+    FLOAT_WIDEN,
+    INTEGER_LITERAL_NARROW,
+    FLOAT_LITERAL_NARROW,
+    ARRAY_DIMENSION_DISCARD,
+    SIZED_ARRAY_SHORTEN,
+    SIZED_ARRAY_SIZE_DISCARD,
+    STRING_LITERAL_TO_UTF8,
+    STRING_LITERAL_TO_UTF16
+}
+
+public class TypeConversionChain {
+    private TypeConversion[] chain;
+
+    public this(TypeConversion[] chain...) {
+        this.chain = chain;
+    }
+
+    mixin generateBuilderMethods!(__traits(allMembers, TypeConversion));
+
+    public override bool opEquals(Object other) {
+        auto conversions = cast(TypeConversionChain) other;
+        if (conversions is null || typeid(conversions) != typeid(TypeConversionChain)) {
+            return false;
+        }
+        return chain == conversions.chain;
+    }
+
+    public override string toString() {
+        return format("Conversions(%s)", chain.join!(" -> ", "to!string"));
+    }
+
+    private mixin template generateBuilderMethods(string conversion, conversions...) {
+        mixin generateBuilderMethod!conversion;
+
+        static if (conversions.length > 0) {
+            mixin generateBuilderMethods!conversions;
+        }
+    }
+
+    private mixin template generateBuilderMethod(string conversion) {
+        mixin(
+            `
+            public TypeConversionChain then` ~ conversion.asciiSnakeToCamelCase(true) ~ `() {
+                chain ~= TypeConversion.` ~ conversion ~ `;
+                return this;
+            }
+            `
+        );
+    }
+}
+
 public immutable interface Type {
-    public bool convertibleTo(inout Type type);
+    public bool convertibleTo(inout Type type, ref TypeConversionChain conversions);
     public string toString();
     public bool opEquals(inout Type type);
 }
@@ -112,12 +167,36 @@ public immutable class AtomicType : Type {
         }
     }
 
-    public override bool convertibleTo(inout Type type) {
+    public override bool convertibleTo(inout Type type, ref TypeConversionChain conversions) {
         auto atomic = cast(immutable AtomicType) type;
         if (atomic is null) {
             return false;
         }
-        return CONVERSIONS[this].canFind(atomic);
+        // Check if the conversion is valid
+        if (!CONVERSIONS[this].canFind(atomic)) {
+            return false;
+        }
+        // Find the conversion type
+        if (this is atomic) {
+            conversions.thenIdentity();
+        } else if (isInteger()) {
+            if (atomic.isInteger()) {
+                conversions.thenIntegerWiden();
+            } else if (atomic.isFloat()) {
+                conversions.thenIntegerToFloat();
+            } else {
+                assert(0);
+            }
+        } else if (isFloat()) {
+            if (atomic.isFloat()) {
+                conversions.thenFloatWiden();
+            } else {
+                assert(0);
+            }
+        } else {
+            assert(0);
+        }
+        return true;
     }
 
     public override string toString() {
@@ -129,8 +208,7 @@ public immutable class AtomicType : Type {
         if (atomicType is null || typeid(atomicType) != typeid(AtomicType)) {
             return false;
         }
-        return bitCount == atomicType.bitCount && signed == atomicType.signed &&
-                fp == atomicType.fp;
+        return this is atomicType;
     }
 }
 
@@ -155,7 +233,7 @@ public immutable class SignedIntegerLiteralType : Type {
         return _value;
     }
 
-    public override bool convertibleTo(inout Type type) {
+    public override bool convertibleTo(inout Type type, ref TypeConversionChain conversions) {
         if (opEquals(type)) {
             return true;
         }
@@ -184,7 +262,7 @@ public immutable class UnsignedIntegerLiteralType : Type {
         return _value;
     }
 
-    public override bool convertibleTo(inout Type type) {
+    public override bool convertibleTo(inout Type type, ref TypeConversionChain conversions) {
         if (opEquals(type)) {
             return true;
         }
@@ -213,7 +291,7 @@ public immutable class FloatLiteralType : Type {
         return _value;
     }
 
-    public override bool convertibleTo(inout Type type) {
+    public override bool convertibleTo(inout Type type, ref TypeConversionChain conversions) {
         if (opEquals(type)) {
             return true;
         }
@@ -254,7 +332,7 @@ public immutable class ArrayType : Type {
         return _totalDepth;
     }
 
-    public override bool convertibleTo(inout Type type) {
+    public override bool convertibleTo(inout Type type, ref TypeConversionChain conversions) {
         // Only identity conversion is allowed
         return opEquals(type);
     }
@@ -284,9 +362,9 @@ public immutable class SizedArrayType : ArrayType {
         return _size;
     }
 
-    public override bool convertibleTo(inout Type type) {
+    public override bool convertibleTo(inout Type type, ref TypeConversionChain conversions) {
         // If the sized array has size 1, we can interpret it as its component type
-        if (_size == 1 && componentType.convertibleTo(type)) {
+        if (_size == 1 && componentType.convertibleTo(type, conversions)) {
             return true;
         }
         auto arrayType = cast(immutable ArrayType) type;
@@ -332,7 +410,7 @@ public immutable class StringLiteralType : SizedArrayType {
         return _value;
     }
 
-    public override bool convertibleTo(inout Type type) {
+    public override bool convertibleTo(inout Type type, ref TypeConversionChain conversions) {
         // Allow identity conversion
         if (opEquals(type)) {
             return true;
@@ -347,12 +425,12 @@ public immutable class StringLiteralType : SizedArrayType {
             return _value.length >= literalLength && _value[0 .. literalLength] == literalType.value[0 .. literalLength];
         }
         // Allow sized array conversions
-        if (super.convertibleTo(type)) {
+        if (super.convertibleTo(type, conversions)) {
             return true;
         }
         // Can convert the string to UTF-16 or 8
-        return new immutable SizedArrayType(AtomicType.UINT16, utf16Length).convertibleTo(type) ||
-                new immutable SizedArrayType(AtomicType.UINT8, utf8Length).convertibleTo(type);
+        return new immutable SizedArrayType(AtomicType.UINT16, utf16Length).convertibleTo(type, conversions) ||
+                new immutable SizedArrayType(AtomicType.UINT8, utf8Length).convertibleTo(type, conversions);
     }
 
     public override string toString() {

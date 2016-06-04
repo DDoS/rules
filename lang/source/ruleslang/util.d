@@ -2,7 +2,8 @@ module ruleslang.util;
 
 import std.array : array;
 import std.algorithm.searching : canFind, findAmong;
-import std.algorithm.iteration : uniq;
+import std.algorithm.iteration : map, reduce, uniq;
+import std.ascii : isAlphaNum, toLower, toUpper;
 
 public T castOrFail(T, S)(S s) {
     T t = cast(T) s;
@@ -48,4 +49,34 @@ public void addMissing(T)(ref T[] to, T[] elements) {
             to ~= element;
         }
     }
+}
+
+public string join(string joiner, string stringer = "toString()", T)(T[] things ...) {
+    if (things.length <= 0) {
+        return "";
+    }
+    return things.map!("a." ~ stringer).reduce!("a ~ \"" ~ joiner ~ "\" ~ b")();
+}
+
+public string asciiSnakeToCamelCase(string snake, bool upperFirst = false) {
+    auto camel = new char[snake.length];
+    bool firstWordLetter = upperFirst;
+    size_t i = 0;
+    foreach (char s; snake) {
+        if (s == '_') {
+            firstWordLetter = true;
+            continue;
+        }
+        if (!s.isAlphaNum()) {
+            throw new Exception("Expected only ASCII alphanumeric characters and underscores");
+        }
+        if (firstWordLetter) {
+            s = s.toUpper();
+            firstWordLetter = false;
+        } else {
+            s = s.toLower();
+        }
+        camel[i++] = s;
+    }
+    return camel[0 .. i].idup;
 }
