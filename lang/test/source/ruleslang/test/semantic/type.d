@@ -66,69 +66,107 @@ unittest {
 }
 
 unittest {
-    assertConvertible(new immutable SignedIntegerLiteralType(323), new immutable SignedIntegerLiteralType(323));
+    assertConvertible(new immutable SignedIntegerLiteralType(323), new immutable SignedIntegerLiteralType(323),
+        TypeConversion.IDENTITY);
     assertNotConvertible(new immutable SignedIntegerLiteralType(323), new immutable SignedIntegerLiteralType(322));
-    assertConvertible(new immutable SignedIntegerLiteralType(323), AtomicType.UINT16);
+    assertConvertible(new immutable SignedIntegerLiteralType(323), AtomicType.UINT16,
+        TypeConversion.INTEGER_LITERAL_NARROW);
+    assertConvertible(new immutable SignedIntegerLiteralType(65504), AtomicType.FP16,
+        TypeConversion.INTEGER_TO_FLOAT, TypeConversion.FLOAT_LITERAL_NARROW);
+    assertNotConvertible(new immutable SignedIntegerLiteralType(65505), AtomicType.FP16);
+    assertConvertible(new immutable SignedIntegerLiteralType(65505), AtomicType.FP32,
+        TypeConversion.INTEGER_TO_FLOAT, TypeConversion.FLOAT_LITERAL_NARROW);
     assertNotConvertible(new immutable SignedIntegerLiteralType(323), AtomicType.UINT8);
-    assertConvertible(new immutable SignedIntegerLiteralType(323), AtomicType.SINT16);
+    assertConvertible(new immutable SignedIntegerLiteralType(323), AtomicType.SINT16,
+        TypeConversion.INTEGER_LITERAL_NARROW);
     assertNotConvertible(new immutable SignedIntegerLiteralType(323), AtomicType.SINT8);
     assertNotConvertible(new immutable SignedIntegerLiteralType(-1), AtomicType.UINT64);
-    assertConvertible(new immutable UnsignedIntegerLiteralType(127), new immutable UnsignedIntegerLiteralType(127));
+    assertConvertible(new immutable UnsignedIntegerLiteralType(127), new immutable UnsignedIntegerLiteralType(127),
+        TypeConversion.IDENTITY);
     assertNotConvertible(new immutable UnsignedIntegerLiteralType(127), new immutable UnsignedIntegerLiteralType(126));
-    assertConvertible(new immutable UnsignedIntegerLiteralType(127), AtomicType.SINT8);
-    assertConvertible(new immutable UnsignedIntegerLiteralType(9223372036854775807L), AtomicType.SINT64);
+    assertConvertible(new immutable UnsignedIntegerLiteralType(127), AtomicType.SINT8,
+        TypeConversion.INTEGER_LITERAL_NARROW);
+    assertConvertible(new immutable UnsignedIntegerLiteralType(9223372036854775807L), AtomicType.SINT64,
+        TypeConversion.INTEGER_LITERAL_NARROW);
     assertNotConvertible(new immutable UnsignedIntegerLiteralType(9223372036854775808uL), AtomicType.SINT64);
-    assertConvertible(new immutable FloatLiteralType(10.0e10), new immutable FloatLiteralType(10.0e10));
+    assertConvertible(new immutable FloatLiteralType(10.0e10), new immutable FloatLiteralType(10.0e10),
+        TypeConversion.IDENTITY);
     assertNotConvertible(new immutable FloatLiteralType(10.0e10), new immutable FloatLiteralType(11.0e10));
-    assertConvertible(new immutable FloatLiteralType(10.0e10), AtomicType.FP32);
+    assertConvertible(new immutable FloatLiteralType(10.0e10), AtomicType.FP32,
+        TypeConversion.FLOAT_LITERAL_NARROW);
     assertNotConvertible(new immutable FloatLiteralType(10.0e10), AtomicType.FP16);
-    assertConvertible(new immutable FloatLiteralType(0.0 / 0.0), AtomicType.FP16);
-    assertConvertible(new immutable FloatLiteralType(-1.0 / 0.0), AtomicType.FP16);
+    assertConvertible(new immutable FloatLiteralType(0.0 / 0.0), AtomicType.FP16,
+        TypeConversion.FLOAT_LITERAL_NARROW);
+    assertConvertible(new immutable FloatLiteralType(-1.0 / 0.0), AtomicType.FP16,
+        TypeConversion.FLOAT_LITERAL_NARROW);
 }
 
 unittest {
-    assertConvertible(new immutable StringLiteralType("1"d), new immutable StringLiteralType("1"d));
+    assertConvertible(new immutable StringLiteralType("1"d), new immutable StringLiteralType("1"d),
+        TypeConversion.IDENTITY);
     assertNotConvertible(new immutable StringLiteralType("1"d), new immutable StringLiteralType("2"d));
     assertNotConvertible(new immutable StringLiteralType("1"d), new immutable StringLiteralType("11"d));
-    assertConvertible(new immutable StringLiteralType("11"d), new immutable StringLiteralType("1"d));
+    assertConvertible(new immutable StringLiteralType("11"d), new immutable StringLiteralType("1"d),
+        TypeConversion.SIZED_ARRAY_SHORTEN);
     assertNotConvertible(new immutable StringLiteralType("21"d), new immutable StringLiteralType("1"d));
-    assertConvertible(new immutable StringLiteralType("12"d), new immutable StringLiteralType("1"d));
-    assertConvertible(new immutable StringLiteralType("1"d), AtomicType.UINT8, TypeConversion.IDENTITY);
+    assertConvertible(new immutable StringLiteralType("12"d), new immutable StringLiteralType("1"d),
+        TypeConversion.SIZED_ARRAY_SHORTEN);
+    assertConvertible(new immutable StringLiteralType("1"d), AtomicType.UINT8,
+        TypeConversion.STRING_LITERAL_TO_UTF8, TypeConversion.ARRAY_TO_COMPONENT, TypeConversion.IDENTITY);
     assertNotConvertible(new immutable StringLiteralType("ç"d), AtomicType.UINT8);
-    assertConvertible(new immutable StringLiteralType("ç"d), AtomicType.UINT16, TypeConversion.IDENTITY);
+    assertConvertible(new immutable StringLiteralType("ç"d), AtomicType.UINT16,
+        TypeConversion.STRING_LITERAL_TO_UTF16, TypeConversion.ARRAY_TO_COMPONENT, TypeConversion.IDENTITY);
     assertNotConvertible(new immutable StringLiteralType("11"d), AtomicType.UINT8);
     assertNotConvertible(new immutable StringLiteralType("Ʃ"d), AtomicType.UINT8);
-    assertConvertible(new immutable StringLiteralType("Ʃ"d), AtomicType.UINT16, TypeConversion.IDENTITY);
-    assertConvertible(new immutable StringLiteralType("1"d), new immutable SizedArrayType(AtomicType.UINT32, 1));
-    assertConvertible(new immutable StringLiteralType("1"d), new immutable SizedArrayType(AtomicType.UINT16, 1));
-    assertConvertible(new immutable StringLiteralType("1"d), new immutable SizedArrayType(AtomicType.UINT8, 1));
+    assertConvertible(new immutable StringLiteralType("Ʃ"d), AtomicType.UINT16,
+        TypeConversion.STRING_LITERAL_TO_UTF16, TypeConversion.ARRAY_TO_COMPONENT, TypeConversion.IDENTITY);
+    assertConvertible(new immutable StringLiteralType("1"d), new immutable SizedArrayType(AtomicType.UINT32, 1),
+        TypeConversion.IDENTITY);
+    assertConvertible(new immutable StringLiteralType("1"d), new immutable SizedArrayType(AtomicType.UINT16, 1),
+        TypeConversion.STRING_LITERAL_TO_UTF16, TypeConversion.IDENTITY);
+    assertConvertible(new immutable StringLiteralType("1"d), new immutable SizedArrayType(AtomicType.UINT8, 1),
+        TypeConversion.STRING_LITERAL_TO_UTF8, TypeConversion.IDENTITY);
     assertNotConvertible(new immutable StringLiteralType("1"d), new immutable SizedArrayType(AtomicType.UINT8, 2));
-    assertConvertible(new immutable StringLiteralType("1"d), new immutable SizedArrayType(AtomicType.UINT32, 0));
+    assertConvertible(new immutable StringLiteralType("1"d), new immutable SizedArrayType(AtomicType.UINT32, 0),
+        TypeConversion.SIZED_ARRAY_SHORTEN);
     assertNotConvertible(new immutable StringLiteralType("1"d), new immutable SizedArrayType(AtomicType.UINT32, 2));
-    assertConvertible(new immutable StringLiteralType("11"d), new immutable SizedArrayType(AtomicType.UINT32, 2));
-    assertConvertible(new immutable StringLiteralType("11"d), new immutable SizedArrayType(AtomicType.UINT16, 2));
-    assertConvertible(new immutable StringLiteralType("11"d), new immutable SizedArrayType(AtomicType.UINT8, 2));
-    assertConvertible(new immutable StringLiteralType("Ʃ"d), new immutable SizedArrayType(AtomicType.UINT32, 1));
-    assertConvertible(new immutable StringLiteralType("Ʃ"d), new immutable SizedArrayType(AtomicType.UINT16, 1));
-    assertConvertible(new immutable StringLiteralType("Ʃ"d), new immutable SizedArrayType(AtomicType.UINT8, 1));
-    assertConvertible(new immutable StringLiteralType("Ʃ"d), new immutable SizedArrayType(AtomicType.UINT8, 2));
+    assertConvertible(new immutable StringLiteralType("11"d), new immutable SizedArrayType(AtomicType.UINT32, 2),
+        TypeConversion.IDENTITY);
+    assertConvertible(new immutable StringLiteralType("11"d), new immutable SizedArrayType(AtomicType.UINT16, 2),
+        TypeConversion.STRING_LITERAL_TO_UTF16, TypeConversion.IDENTITY);
+    assertConvertible(new immutable StringLiteralType("11"d), new immutable SizedArrayType(AtomicType.UINT8, 2),
+        TypeConversion.STRING_LITERAL_TO_UTF8, TypeConversion.IDENTITY);
+    assertConvertible(new immutable StringLiteralType("Ʃ"d), new immutable SizedArrayType(AtomicType.UINT32, 1),
+        TypeConversion.IDENTITY);
+    assertConvertible(new immutable StringLiteralType("Ʃ"d), new immutable SizedArrayType(AtomicType.UINT16, 1),
+        TypeConversion.STRING_LITERAL_TO_UTF16, TypeConversion.IDENTITY);
+    assertConvertible(new immutable StringLiteralType("Ʃ"d), new immutable SizedArrayType(AtomicType.UINT8, 1),
+        TypeConversion.STRING_LITERAL_TO_UTF8, TypeConversion.SIZED_ARRAY_SHORTEN);
+    assertConvertible(new immutable StringLiteralType("Ʃ"d), new immutable SizedArrayType(AtomicType.UINT8, 2),
+        TypeConversion.STRING_LITERAL_TO_UTF8, TypeConversion.IDENTITY);
     assertNotConvertible(new immutable StringLiteralType("Ʃ"d), new immutable SizedArrayType(AtomicType.UINT8, 3));
 }
 
 unittest {
-    assertConvertible(new immutable ArrayType(AtomicType.UINT8), new immutable ArrayType(AtomicType.UINT8));
+    assertConvertible(new immutable ArrayType(AtomicType.UINT8), new immutable ArrayType(AtomicType.UINT8),
+        TypeConversion.IDENTITY);
     assertNotConvertible(new immutable ArrayType(AtomicType.UINT8), new immutable ArrayType(AtomicType.SINT16));
     assertNotConvertible(new immutable ArrayType(new immutable ArrayType(AtomicType.UINT8)), new immutable ArrayType(AtomicType.UINT8));
     assertNotConvertible(new immutable ArrayType(AtomicType.UINT8), new immutable ArrayType(new immutable ArrayType(AtomicType.UINT8)));
     assertNotConvertible(new immutable ArrayType(AtomicType.UINT8), new immutable SizedArrayType(AtomicType.UINT8, 0));
     assertNotConvertible(new immutable SizedArrayType(AtomicType.UINT8, 0), new immutable SizedArrayType(AtomicType.UINT8, 1));
-    assertConvertible(new immutable SizedArrayType(AtomicType.UINT8, 1), new immutable SizedArrayType(AtomicType.UINT8, 1));
+    assertNotConvertible(new immutable SizedArrayType(AtomicType.UINT8, 2), new immutable SizedArrayType(AtomicType.SINT8, 2));
+    assertConvertible(new immutable SizedArrayType(AtomicType.UINT8, 1), new immutable SizedArrayType(AtomicType.UINT8, 1),
+        TypeConversion.IDENTITY);
     assertNotConvertible(new immutable SizedArrayType(AtomicType.UINT8, 1), new immutable SizedArrayType(AtomicType.SINT8, 1));
-    assertConvertible(new immutable SizedArrayType(AtomicType.UINT8, 1), new immutable SizedArrayType(AtomicType.UINT8, 0));
+    assertConvertible(new immutable SizedArrayType(AtomicType.UINT8, 1), new immutable SizedArrayType(AtomicType.UINT8, 0),
+        TypeConversion.SIZED_ARRAY_SHORTEN);
     assertNotConvertible(new immutable SizedArrayType(AtomicType.UINT8, 1), new immutable SizedArrayType(AtomicType.SINT8, 0));
-    assertConvertible(new immutable SizedArrayType(AtomicType.UINT8, 1), new immutable ArrayType(AtomicType.UINT8));
+    assertConvertible(new immutable SizedArrayType(AtomicType.UINT8, 1), new immutable ArrayType(AtomicType.UINT8),
+        TypeConversion.SIZED_ARRAY_TO_UNSIZED);
     assertNotConvertible(new immutable SizedArrayType(AtomicType.UINT8, 1), new immutable ArrayType(AtomicType.SINT8));
-    assertConvertible(new immutable SizedArrayType(AtomicType.UINT8, 1), AtomicType.UINT8, TypeConversion.IDENTITY);
+    assertConvertible(new immutable SizedArrayType(AtomicType.UINT8, 1), AtomicType.UINT8,
+        TypeConversion.ARRAY_TO_COMPONENT, TypeConversion.IDENTITY);
     assertNotConvertible(new immutable SizedArrayType(AtomicType.UINT8, 0), AtomicType.UINT8);
     assertNotConvertible(new immutable SizedArrayType(AtomicType.UINT8, 2), AtomicType.UINT8);
     assertNotConvertible(new immutable SizedArrayType(AtomicType.UINT8, 1), AtomicType.SINT8);

@@ -15,9 +15,9 @@ public enum TypeConversion {
     FLOAT_WIDEN,
     INTEGER_LITERAL_NARROW,
     FLOAT_LITERAL_NARROW,
-    ARRAY_DIMENSION_DISCARD,
+    ARRAY_TO_COMPONENT,
     SIZED_ARRAY_SHORTEN,
-    SIZED_ARRAY_SIZE_DISCARD,
+    SIZED_ARRAY_TO_UNSIZED,
     STRING_LITERAL_TO_UTF8,
     STRING_LITERAL_TO_UTF16
 }
@@ -37,6 +37,10 @@ public class TypeConversionChain {
             return false;
         }
         return chain == conversions.chain;
+    }
+
+    public TypeConversionChain clone() {
+        return new TypeConversionChain(chain.dup);
     }
 
     public override string toString() {
@@ -235,13 +239,23 @@ public immutable class SignedIntegerLiteralType : Type {
 
     public override bool convertibleTo(inout Type type, ref TypeConversionChain conversions) {
         if (opEquals(type)) {
+            conversions.thenIdentity();
             return true;
         }
         auto atomic = cast(immutable AtomicType) type;
         if (atomic is null) {
             return false;
         }
-        return atomic.isInteger() && atomic.inRange(_value);
+        if (atomic.inRange(_value)) {
+            if (atomic.isFloat()) {
+                conversions.thenIntegerToFloat();
+                conversions.thenFloatLiteralNarrow();
+            } else {
+                conversions.thenIntegerLiteralNarrow();
+            }
+            return true;
+        }
+        return false;
     }
 
     public override string toString() {
@@ -264,13 +278,23 @@ public immutable class UnsignedIntegerLiteralType : Type {
 
     public override bool convertibleTo(inout Type type, ref TypeConversionChain conversions) {
         if (opEquals(type)) {
+            conversions.thenIdentity();
             return true;
         }
         auto atomic = cast(immutable AtomicType) type;
         if (atomic is null) {
             return false;
         }
-        return atomic.isInteger() && atomic.inRange(_value);
+        if (atomic.inRange(_value)) {
+            if (atomic.isFloat()) {
+                conversions.thenIntegerToFloat();
+                conversions.thenFloatLiteralNarrow();
+            } else {
+                conversions.thenIntegerLiteralNarrow();
+            }
+            return true;
+        }
+        return false;
     }
 
     public override string toString() {
@@ -293,13 +317,18 @@ public immutable class FloatLiteralType : Type {
 
     public override bool convertibleTo(inout Type type, ref TypeConversionChain conversions) {
         if (opEquals(type)) {
+            conversions.thenIdentity();
             return true;
         }
         auto atomic = cast(immutable AtomicType) type;
         if (atomic is null) {
             return false;
         }
-        return atomic.isFloat() && atomic.inRange(_value);
+        if (atomic.inRange(_value)) {
+            conversions.thenFloatLiteralNarrow();
+            return true;
+        }
+        return false;
     }
 
     public override string toString() {
@@ -334,7 +363,11 @@ public immutable class ArrayType : Type {
 
     public override bool convertibleTo(inout Type type, ref TypeConversionChain conversions) {
         // Only identity conversion is allowed
-        return opEquals(type);
+        if (opEquals(type)) {
+            conversions.thenIdentity();
+            return true;
+        }
+        return false;
     }
 
     public override string toString() {
@@ -364,8 +397,12 @@ public immutable class SizedArrayType : ArrayType {
 
     public override bool convertibleTo(inout Type type, ref TypeConversionChain conversions) {
         // If the sized array has size 1, we can interpret it as its component type
-        if (_size == 1 && componentType.convertibleTo(type, conversions)) {
-            return true;
+        if (_size == 1) {
+            auto copy = conversions.clone().thenArrayToComponent();
+            if (componentType.convertibleTo(type, copy)) {
+                conversions = copy;
+                return true;
+            }
         }
         auto arrayType = cast(immutable ArrayType) type;
         if (arrayType is null) {
@@ -377,7 +414,18 @@ public immutable class SizedArrayType : ArrayType {
         }
         // If the array is sized then the length must be smaller or equal
         auto sizedArrayType = cast(immutable SizedArrayType) arrayType;
-        return sizedArrayType is null || _size >= sizedArrayType.size;
+        if (sizedArrayType is null) {
+            conversions.thenSizedArrayToUnsized();
+            return true;
+        }
+        if (_size == sizedArrayType.size) {
+            conversions.thenIdentity();
+            return true;
+        } else if (_size > sizedArrayType.size) {
+            conversions.thenSizedArrayShorten();
+            return true;
+        }
+        return false;
     }
 
     public override string toString() {
@@ -413,24 +461,38 @@ public immutable class StringLiteralType : SizedArrayType {
     public override bool convertibleTo(inout Type type, ref TypeConversionChain conversions) {
         // Allow identity conversion
         if (opEquals(type)) {
+            conversions.thenIdentity();
             return true;
         }
-        // Allow conversion to shorter or equal string literals
+        // Allow conversion to shorter string literals
         auto literalType = cast(immutable StringLiteralType) type;
         if (literalType !is null) {
             if (typeid(literalType) != typeid(StringLiteralType)) {
                 return false;
             }
             auto literalLength = literalType.value.length;
-            return _value.length >= literalLength && _value[0 .. literalLength] == literalType.value[0 .. literalLength];
+            if (literalLength < _value.length && _value[0 .. literalLength] == literalType.value[0 .. literalLength]) {
+                conversions.thenSizedArrayShorten();
+                return true;
+            }
+            return false;
         }
         // Allow sized array conversions
         if (super.convertibleTo(type, conversions)) {
             return true;
         }
-        // Can convert the string to UTF-16 or 8
-        return new immutable SizedArrayType(AtomicType.UINT16, utf16Length).convertibleTo(type, conversions) ||
-                new immutable SizedArrayType(AtomicType.UINT8, utf8Length).convertibleTo(type, conversions);
+        // Can convert the string to UTF-16 or UTF-8
+        auto copy = conversions.clone().thenStringLiteralToUtf16();
+        if (new immutable SizedArrayType(AtomicType.UINT16, utf16Length).convertibleTo(type, copy)) {
+            conversions = copy;
+            return true;
+        }
+        copy = conversions.clone().thenStringLiteralToUtf8();
+        if (new immutable SizedArrayType(AtomicType.UINT8, utf8Length).convertibleTo(type, copy)) {
+            conversions = copy;
+            return true;
+        }
+        return false;
     }
 
     public override string toString() {
