@@ -13,6 +13,14 @@ public T castOrFail(T, S)(S s) {
     return t;
 }
 
+public immutable(T) exactCastImmutable(T, S)(S s) {
+    auto t = cast(immutable T) s;
+    if (t is null || typeid(t) != typeid(T)) {
+        return null;
+    }
+    return t;
+}
+
 public T[][T] transitiveClosure(T)(T[][T] adjacencies) {
     T[][T] result;
     bool wasReduced = void;

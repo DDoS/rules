@@ -32,11 +32,8 @@ public class TypeConversionChain {
     mixin generateBuilderMethods!(__traits(allMembers, TypeConversion));
 
     public override bool opEquals(Object other) {
-        auto conversions = cast(TypeConversionChain) other;
-        if (conversions is null || typeid(conversions) != typeid(TypeConversionChain)) {
-            return false;
-        }
-        return chain == conversions.chain;
+        auto conversions = other.exactCastImmutable!(TypeConversionChain);
+        return conversions !is null && chain == conversions.chain;
     }
 
     public size_t length() {
@@ -212,21 +209,15 @@ public immutable class AtomicType : Type {
     }
 
     public override bool opEquals(inout Type type) {
-        auto atomicType = cast(immutable AtomicType) type;
-        if (atomicType is null || typeid(atomicType) != typeid(AtomicType)) {
-            return false;
-        }
+        auto atomicType = type.exactCastImmutable!(AtomicType);
         return this is atomicType;
     }
 }
 
 private mixin template literalTypeOpEquals(L) {
     public override bool opEquals(inout Type type) {
-        auto literalType = cast(immutable L) type;
-        if (literalType is null || typeid(literalType) != typeid(L)) {
-            return false;
-        }
-        return _value == literalType._value;
+        auto literalType = type.exactCastImmutable!(L);
+        return literalType !is null && _value == literalType._value;
     }
 }
 
@@ -379,11 +370,8 @@ public immutable class ArrayType : Type {
     }
 
     public override bool opEquals(inout Type type) {
-        auto arrayType = cast(immutable ArrayType) type;
-        if (arrayType is null || typeid(arrayType) != typeid(ArrayType)) {
-            return false;
-        }
-        return arrayType.totalDepth == _totalDepth && arrayType.componentType == _componentType;
+        auto arrayType = type.exactCastImmutable!(ArrayType);
+        return arrayType !is null && arrayType.totalDepth == _totalDepth && arrayType.componentType == _componentType;
     }
 }
 
@@ -437,12 +425,9 @@ public immutable class SizedArrayType : ArrayType {
     }
 
     public override bool opEquals(inout Type type) {
-        auto arrayType = cast(immutable SizedArrayType) type;
-        if (arrayType is null || typeid(arrayType) != typeid(SizedArrayType)) {
-            return false;
-        }
-        return arrayType.totalDepth == totalDepth && arrayType.componentType == componentType &&
-            arrayType.size == _size;
+        auto arrayType = type.exactCastImmutable!(SizedArrayType);
+        return arrayType !is null && arrayType.totalDepth == totalDepth
+                && arrayType.componentType == componentType && arrayType.size == _size;
     }
 }
 
