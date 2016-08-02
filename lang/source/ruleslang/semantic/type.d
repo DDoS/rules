@@ -39,6 +39,10 @@ public class TypeConversionChain {
         return chain == conversions.chain;
     }
 
+    public size_t length() {
+        return chain.length;
+    }
+
     public TypeConversionChain clone() {
         return new TypeConversionChain(chain.dup);
     }
