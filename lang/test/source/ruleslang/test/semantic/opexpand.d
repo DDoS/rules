@@ -10,78 +10,79 @@ import ruleslang.test.assertion;
 
 unittest {
     assertEqual(
-        "Assignment(a = Exponent(a ** b))",
+        "Assignment(a = FunctionCall(opExponent(a, b)))",
         parseAndExpand("a **= b")
     );
     assertEqual(
-        "Assignment(a = Multiply(a * b))",
+        "Assignment(a = FunctionCall(opMultiply(a, b)))",
         parseAndExpand("a *= b")
     );
     assertEqual(
-        "Assignment(a = Multiply(a / b))",
+        "Assignment(a = FunctionCall(opDivide(a, b)))",
         parseAndExpand("a /= b")
     );
     assertEqual(
-        "Assignment(a = Multiply(a % b))",
+        "Assignment(a = FunctionCall(opRemainder(a, b)))",
         parseAndExpand("a %= b")
     );
     assertEqual(
-        "Assignment(a = Add(a + b))",
+        "Assignment(a = FunctionCall(opAdd(a, b)))",
         parseAndExpand("a += b")
     );
     assertEqual(
-        "Assignment(a = Add(a - b))",
+        "Assignment(a = FunctionCall(opSubtract(a, b)))",
         parseAndExpand("a -= b")
     );
     assertEqual(
-        "Assignment(a = Shift(a << b))",
+        "Assignment(a = FunctionCall(opLeftShift(a, b)))",
         parseAndExpand("a <<= b")
     );
     assertEqual(
-        "Assignment(a = Shift(a >> b))",
+        "Assignment(a = FunctionCall(opArithmeticRightShift(a, b)))",
         parseAndExpand("a >>= b")
     );
     assertEqual(
-        "Assignment(a = Shift(a >>> b))",
+        "Assignment(a = FunctionCall(opLogicalRightShift(a, b)))",
         parseAndExpand("a >>>= b")
     );
     assertEqual(
-        "Assignment(a = BitwiseAnd(a & b))",
+        "Assignment(a = FunctionCall(opBitwiseAnd(a, b)))",
         parseAndExpand("a &= b")
     );
     assertEqual(
-        "Assignment(a = BitwiseOr(a | b))",
+        "Assignment(a = FunctionCall(opBitwiseOr(a, b)))",
         parseAndExpand("a |= b")
     );
     assertEqual(
-        "Assignment(a = BitwiseXor(a ^ b))",
+        "Assignment(a = FunctionCall(opBitwiseXor(a, b)))",
         parseAndExpand("a ^= b")
     );
     assertEqual(
-        "Assignment(a = LogicalAnd(a && b))",
+        "Assignment(a = FunctionCall(opLogicalAnd(a, b)))",
         parseAndExpand("a &&= b")
     );
     assertEqual(
-        "Assignment(a = LogicalOr(a || b))",
+        "Assignment(a = FunctionCall(opLogicalOr(a, b)))",
         parseAndExpand("a ||= b")
     );
     assertEqual(
-        "Assignment(a = LogicalXor(a ^^ b))",
+        "Assignment(a = FunctionCall(opLogicalXor(a, b)))",
         parseAndExpand("a ^^= b")
     );
     assertEqual(
-        "Assignment(a = Concatenate(a ~ b))",
+        "Assignment(a = FunctionCall(opConcatenate(a, b)))",
         parseAndExpand("a ~= b")
     );
 }
 
 unittest {
     assertEqual(
-        "Assignment(a = ValueCompare(IntegerLiteral(1) > IntegerLiteral(2)))",
+        "Assignment(a = FunctionCall(opGreaterThan(IntegerLiteral(1), IntegerLiteral(2))))",
         parseAndExpand("a = 1 > 2")
     );
     assertEqual(
-        "Assignment(a = LogicalAnd(LogicalAnd(ValueCompare(c == b) && ValueCompare(b != m)) && ValueCompare(m < j)))",
+        "Assignment(a = FunctionCall(opLogicalAnd(FunctionCall(opLogicalAnd(FunctionCall(opEquals(c, b)), "
+            ~ "FunctionCall(opNotEquals(b, m)))), FunctionCall(opLesserThan(m, j)))))",
         parseAndExpand("a = c == b != m < j")
     );
     assertEqual(
@@ -89,8 +90,8 @@ unittest {
         parseAndExpand("a = a :: b")
     );
     assertEqual(
-        "Assignment(a = LogicalAnd(ValueCompare(m == b) && TypeCompare(b !: o)))",
-        parseAndExpand("a = m == b !: o")
+        "Assignment(a = FunctionCall(opLogicalAnd(ValueCompare(m === b), TypeCompare(b !: o))))",
+        parseAndExpand("a = m === b !: o")
     );
 }
 

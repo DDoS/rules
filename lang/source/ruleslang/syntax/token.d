@@ -93,7 +93,11 @@ public template SourceToken(Kind kind) {
         }
 
         public this(dstring source, size_t start, size_t end) {
-            this.source = source.to!string;
+            this(source.to!string, start, end);
+        }
+
+        public this(string source, size_t start, size_t end) {
+            this.source = source;
             if (end < start) {
                 throw new Exception("A token cannot end before it has started");
             }
