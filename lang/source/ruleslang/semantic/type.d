@@ -5,7 +5,9 @@ import std.algorithm.searching : canFind;
 import std.exception : assumeUnique;
 import std.math: isNaN, isInfinity;
 import std.utf : codeLength;
+import std.variant : Variant;
 
+import ruleslang.semantic.context;
 import ruleslang.util;
 
 public enum TypeConversion {
@@ -88,9 +90,9 @@ public immutable class AtomicType : Type {
     public static immutable AtomicType FP32 = new immutable AtomicType("fp32", 32, true, true);
     public static immutable AtomicType FP64 = new immutable AtomicType("fp64", 64, true, true);
     private static immutable immutable(AtomicType)[][immutable(AtomicType)] CONVERSIONS;
-    private static immutable immutable(AtomicType)[] INTEGERS = [
-        SINT8, UINT8, SINT16, UINT16, SINT32, UINT32, SINT64, UINT64
-    ];
+    private static immutable immutable(AtomicType)[immutable(AtomicType)] UNSIGNED_TO_SIGNED;
+    private static immutable immutable(AtomicType)[immutable(AtomicType)] SIGNED_TO_UNSIGNED;
+    private static immutable immutable(AtomicType)[immutable(AtomicType)] INTEGER_TO_FLOAT;
     private string name;
     private uint bitCount;
     private bool signed;
@@ -114,6 +116,22 @@ public immutable class AtomicType : Type {
         auto conv = subtypes.transitiveClosure();
         conv.rehash;
         CONVERSIONS = conv.assumeUnique();
+
+        immutable(AtomicType)[immutable(AtomicType)] unsignedToSigned = [
+           UINT8: SINT8, UINT16: SINT16, UINT32: SINT32, UINT64: SINT64,
+        ];
+        UNSIGNED_TO_SIGNED = unsignedToSigned.assumeUnique();
+
+        immutable(AtomicType)[immutable(AtomicType)] signedToUnsigned = [
+           SINT8: UINT8, SINT16: UINT16, SINT32: UINT32, SINT64: UINT64,
+        ];
+        SIGNED_TO_UNSIGNED = signedToUnsigned.assumeUnique();
+
+        immutable(AtomicType)[immutable(AtomicType)] integerToFloat = [
+           UINT8: FP16, SINT8: FP16, UINT16: FP16, SINT16: FP16,
+           UINT32: FP32, SINT32: FP32, UINT64: FP32, SINT64: FP32,
+        ];
+        INTEGER_TO_FLOAT = integerToFloat.assumeUnique();
     }
 
     private this(string name, uint bitCount, bool signed, bool fp) {
@@ -204,6 +222,60 @@ public immutable class AtomicType : Type {
         return true;
     }
 
+    public immutable(AtomicType) unaryPromotion(IntrinsicFunction func) {
+        // The only promotion is to convert unsigned integer to signed when negating
+        if (!isSigned() && func == IntrinsicFunction.NEGATE_FUNCTION) {
+            return UNSIGNED_TO_SIGNED[this];
+        }
+        return this;
+    }
+
+    public immutable(AtomicType) binaryPromotion(immutable AtomicType second) {
+        // For same types, don't change anything
+        if (second is this) {
+            return this;
+        }
+        // Don't promote boolean types
+        if (this.isBoolean() || second.isBoolean()) {
+            throw new Exception("Cannot have only one boolean type");
+        }
+        // If either is a float, convert both to float and pick the biggest
+        if (this.isFloat() || second.isFloat) {
+            auto firstFloat = this.isFloat() ? this : INTEGER_TO_FLOAT[this];
+            auto secondFloat = second.isFloat() ? second : INTEGER_TO_FLOAT[second];
+            return firstFloat.bitCount >= secondFloat.bitCount ? firstFloat : secondFloat;
+        }
+        // Otherwise both are integers. Start by making them of the same largest size
+        auto firstInt = this.bitCount < second.bitCount ? second.copySigness(this) : this;
+        auto secondInt = second.bitCount < this.bitCount ? this.copySigness(second) : second;
+        // If both have the same signess, use that
+        if (firstInt.isSigned() == secondInt.isSigned()) {
+            return this;
+        }
+        // Otherwise use signed
+        return firstInt.isSigned() ? firstInt : secondInt;
+    }
+
+    private immutable(AtomicType) copySigness(immutable AtomicType second) {
+        if (this.isSigned() == second.isSigned()) {
+            return this;
+        }
+        return this.isSigned() ? SIGNED_TO_UNSIGNED[this] : UNSIGNED_TO_SIGNED[this];
+    }
+
+    public immutable(AtomicLiteralType) literalTypeOf(Variant value) {
+        if (isBoolean()) {
+            assert(0);
+        }
+        if (isFloat()) {
+            return new immutable FloatLiteralType(value.get!double);
+        }
+        if (isSigned()) {
+            return new immutable SignedIntegerLiteralType(value.get!long);
+        }
+        return new immutable UnsignedIntegerLiteralType(value.get!ulong);
+    }
+
     public override string toString() {
         return name;
     }
@@ -221,7 +293,16 @@ private mixin template literalTypeOpEquals(L) {
     }
 }
 
-public immutable class SignedIntegerLiteralType : Type {
+public immutable interface LiteralType : Type {
+    public immutable(LiteralType) applyUnaryFunction(IntrinsicFunction func);
+    public immutable(LiteralType) applyBinaryFunction(IntrinsicFunction func, inout LiteralType second);
+}
+
+public immutable interface AtomicLiteralType : LiteralType {
+    public immutable(AtomicType) getBackingAtomicType();
+}
+
+public immutable class SignedIntegerLiteralType : AtomicLiteralType {
     private long _value;
 
     public this(long value) {
@@ -253,6 +334,31 @@ public immutable class SignedIntegerLiteralType : Type {
         return false;
     }
 
+    public override immutable(AtomicType) getBackingAtomicType() {
+        return AtomicType.SINT64;
+    }
+
+    public override immutable(AtomicLiteralType) applyUnaryFunction(IntrinsicFunction func) {
+        auto promoted = getBackingAtomicType().unaryPromotion(func);
+        long value = _value;
+        switch (func) with (IntrinsicFunction) {
+            case NEGATE_FUNCTION:
+                return promoted.literalTypeOf(Variant(-value));
+            case REAFFIRM_FUNCTION:
+                return promoted.literalTypeOf(Variant(+value));
+            case LOGICAL_NOT_FUNCTION:
+                throw new Exception("Cannot apply opLogicalNot to a signed integer");
+            case BITWISE_NOT_FUNCTION:
+                return promoted.literalTypeOf(Variant(~value));
+            default:
+                assert(0);
+        }
+    }
+
+    public override immutable(LiteralType) applyBinaryFunction(IntrinsicFunction func, inout LiteralType second) {
+        return this;
+    }
+
     public override string toString() {
         return format("lit_sint64(%d)", _value);
     }
@@ -260,7 +366,7 @@ public immutable class SignedIntegerLiteralType : Type {
     mixin literalTypeOpEquals!SignedIntegerLiteralType;
 }
 
-public immutable class UnsignedIntegerLiteralType : Type {
+public immutable class UnsignedIntegerLiteralType : AtomicLiteralType {
     private ulong _value;
 
     public this(ulong value) {
@@ -292,6 +398,18 @@ public immutable class UnsignedIntegerLiteralType : Type {
         return false;
     }
 
+    public override immutable(AtomicType) getBackingAtomicType() {
+        return AtomicType.UINT64;
+    }
+
+    public override immutable(LiteralType) applyUnaryFunction(IntrinsicFunction func) {
+        return this;
+    }
+
+    public override immutable(LiteralType) applyBinaryFunction(IntrinsicFunction func, inout LiteralType other) {
+        return this;
+    }
+
     public override string toString() {
         return format("lit_uint64(%d)", _value);
     }
@@ -299,7 +417,7 @@ public immutable class UnsignedIntegerLiteralType : Type {
     mixin literalTypeOpEquals!UnsignedIntegerLiteralType;
 }
 
-public immutable class FloatLiteralType : Type {
+public immutable class FloatLiteralType : AtomicLiteralType {
     private double _value;
 
     public this(double value) {
@@ -324,6 +442,18 @@ public immutable class FloatLiteralType : Type {
             return true;
         }
         return false;
+    }
+
+    public override immutable(AtomicType) getBackingAtomicType() {
+        return AtomicType.FP64;
+    }
+
+    public override immutable(LiteralType) applyUnaryFunction(IntrinsicFunction func) {
+        return this;
+    }
+
+    public override immutable(LiteralType) applyBinaryFunction(IntrinsicFunction func, inout LiteralType other) {
+        return this;
     }
 
     public override string toString() {
@@ -431,7 +561,7 @@ public immutable class SizedArrayType : ArrayType {
     }
 }
 
-public immutable class StringLiteralType : SizedArrayType {
+public immutable class StringLiteralType : SizedArrayType, LiteralType {
     private dstring _value;
     private ulong utf8Length;
     private ulong utf16Length;
@@ -482,6 +612,14 @@ public immutable class StringLiteralType : SizedArrayType {
             return true;
         }
         return false;
+    }
+
+    public override immutable(LiteralType) applyUnaryFunction(IntrinsicFunction func) {
+        return this;
+    }
+
+    public override immutable(LiteralType) applyBinaryFunction(IntrinsicFunction func, inout LiteralType other) {
+        return this;
     }
 
     public override string toString() {

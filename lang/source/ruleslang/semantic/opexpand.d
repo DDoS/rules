@@ -204,7 +204,7 @@ private class OperatorConverter : StatementMapper {
         return `
         if (op == "` ~ op ~ `") {
             return new FunctionCall(
-                new NameReference([new Identifier(IntrisicNameSpace.` ~ func ~ `, op.start, op.end)]),
+                new NameReference([new Identifier(IntrinsicFunction.` ~ func ~ `, op.start, op.end)]),
                 [` ~ args ~ `], expression.start, expression.end
             );
         }

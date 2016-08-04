@@ -8,7 +8,7 @@ public class Context {
     private ForeignNameSpace foreignNames;
     private ImportedNameSpace importedNames;
     private ScopeNameSpace scopeNames;
-    private IntrisicNameSpace intrisicNames;
+    private IntrinsicNameSpace intrisicNames;
 }
 
 public interface NameSpace {
@@ -33,37 +33,48 @@ public class ScopeNameSpace : NameSpace {
     }
 }
 
-public class IntrisicNameSpace : NameSpace {
-    public static immutable string NEGATE_FUNCTION = "opNegate";
-    public static immutable string REAFFIRM_FUNCTION = "opReaffirm";
-    public static immutable string LOGICAL_NOT_FUNCTION = "opLogicalNot";
-    public static immutable string BITWISE_NOT_FUNCTION = "opBitwiseNot";
-    private static immutable string[] unaryOperators = [
+public enum IntrinsicFunction : string {
+    NEGATE_FUNCTION = "opNegate",
+    REAFFIRM_FUNCTION = "opReaffirm",
+    LOGICAL_NOT_FUNCTION = "opLogicalNot",
+    BITWISE_NOT_FUNCTION = "opBitwiseNot",
+    EXPONENT_FUNCTION = "opExponent",
+    MULTIPLY_FUNCTION = "opMultiply",
+    DIVIDE_FUNCTION = "opDivide",
+    REMAINDER_FUNCTION = "opRemainder",
+    ADD_FUNCTION = "opAdd",
+    SUBTRACT_FUNCTION = "opSubtract",
+    LEFT_SHIFT_FUNCTION = "opLeftShift",
+    ARITHMETIC_RIGHT_SHIFT_FUNCTION = "opArithmeticRightShift",
+    LOGICAL_RIGHT_SHIFT_FUNCTION = "opLogicalRightShift",
+    EQUALS_FUNCTION = "opEquals",
+    NOT_EQUALS_FUNCTION = "opNotEquals",
+    LESSER_THAN_FUNCTION = "opLesserThan",
+    GREATER_THAN_FUNCTION = "opGreaterThan",
+    LESSER_OR_EQUAL_TO_FUNCTION = "opLesserOrEqualTo",
+    GREATER_OR_EQUAL_TO_FUNCTION = "opGreaterOrEqualTo",
+    BITWISE_AND_FUNCTION = "opBitwiseAnd",
+    BITWISE_XOR_FUNCTION = "opBitwiseXor",
+    BITWISE_OR_FUNCTION = "opBitwiseOr",
+    LOGICAL_AND_FUNCTION = "opLogicalAnd",
+    LOGICAL_XOR_FUNCTION = "opLogicalXor",
+    LOGICAL_OR_FUNCTION = "opLogicalOr",
+    CONCATENATE_FUNCTION = "opConcatenate",
+    RANGE_FUNCTION = "opRange"
+}
+
+public class IntrinsicNameSpace : NameSpace {
+    /*private static immutable string[] unaryOperators = [
         NEGATE_FUNCTION, REAFFIRM_FUNCTION, LOGICAL_NOT_FUNCTION, BITWISE_NOT_FUNCTION
     ];
-    public static immutable string EXPONENT_FUNCTION = "opExponent";
-    public static immutable string MULTIPLY_FUNCTION = "opMultiply";
-    public static immutable string DIVIDE_FUNCTION = "opDivide";
-    public static immutable string REMAINDER_FUNCTION = "opRemainder";
-    public static immutable string ADD_FUNCTION = "opAdd";
-    public static immutable string SUBTRACT_FUNCTION = "opSubtract";
-    public static immutable string LEFT_SHIFT_FUNCTION = "opLeftShift";
-    public static immutable string ARITHMETIC_RIGHT_SHIFT_FUNCTION = "opArithmeticRightShift";
-    public static immutable string LOGICAL_RIGHT_SHIFT_FUNCTION = "opLogicalRightShift";
-    public static immutable string EQUALS_FUNCTION = "opEquals";
-    public static immutable string NOT_EQUALS_FUNCTION = "opNotEquals";
-    public static immutable string LESSER_THAN_FUNCTION = "opLesserThan";
-    public static immutable string GREATER_THAN_FUNCTION = "opGreaterThan";
-    public static immutable string LESSER_OR_EQUAL_TO_FUNCTION = "opLesserOrEqualTo";
-    public static immutable string GREATER_OR_EQUAL_TO_FUNCTION = "opGreaterOrEqualTo";
-    public static immutable string BITWISE_AND_FUNCTION = "opBitwiseAnd";
-    public static immutable string BITWISE_XOR_FUNCTION = "opBitwiseXor";
-    public static immutable string BITWISE_OR_FUNCTION = "opBitwiseOr";
-    public static immutable string LOGICAL_AND_FUNCTION = "opLogicalAnd";
-    public static immutable string LOGICAL_XOR_FUNCTION = "opLogicalXor";
-    public static immutable string LOGICAL_OR_FUNCTION = "opLogicalOr";
-    public static immutable string CONCATENATE_FUNCTION = "opConcatenate";
-    public static immutable string RANGE_FUNCTION = "opRange";
+    private static immutable string[] binaryOperators = [
+        EXPONENT_FUNCTION, MULTIPLY_FUNCTION, DIVIDE_FUNCTION, REMAINDER_FUNCTION,
+        ADD_FUNCTION, SUBTRACT_FUNCTION, LEFT_SHIFT_FUNCTION, ARITHMETIC_RIGHT_SHIFT_FUNCTION,
+        LOGICAL_RIGHT_SHIFT_FUNCTION, EQUALS_FUNCTION, NOT_EQUALS_FUNCTION, LESSER_THAN_FUNCTION,
+        GREATER_THAN_FUNCTION, LESSER_OR_EQUAL_TO_FUNCTION, GREATER_OR_EQUAL_TO_FUNCTION, BITWISE_AND_FUNCTION,
+        BITWISE_XOR_FUNCTION, BITWISE_OR_FUNCTION, LOGICAL_AND_FUNCTION, LOGICAL_XOR_FUNCTION,
+        LOGICAL_OR_FUNCTION, CONCATENATE_FUNCTION, RANGE_FUNCTION
+    ];*/
 
     public override Function[] getFunctions(string name, inout Type[] argumentTypes...) {
         return [];
