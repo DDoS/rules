@@ -67,29 +67,35 @@ unittest {
 }
 
 unittest {
-    assertLexNoIndent("0b0", "IntegerLiteral(0b0)");
-    assertLexNoIndent("0b11", "IntegerLiteral(0b11)");
-    assertLexNoIndent("0B110101", "IntegerLiteral(0B110101)");
-    assertLexNoIndent("0b1101_0001", "IntegerLiteral(0b1101_0001)");
-    assertLexNoIndent("0b1101__0001", "IntegerLiteral(0b1101__0001)");
-    assertLexNoIndent("0b1101_0100_0001", "IntegerLiteral(0b1101_0100_0001)");
-    assertLexNoIndent("0b1101_0100____0001", "IntegerLiteral(0b1101_0100____0001)");
+    assertLexNoIndent("0b0", "SignedIntegerLiteral(0b0)");
+    assertLexNoIndent("0b11", "SignedIntegerLiteral(0b11)");
+    assertLexNoIndent("0B110101", "SignedIntegerLiteral(0B110101)");
+    assertLexNoIndent("0b1101_0001", "SignedIntegerLiteral(0b1101_0001)");
+    assertLexNoIndent("0b1101__0001", "SignedIntegerLiteral(0b1101__0001)");
+    assertLexNoIndent("0b1101_0100_0001", "SignedIntegerLiteral(0b1101_0100_0001)");
+    assertLexNoIndent("0b1101_0100____0001", "SignedIntegerLiteral(0b1101_0100____0001)");
+    assertLexNoIndent("0b0u", "UnsignedIntegerLiteral(0b0)");
+    assertLexNoIndent("0b0U", "UnsignedIntegerLiteral(0b0)");
 
-    assertLexNoIndent("0", "IntegerLiteral(0)");
-    assertLexNoIndent("012", "IntegerLiteral(012)");
-    assertLexNoIndent("564", "IntegerLiteral(564)");
-    assertLexNoIndent("5_000", "IntegerLiteral(5_000)");
-    assertLexNoIndent("5__000", "IntegerLiteral(5__000)");
-    assertLexNoIndent("5_000_000", "IntegerLiteral(5_000_000)");
-    assertLexNoIndent("5_000____000", "IntegerLiteral(5_000____000)");
+    assertLexNoIndent("0", "SignedIntegerLiteral(0)");
+    assertLexNoIndent("012", "SignedIntegerLiteral(012)");
+    assertLexNoIndent("564", "SignedIntegerLiteral(564)");
+    assertLexNoIndent("5_000", "SignedIntegerLiteral(5_000)");
+    assertLexNoIndent("5__000", "SignedIntegerLiteral(5__000)");
+    assertLexNoIndent("5_000_000", "SignedIntegerLiteral(5_000_000)");
+    assertLexNoIndent("5_000____000", "SignedIntegerLiteral(5_000____000)");
+    assertLexNoIndent("564u", "UnsignedIntegerLiteral(564)");
+    assertLexNoIndent("564U", "UnsignedIntegerLiteral(564)");
 
-    assertLexNoIndent("0x0", "IntegerLiteral(0x0)");
-    assertLexNoIndent("0xAf", "IntegerLiteral(0xAf)");
-    assertLexNoIndent("0XA24E4", "IntegerLiteral(0XA24E4)");
-    assertLexNoIndent("0xDEAD_BEEF", "IntegerLiteral(0xDEAD_BEEF)");
-    assertLexNoIndent("0x2192__CAFE", "IntegerLiteral(0x2192__CAFE)");
-    assertLexNoIndent("0xBABE_291c_13b2", "IntegerLiteral(0xBABE_291c_13b2)");
-    assertLexNoIndent("0x4235_1232____54fd3", "IntegerLiteral(0x4235_1232____54fd3)");
+    assertLexNoIndent("0x0", "SignedIntegerLiteral(0x0)");
+    assertLexNoIndent("0xAf", "SignedIntegerLiteral(0xAf)");
+    assertLexNoIndent("0XA24E4", "SignedIntegerLiteral(0XA24E4)");
+    assertLexNoIndent("0xDEAD_BEEF", "SignedIntegerLiteral(0xDEAD_BEEF)");
+    assertLexNoIndent("0x2192__CAFE", "SignedIntegerLiteral(0x2192__CAFE)");
+    assertLexNoIndent("0xBABE_291c_13b2", "SignedIntegerLiteral(0xBABE_291c_13b2)");
+    assertLexNoIndent("0x4235_1232____54fd3", "SignedIntegerLiteral(0x4235_1232____54fd3)");
+    assertLexNoIndent("0xAfu", "UnsignedIntegerLiteral(0xAf)");
+    assertLexNoIndent("0xAfU", "UnsignedIntegerLiteral(0xAf)");
 }
 
 unittest {
@@ -125,17 +131,17 @@ unittest {
     // Not necessarily representative of the actual language, just to test the lexer
     assertLex(
         "# Computes and prints the factorial of n\n" ~
-        "let n = 12; var fact = 1\n" ~
+        "let n = 12u; var fact = 1\n" ~
         "for var i = 2; i <= n; i += 1\n" ~
         "    fact *= i\n" ~
         "printfln(\"%d! is %d\", n, fact)\n" ~
         "## Random block comment ##",
         "Indentation()",
-        "Indentation()", "Keyword(let)", "Identifier(n)", "Symbol(=)", "IntegerLiteral(12)", "Terminator(;)",
-        "Keyword(var)", "Identifier(fact)", "Symbol(=)", "IntegerLiteral(1)",
-        "Indentation()", "Keyword(for)", "Keyword(var)", "Identifier(i)", "Symbol(=)", "IntegerLiteral(2)", "Terminator(;)",
+        "Indentation()", "Keyword(let)", "Identifier(n)", "Symbol(=)", "UnsignedIntegerLiteral(12)", "Terminator(;)",
+        "Keyword(var)", "Identifier(fact)", "Symbol(=)", "SignedIntegerLiteral(1)",
+        "Indentation()", "Keyword(for)", "Keyword(var)", "Identifier(i)", "Symbol(=)", "SignedIntegerLiteral(2)", "Terminator(;)",
         "Identifier(i)", "Symbol(<=)", "Identifier(n)", "Terminator(;)",
-        "Identifier(i)", "Symbol(+=)", "IntegerLiteral(1)",
+        "Identifier(i)", "Symbol(+=)", "SignedIntegerLiteral(1)",
         "Indentation(    )", "Identifier(fact)", "Symbol(*=)", "Identifier(i)",
         "Indentation()", "Identifier(printfln)", "Symbol(()", "StringLiteral(\"%d! is %d\")", "Symbol(,)",
         "Identifier(n)", "Symbol(,)", "Identifier(fact)", "Symbol())",

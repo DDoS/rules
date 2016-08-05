@@ -57,13 +57,11 @@ public class TypeConversionChain {
     }
 
     private mixin template generateBuilderMethod(string conversion) {
-        mixin(
-            `
-            public TypeConversionChain then` ~ conversion.asciiSnakeToCamelCase(true) ~ `() {
+        mixin (
+            `public TypeConversionChain then` ~ conversion.asciiSnakeToCamelCase(true) ~ `() {
                 chain ~= TypeConversion.` ~ conversion ~ `;
                 return this;
-            }
-            `
+            }`
         );
     }
 }

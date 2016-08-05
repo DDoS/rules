@@ -29,7 +29,7 @@ unittest {
         parseTestExpression("hello{2: test, 0xf1a: other, 0b00100: more}")
     );
     assertEqual(
-        "Initializer(test[]{IntegerLiteral(1), StringLiteral(\"2\"), CompositeLiteral({hey: FloatLiteral(2.1)})})",
+        "Initializer(test[]{SignedIntegerLiteral(1), StringLiteral(\"2\"), CompositeLiteral({hey: FloatLiteral(2.1)})})",
         parseTestExpression("test[] {1, \"2\", {hey: 2.1}}")
     );
     assertEqual(
@@ -44,11 +44,11 @@ unittest {
         parseTestExpression("\"test\".length")
     );
     assertEqual(
-        "MemberAccess(MemberAccess(IntegerLiteral(5).ucc).test)",
+        "MemberAccess(MemberAccess(SignedIntegerLiteral(5).ucc).test)",
         parseTestExpression("5.ucc.test")
     );
     assertEqual(
-        "MemberAccess(MemberAccess(IntegerLiteral(0xf).ucc).test)",
+        "MemberAccess(MemberAccess(SignedIntegerLiteral(0xf).ucc).test)",
         parseTestExpression("0xf.ucc.test")
     );
     assertEqual(
@@ -56,7 +56,7 @@ unittest {
         parseTestExpression("5..ucc.test")
     );
     assertEqual(
-        "ArrayAccess(StringLiteral(\"test\")[IntegerLiteral(2)])",
+        "ArrayAccess(StringLiteral(\"test\")[SignedIntegerLiteral(2)])",
         parseTestExpression("\"test\"[2]")
     );
     assertEqual(
@@ -64,7 +64,7 @@ unittest {
         parseTestExpression("\"test\".len()")
     );
     assertEqual(
-        "FunctionCall(MemberAccess(StringLiteral(\"test\").substring)(IntegerLiteral(1), IntegerLiteral(3)))",
+        "FunctionCall(MemberAccess(StringLiteral(\"test\").substring)(SignedIntegerLiteral(1), SignedIntegerLiteral(3)))",
         parseTestExpression("\"test\".substring(1, 3)")
     );
 }
@@ -98,7 +98,7 @@ unittest {
 
 unittest {
     assertEqual(
-        "Exponent(test ** IntegerLiteral(12))",
+        "Exponent(test ** SignedIntegerLiteral(12))",
         parseTestExpression("test ** 12")
     );
     assertEqual(
@@ -106,7 +106,7 @@ unittest {
         parseTestExpression("test ** another ** more")
     );
     assertEqual(
-        "Exponent(MemberAccess(StringLiteral(\"1\").length) ** Sign(-IntegerLiteral(2)))",
+        "Exponent(MemberAccess(StringLiteral(\"1\").length) ** Sign(-SignedIntegerLiteral(2)))",
         parseTestExpression("\"1\".length ** -2")
     );
 }

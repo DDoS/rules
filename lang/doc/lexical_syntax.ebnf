@@ -63,6 +63,12 @@ binaryInteger = "0", ("b" | "B"), binaryDigitSequence ;
 decimalInteger = decimalDigitSequence ;
 hexInteger = "0", ("x" | "X"), hexDigitSequence ;
 
+(* To mark an integer literal as unsigned, we use a suffix *)
+unsignedSuffix = "u" | "U" ;
+
+signedIntegerLiteral = decimalInteger | hexInteger | binaryInteger ;
+unsignedIntegerLiteral = signedIntegerLiteral, [unsignedSuffix] ;
+
 exponentPart = ("e" | "E"), [sign], decimalDigitSequence ;
 (* Float numbers are like: 0.4, 1.28, .5, .3e2, 2., 1.e2, 3.4e12, 5_0e-9 *)
 float = ([decimalDigitSequence], ".", decimalDigitSequence, [exponentPart])
@@ -87,7 +93,7 @@ string = '"', {
 
 identifierToken = identifierStart, {identifierBody} ;
 literalToken = (
-    decimalInteger | hexInteger | binaryInteger | float | boolean | string
+    signedIntegerLiteral | unsignedIntegerLiteral | float | boolean | string
 ) ;
 symbolToken = symbol ;
 keywordToken = keyword ;

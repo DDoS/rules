@@ -19,9 +19,18 @@ public immutable class Interpreter {
         return new immutable StringLiteralNode(expression.getValue());
     }
 
-    public immutable(Node) interpretIntegerLiteral(IntegerLiteral integer) {
+    public immutable(Node) interpretSignedIntegerLiteral(SignedIntegerLiteral integer) {
         bool overflow;
-        auto value = integer.getValue!ulong(false, overflow);
+        auto value = integer.getValue(false, overflow);
+        if (overflow) {
+            throw new SourceException("Signed integer overflow", integer);
+        }
+        return new immutable SignedIntegerLiteralNode(value);
+    }
+
+    public immutable(Node) interpretUnsignedIntegerLiteral(UnsignedIntegerLiteral integer) {
+        bool overflow;
+        auto value = integer.getValue(overflow);
         if (overflow) {
             throw new SourceException("Unsigned integer overflow", integer);
         }
@@ -66,15 +75,6 @@ public immutable class Interpreter {
     }
 
     public immutable(Node) interpretSign(Sign sign) {
-        auto integer = cast(IntegerLiteral) sign.inner;
-        if (integer && integer.radix == 10) {
-            bool overflow;
-            auto value = integer.getValue!long(sign.operator == "-", overflow);
-            if (overflow) {
-                throw new SourceException("Signed integer overflow", sign);
-            }
-            return new immutable SignedIntegerLiteralNode(value);
-        }
         return NullNode.INSTANCE;
     }
 

@@ -77,7 +77,7 @@ unittest {
 
 unittest {
     assertEqual(
-        "Assignment(a = FunctionCall(opGreaterThan(IntegerLiteral(1), IntegerLiteral(2))))",
+        "Assignment(a = FunctionCall(opGreaterThan(SignedIntegerLiteral(1), SignedIntegerLiteral(2))))",
         parseAndExpand("a = 1 > 2")
     );
     assertEqual(

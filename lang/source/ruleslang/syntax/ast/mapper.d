@@ -20,7 +20,11 @@ public abstract class ExpressionMapper : TypeMapper {
         return expression;
     }
 
-    public Expression mapIntegerLiteral(IntegerLiteral expression) {
+    public Expression mapSignedIntegerLiteral(SignedIntegerLiteral expression) {
+        return expression;
+    }
+
+    public Expression mapUnsignedIntegerLiteral(UnsignedIntegerLiteral expression) {
         return expression;
     }
 

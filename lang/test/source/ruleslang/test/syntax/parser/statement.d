@@ -10,7 +10,7 @@ import ruleslang.test.assertion;
 
 unittest {
     assertEqual(
-        "Assignment(a = IntegerLiteral(1))",
+        "Assignment(a = SignedIntegerLiteral(1))",
         parse("a = 1")
     );
     assertEqual(
@@ -33,7 +33,7 @@ unittest {
         parse("a()")
     );
     assertEqual(
-        "FunctionCall(a(IntegerLiteral(1), b))",
+        "FunctionCall(a(SignedIntegerLiteral(1), b))",
         parse("a(1, b)")
     );
     assertEqual(
@@ -45,7 +45,7 @@ unittest {
         parse("\"test\".length()")
     );
     assertEqual(
-        "FunctionCall(MemberAccess(Infix(IntegerLiteral(2) log b).test)())",
+        "FunctionCall(MemberAccess(Infix(SignedIntegerLiteral(2) log b).test)())",
         parse("(2 log b).test()")
     );
 }
@@ -53,7 +53,7 @@ unittest {
 unittest {
     assertEqual(
         "FunctionCall(a())\n" ~
-            "Assignment(a = IntegerLiteral(1))\n" ~
+            "Assignment(a = SignedIntegerLiteral(1))\n" ~
             "FunctionCall(a.b())\n" ~
             "Assignment(a.b *= v)",
         parse("a()\na = 1; a.b();\n\t\ra.b *= v")

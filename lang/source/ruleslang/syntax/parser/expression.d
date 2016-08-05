@@ -13,7 +13,8 @@ import ruleslang.util;
 private LabeledExpression parseCompositeLiteralPart(Tokenizer tokens) {
     Token label = null;
     auto headKind = tokens.head().getKind();
-    if (headKind == Kind.IDENTIFIER || headKind == Kind.INTEGER_LITERAL) {
+    if (headKind == Kind.IDENTIFIER || headKind == Kind.SIGNED_INTEGER_LITERAL
+            || headKind == Kind.UNSIGNED_INTEGER_LITERAL) {
         label = tokens.head();
         tokens.savePosition();
         tokens.advance();
@@ -161,7 +162,7 @@ private Expression parseAccess(Tokenizer tokens, Expression value) {
         tokens.advance();
         // The form decimalInt.identifier is lexed as float(numberSeq.)identifier
         // We detect it and convert it to first form here
-        auto decimalInt = new IntegerLiteral(token.getSource()[0 .. $ - 1].to!dstring, token.start);
+        auto decimalInt = new SignedIntegerLiteral(token.getSource()[0 .. $ - 1].to!dstring, token.start);
         return parseAccess(tokens, new MemberAccess(decimalInt, name));
     }
     return value;

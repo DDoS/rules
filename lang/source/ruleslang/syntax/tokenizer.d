@@ -274,13 +274,25 @@ private Token collectNumberLiteral(DCharReader chars) {
             // Binary integer
             chars.collect();
             chars.collectDigitSequence!isBinaryDigit();
-            return new IntegerLiteral(chars.popCollected(), position);
+            auto digits = chars.popCollected();
+            // Check if unsigned
+            if (chars.head().isUnsignedSuffix()) {
+                chars.advance();
+                return new UnsignedIntegerLiteral(digits, position);
+            }
+            return new SignedIntegerLiteral(digits, position);
         }
         if (chars.head() == 'x' || chars.head() == 'X') {
             // Hexadecimal integer
             chars.collect();
             chars.collectDigitSequence!isHexDigit();
-            return new IntegerLiteral(chars.popCollected(), position);
+            auto digits = chars.popCollected();
+            // Check if unsigned
+            if (chars.head().isUnsignedSuffix()) {
+                chars.advance();
+                return new UnsignedIntegerLiteral(digits, position);
+            }
+            return new SignedIntegerLiteral(digits, position);
         }
         if (chars.head().isDecimalDigit()) {
             // Not just a zero, collect more digits
@@ -305,8 +317,13 @@ private Token collectNumberLiteral(DCharReader chars) {
     if (chars.collectFloatLiteralExponent()) {
         return new FloatLiteral(chars.popCollected(), position);
     }
-    // Else it's a decimal integer and there's nothing more to do
-    return new IntegerLiteral(chars.popCollected(), position);
+    // Else it's a decimal integer and there's nothing more to do, just check if unsigned
+    auto digits = chars.popCollected();
+    if (chars.head().isUnsignedSuffix()) {
+        chars.advance();
+        return new UnsignedIntegerLiteral(digits, position);
+    }
+    return new SignedIntegerLiteral(digits, position);
 }
 
 private Token completeFloatLiteralStartingWithDecimalSeparator(DCharReader chars, size_t position) {
@@ -400,4 +417,8 @@ private bool isKeyword(dstring source) {
 
 private bool isBooleanLiteral(dstring source) {
     return source == FALSE_LITERAL || source == TRUE_LITERAL;
+}
+
+private bool isUnsignedSuffix(dchar c) {
+    return c == 'u' || c == 'U';
 }

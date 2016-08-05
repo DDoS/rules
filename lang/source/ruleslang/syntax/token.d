@@ -38,7 +38,8 @@ public enum Kind {
     OTHER_SYMBOL,
     BOOLEAN_LITERAL,
     STRING_LITERAL,
-    INTEGER_LITERAL,
+    SIGNED_INTEGER_LITERAL,
+    UNSIGNED_INTEGER_LITERAL,
     FLOAT_LITERAL,
     EOF
 }
@@ -275,7 +276,11 @@ public class StringLiteral : SourceToken!(Kind.STRING_LITERAL), Expression {
     }
 }
 
-public class IntegerLiteral : SourceToken!(Kind.INTEGER_LITERAL), Expression {
+public alias SignedIntegerLiteral = IntegerLiteral!true;
+public alias UnsignedIntegerLiteral = IntegerLiteral!false;
+
+public class IntegerLiteral(bool signed) : SourceToken!(signed ? Kind.SIGNED_INTEGER_LITERAL : Kind.UNSIGNED_INTEGER_LITERAL),
+        Expression {
     private uint _radix;
 
     public this(dstring source, size_t start) {
@@ -316,67 +321,84 @@ public class IntegerLiteral : SourceToken!(Kind.INTEGER_LITERAL), Expression {
     }
 
     public override Expression map(ExpressionMapper mapper) {
-        return mapper.mapIntegerLiteral(this);
+        static if (signed) {
+            return mapper.mapSignedIntegerLiteral(this);
+        } else {
+            return mapper.mapUnsignedIntegerLiteral(this);
+        }
     }
 
     public override immutable(Node) interpret() {
-        return Interpreter.INSTANCE.interpretIntegerLiteral(this);
+        static if (signed) {
+            return Interpreter.INSTANCE.interpretSignedIntegerLiteral(this);
+        } else {
+            return Interpreter.INSTANCE.interpretUnsignedIntegerLiteral(this);
+        }
     }
 
     public override string getSource() {
         return super.getSource();
     }
 
-    public L getValue(L)(bool sign, ref bool overflow) if (is(L == long) || is(L == ulong)) {
-        static if (is(L == ulong)) {
-            if (sign) {
-                throw new Exception("Can't apply a sign to an unsigned integer");
-            }
+    static if (signed) {
+        public long getValue(bool sign, ref bool overflow) {
+            mixin (genGetValue());
         }
-        auto source = getSource().replace("_", "");
-        if (radix != 10) {
-            source = source[2 .. $];
+    } else {
+        public ulong getValue(ref bool overflow) {
+            mixin (genGetValue());
         }
-        if (sign) {
-            if (radix == 10) {
-                source = "-" ~ source;
-            } else {
-                throw new Exception("Can't apply a sign to a non-decimal integer");
-            }
+    }
+
+    private static string genGetValue() {
+        auto source = `auto source = getSource().replace("_", "");
+            if (radix != 10) {
+                source = source[2 .. $];
+            }`;
+        static if (signed) {
+            source ~= `if (sign) {
+                    if (radix == 10) {
+                        source = "-" ~ source;
+                    } else {
+                        throw new Exception("Can't apply a sign to a non-decimal integer");
+                    }
+                }`;
         }
-        try {
+        source ~= `try {
             overflow = false;
-            return source.to!L(_radix);
+            return source.to!` ~ (signed ? "long" : "ulong") ~ `(_radix);
         } catch (ConvOverflowException) {
             overflow = true;
             return -1;
-        }
+        }`;
+        return source;
     }
 
     public override string toString() {
         return super.toString();
     }
+}
 
-    unittest {
-        bool overflow;
-        auto a = new IntegerLiteral("424_32", 0);
-        assert(a.getValue!long(false, overflow) == 42432);
-        assert(a.getValue!long(true, overflow) == -42432);
-        assert(!overflow);
-    	auto b = new IntegerLiteral("0xFFFF", 0);
-        assert(b.getValue!long(false, overflow) == 0xFFFF);
-    	auto c = new IntegerLiteral("0b1110", 0);
-        assert(c.getValue!long(false, overflow) == 0b1110);
-        auto d = new IntegerLiteral("9223372036854775808", 0);
-        assert(d.getValue!ulong(false, overflow) == 9223372036854775808uL);
-        assert(d.getValue!long(true, overflow) == 0x8000000000000000L);
-        assert(!overflow);
-        d.getValue!long(false, overflow);
-        assert(overflow);
-        auto e = new IntegerLiteral("9223372036854775809", 0);
-        e.getValue!long(true, overflow);
-        assert(overflow);
-    }
+unittest {
+    bool overflow;
+    auto a = new SignedIntegerLiteral("424_32", 0);
+    assert(a.getValue(false, overflow) == 42432);
+    assert(a.getValue(true, overflow) == -42432);
+    assert(!overflow);
+    auto b = new SignedIntegerLiteral("0xFFFF", 0);
+    assert(b.getValue(false, overflow) == 0xFFFF);
+    auto c = new SignedIntegerLiteral("0b1110", 0);
+    assert(c.getValue(false, overflow) == 0b1110);
+    auto d = new UnsignedIntegerLiteral("9223372036854775808", 0);
+    assert(d.getValue(overflow) == 9223372036854775808uL);
+    auto e = new SignedIntegerLiteral("9223372036854775808", 0);
+    assert(e.getValue(true, overflow) == 0x8000000000000000L);
+    assert(!overflow);
+    e.getValue(false, overflow);
+    assert(overflow);
+    auto f = new SignedIntegerLiteral("9223372036854775809", 0);
+    f.getValue(true, overflow);
+    assert(overflow);
 }
 
 public class FloatLiteral : SourceToken!(Kind.FLOAT_LITERAL), Expression {
@@ -520,8 +542,10 @@ public string toString(Kind kind) {
             return "BooleanLiteral";
         case STRING_LITERAL:
             return "StringLiteral";
-        case INTEGER_LITERAL:
-            return "IntegerLiteral";
+        case SIGNED_INTEGER_LITERAL:
+            return "SignedIntegerLiteral";
+        case UNSIGNED_INTEGER_LITERAL:
+            return "UnsignedIntegerLiteral";
         case FLOAT_LITERAL:
             return "FloatLiteral";
         case EOF:
