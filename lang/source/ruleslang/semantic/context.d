@@ -2,6 +2,7 @@ module ruleslang.semantic.context;
 
 import ruleslang.semantic.type;
 import ruleslang.semantic.function_;
+import ruleslang.util;
 
 public class Context {
     private Context parent;
@@ -127,12 +128,27 @@ public class IntrinsicNameSpace : NameSpace {
         if (argumentTypes.length <= 0 || argumentTypes.length > 2) {
             return [];
         }
-        immutable Function[] search = argumentTypes.length == 1 ? unaryOperators : binaryOperators;
+        // If the argument are atomic literals, use their best atomic equivalent
+        immutable(Type)[] literalBestAtomics = [];
+        foreach (arg; argumentTypes) {
+            auto literal = arg.exactCastImmutable!AtomicLiteralType;
+            if (literal !is null) {
+                literalBestAtomics ~= literal.getBestAtomicType();
+            }
+        }
+        auto literalArguments = literalBestAtomics.length == argumentTypes.length;
+        immutable(Type)[] searchArgumentTypes = literalArguments ? literalBestAtomics : argumentTypes;
+        // Search an operator that can be applied to the argument types
+        immutable Function[] searchFunctions = searchArgumentTypes.length == 1 ? unaryOperators : binaryOperators;
         immutable(Function)[] functions = [];
-        foreach (func; search) {
-            if (name == func.name && func.isApplicable(argumentTypes)) {
+        foreach (func; searchFunctions) {
+            if (name == func.name && func.isApplicable(searchArgumentTypes)) {
                 functions ~= func;
             }
+        }
+        // Modify return type if arguments are literals to also be a literal
+        if (literalArguments) {
+            // TODO: this ^
         }
         return functions;
     }

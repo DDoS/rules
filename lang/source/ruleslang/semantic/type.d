@@ -88,7 +88,7 @@ public immutable class AtomicType : Type {
     public static immutable AtomicType FP32 = new immutable AtomicType("fp32", 32, true, true);
     public static immutable AtomicType FP64 = new immutable AtomicType("fp64", 64, true, true);
     public static immutable immutable(AtomicType)[] ALL_TYPES = BOOL ~ NUMERIC_TYPES;
-    public static immutable immutable(AtomicType)[] NUMERIC_TYPES = INTEGER_TYPES ~ FLOAT_TYPES;
+    public static immutable immutable(AtomicType)[] NUMERIC_TYPES = INTEGER_TYPES ~ FLOATING_POINT_TYPES;
     public static immutable immutable(AtomicType)[] INTEGER_TYPES = SIGNED_INTEGER_TYPES ~ UNSIGNED_INTEGER_TYPES;
     public static immutable immutable(AtomicType)[] SIGNED_INTEGER_TYPES = [
         SINT8, SINT16, SINT32, SINT64
@@ -96,7 +96,7 @@ public immutable class AtomicType : Type {
     public static immutable immutable(AtomicType)[] UNSIGNED_INTEGER_TYPES = [
         UINT8, UINT16, UINT32, UINT64
     ];
-    public static immutable immutable(AtomicType)[] FLOAT_TYPES = [
+    public static immutable immutable(AtomicType)[] FLOATING_POINT_TYPES = [
         FP16, FP32, FP64
     ];
     private static immutable immutable(AtomicType)[][immutable(AtomicType)] CONVERSIONS;
@@ -239,6 +239,13 @@ public immutable class AtomicType : Type {
         return UNSIGNED_TO_SIGNED[this];
     }
 
+    public bool hasSmallerRange(immutable AtomicType other) {
+        if (this.bitCount == other.bitCount) {
+            return !this.isSigned() && other.isSigned();
+        }
+        return this.bitCount < other.bitCount;
+    }
+
     public override string toString() {
         return name;
     }
@@ -256,18 +263,32 @@ private mixin template literalTypeOpEquals(L) {
     }
 }
 
+private immutable(AtomicType) getBestAtomicType(T)(immutable(AtomicType)[] types, T value) {
+    size_t best = 0;
+    foreach (i; 1 .. types.length) {
+        auto m = types[i];
+        auto n = types[best];
+        if (m.inRange(value) && m.hasSmallerRange(n)) {
+            best = i;
+        }
+    }
+    return types[best];
+}
+
 public immutable interface LiteralType : Type {
 }
 
 public immutable interface AtomicLiteralType : LiteralType {
-    public immutable(AtomicType) getBackingAtomicType();
+    public immutable(AtomicType) getBestAtomicType();
 }
 
 public immutable class SignedIntegerLiteralType : AtomicLiteralType {
     private long _value;
+    private AtomicType atomic;
 
     public this(long value) {
         _value = value;
+        atomic = AtomicType.INTEGER_TYPES.getBestAtomicType(_value);
     }
 
     @property public long value() {
@@ -295,8 +316,8 @@ public immutable class SignedIntegerLiteralType : AtomicLiteralType {
         return false;
     }
 
-    public override immutable(AtomicType) getBackingAtomicType() {
-        return AtomicType.SINT64;
+    public override immutable(AtomicType) getBestAtomicType() {
+        return atomic;
     }
 
     public override string toString() {
@@ -308,9 +329,11 @@ public immutable class SignedIntegerLiteralType : AtomicLiteralType {
 
 public immutable class UnsignedIntegerLiteralType : AtomicLiteralType {
     private ulong _value;
+    private AtomicType atomic;
 
     public this(ulong value) {
         _value = value;
+        atomic = AtomicType.UNSIGNED_INTEGER_TYPES.getBestAtomicType(_value);
     }
 
     @property public ulong value() {
@@ -338,8 +361,8 @@ public immutable class UnsignedIntegerLiteralType : AtomicLiteralType {
         return false;
     }
 
-    public override immutable(AtomicType) getBackingAtomicType() {
-        return AtomicType.UINT64;
+    public override immutable(AtomicType) getBestAtomicType() {
+        return atomic;
     }
 
     public override string toString() {
@@ -351,9 +374,11 @@ public immutable class UnsignedIntegerLiteralType : AtomicLiteralType {
 
 public immutable class FloatLiteralType : AtomicLiteralType {
     private double _value;
+    private AtomicType atomic;
 
     public this(double value) {
         _value = value;
+        atomic = AtomicType.FLOATING_POINT_TYPES.getBestAtomicType(_value);
     }
 
     @property public double value() {
@@ -376,8 +401,8 @@ public immutable class FloatLiteralType : AtomicLiteralType {
         return false;
     }
 
-    public override immutable(AtomicType) getBackingAtomicType() {
-        return AtomicType.FP64;
+    public override immutable(AtomicType) getBestAtomicType() {
+        return atomic;
     }
 
     public override string toString() {
