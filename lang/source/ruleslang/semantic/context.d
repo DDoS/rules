@@ -12,23 +12,23 @@ public class Context {
 }
 
 public interface NameSpace {
-    public Function[] getFunctions(string name, inout Type[] argumentTypes...);
+    public immutable(Function)[] getFunctions(string name, immutable(Type)[] argumentTypes);
 }
 
 public class ForeignNameSpace : NameSpace {
-    public override Function[] getFunctions(string name, inout Type[] argumentTypes...) {
+    public override immutable(Function)[] getFunctions(string name, immutable(Type)[] argumentTypes) {
         assert(0);
     }
 }
 
 public class ImportedNameSpace : NameSpace {
-    public override Function[] getFunctions(string name, inout Type[] argumentTypes...) {
+    public override immutable(Function)[] getFunctions(string name, immutable(Type)[] argumentTypes) {
         assert(0);
     }
 }
 
 public class ScopeNameSpace : NameSpace {
-    public override Function[] getFunctions(string name, inout Type[] argumentTypes...) {
+    public override immutable(Function)[] getFunctions(string name, immutable(Type)[] argumentTypes) {
         assert(0);
     }
 }
@@ -64,19 +64,76 @@ public enum IntrinsicFunction : string {
 }
 
 public class IntrinsicNameSpace : NameSpace {
-    /*private static immutable string[] unaryOperators = [
-        NEGATE_FUNCTION, REAFFIRM_FUNCTION, LOGICAL_NOT_FUNCTION, BITWISE_NOT_FUNCTION
-    ];
-    private static immutable string[] binaryOperators = [
-        EXPONENT_FUNCTION, MULTIPLY_FUNCTION, DIVIDE_FUNCTION, REMAINDER_FUNCTION,
-        ADD_FUNCTION, SUBTRACT_FUNCTION, LEFT_SHIFT_FUNCTION, ARITHMETIC_RIGHT_SHIFT_FUNCTION,
-        LOGICAL_RIGHT_SHIFT_FUNCTION, EQUALS_FUNCTION, NOT_EQUALS_FUNCTION, LESSER_THAN_FUNCTION,
-        GREATER_THAN_FUNCTION, LESSER_OR_EQUAL_TO_FUNCTION, GREATER_OR_EQUAL_TO_FUNCTION, BITWISE_AND_FUNCTION,
-        BITWISE_XOR_FUNCTION, BITWISE_OR_FUNCTION, LOGICAL_AND_FUNCTION, LOGICAL_XOR_FUNCTION,
-        LOGICAL_OR_FUNCTION, CONCATENATE_FUNCTION, RANGE_FUNCTION
-    ];*/
+    private static immutable immutable(Function)[] unaryOperators;
+    private static immutable immutable(Function)[] binaryOperators;
 
-    public override Function[] getFunctions(string name, inout Type[] argumentTypes...) {
-        return [];
+    public static this() {
+        immutable(Function)[] functions = [];
+        // Operator unary -
+        foreach (type; AtomicType.NUMERIC_TYPES) {
+            functions ~= new immutable Function(IntrinsicFunction.NEGATE_FUNCTION, [type], type.asSigned());
+        }
+        // Operator unary +
+        foreach (type; AtomicType.NUMERIC_TYPES) {
+            functions ~= new immutable Function(IntrinsicFunction.REAFFIRM_FUNCTION, [type], type);
+        }
+        // Operator unary !
+        functions ~= new immutable Function(IntrinsicFunction.LOGICAL_NOT_FUNCTION, [AtomicType.BOOL], AtomicType.BOOL);
+        // Operator unary ~
+        foreach (type; AtomicType.INTEGER_TYPES) {
+            functions ~= new immutable Function(IntrinsicFunction.BITWISE_NOT_FUNCTION, [type], type);
+        }
+        unaryOperators = functions.idup;
+        functions.length = 0;
+        // Operators binary **, *, /, %, +, -
+        foreach (type; AtomicType.NUMERIC_TYPES) {
+            functions ~= new immutable Function(IntrinsicFunction.EXPONENT_FUNCTION, [type, type], type);
+            functions ~= new immutable Function(IntrinsicFunction.MULTIPLY_FUNCTION, [type, type], type);
+            functions ~= new immutable Function(IntrinsicFunction.DIVIDE_FUNCTION, [type, type], type);
+            functions ~= new immutable Function(IntrinsicFunction.REMAINDER_FUNCTION, [type, type], type);
+            functions ~= new immutable Function(IntrinsicFunction.ADD_FUNCTION, [type, type], type);
+            functions ~= new immutable Function(IntrinsicFunction.SUBTRACT_FUNCTION, [type, type], type);
+        }
+        // Operators binary <<, >>, >>>
+        foreach (type; AtomicType.INTEGER_TYPES) {
+            functions ~= new immutable Function(IntrinsicFunction.LEFT_SHIFT_FUNCTION, [type, AtomicType.UINT64], type);
+            functions ~= new immutable Function(IntrinsicFunction.ARITHMETIC_RIGHT_SHIFT_FUNCTION, [type, AtomicType.UINT64], type);
+            functions ~= new immutable Function(IntrinsicFunction.LOGICAL_RIGHT_SHIFT_FUNCTION, [type, AtomicType.UINT64], type);
+        }
+        // Operators binary ==, !=, <, >, <=, >=
+        foreach (type; AtomicType.ALL_TYPES) {
+            functions ~= new immutable Function(IntrinsicFunction.EQUALS_FUNCTION, [type, type], AtomicType.BOOL);
+            functions ~= new immutable Function(IntrinsicFunction.NOT_EQUALS_FUNCTION, [type, type], AtomicType.BOOL);
+            functions ~= new immutable Function(IntrinsicFunction.LESSER_THAN_FUNCTION, [type, type], AtomicType.BOOL);
+            functions ~= new immutable Function(IntrinsicFunction.GREATER_THAN_FUNCTION, [type, type], AtomicType.BOOL);
+            functions ~= new immutable Function(IntrinsicFunction.LESSER_OR_EQUAL_TO_FUNCTION, [type, type], AtomicType.BOOL);
+            functions ~= new immutable Function(IntrinsicFunction.GREATER_OR_EQUAL_TO_FUNCTION, [type, type], AtomicType.BOOL);
+        }
+        // Operators binary &, ^, |
+        foreach (type; AtomicType.INTEGER_TYPES) {
+            functions ~= new immutable Function(IntrinsicFunction.BITWISE_AND_FUNCTION, [type, type], type);
+            functions ~= new immutable Function(IntrinsicFunction.BITWISE_XOR_FUNCTION, [type, type], type);
+            functions ~= new immutable Function(IntrinsicFunction.BITWISE_OR_FUNCTION, [type, type], type);
+        }
+        // Operators binary &&, ^^, ||
+        functions ~= new immutable Function(IntrinsicFunction.LOGICAL_AND_FUNCTION, [AtomicType.BOOL, AtomicType.BOOL], AtomicType.BOOL);
+        functions ~= new immutable Function(IntrinsicFunction.LOGICAL_XOR_FUNCTION, [AtomicType.BOOL, AtomicType.BOOL], AtomicType.BOOL);
+        functions ~= new immutable Function(IntrinsicFunction.LOGICAL_OR_FUNCTION, [AtomicType.BOOL, AtomicType.BOOL], AtomicType.BOOL);
+        // TODO: operators ~, ..
+        binaryOperators = functions.idup;
+    }
+
+    public override immutable(Function)[] getFunctions(string name, immutable(Type)[] argumentTypes) {
+        if (argumentTypes.length <= 0 || argumentTypes.length > 2) {
+            return [];
+        }
+        immutable Function[] search = argumentTypes.length == 1 ? unaryOperators : binaryOperators;
+        immutable(Function)[] functions = [];
+        foreach (func; search) {
+            if (name == func.name && func.isApplicable(argumentTypes)) {
+                functions ~= func;
+            }
+        }
+        return functions;
     }
 }

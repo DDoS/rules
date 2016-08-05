@@ -4,6 +4,22 @@ import ruleslang.semantic.type;
 import ruleslang.semantic.function_;
 
 unittest {
+    assertIsApplicable([], []);
+    assertNotApplicable([AtomicType.UINT8], []);
+    assertNotApplicable([], [AtomicType.UINT8]);
+    assertIsApplicable([AtomicType.UINT8], [AtomicType.UINT8]);
+    assertIsApplicable([AtomicType.UINT16], [AtomicType.UINT8]);
+    assertNotApplicable([AtomicType.UINT8], [AtomicType.UINT16]);
+
+    assertIsApplicable([AtomicType.UINT8, AtomicType.UINT8], [AtomicType.UINT8, AtomicType.UINT8]);
+    assertIsApplicable([AtomicType.UINT16, AtomicType.UINT8], [AtomicType.UINT8, AtomicType.UINT8]);
+    assertIsApplicable([AtomicType.UINT8, AtomicType.UINT16], [AtomicType.UINT8, AtomicType.UINT8]);
+    assertIsApplicable([AtomicType.UINT16, AtomicType.UINT16], [AtomicType.UINT8, AtomicType.UINT8]);
+    assertNotApplicable([AtomicType.UINT8, AtomicType.UINT8], [AtomicType.UINT16, AtomicType.UINT8]);
+    assertNotApplicable([AtomicType.UINT8, AtomicType.UINT8], [AtomicType.UINT8, AtomicType.UINT16]);
+}
+
+unittest {
     assertLessSpecific([AtomicType.UINT8], [AtomicType.UINT8]);
     assertLessSpecific([AtomicType.UINT16], [AtomicType.UINT8]);
     assertMoreSpecific([AtomicType.UINT8], [AtomicType.UINT16]);
@@ -28,15 +44,27 @@ unittest {
     assertLessSpecific([new immutable ArrayType(AtomicType.UINT16)], [new immutable ArrayType(AtomicType.UINT8)]);
 }
 
-private void assertMoreSpecific(immutable Type[] argumentTypesA, immutable Type[] argumentTypesB) {
-    assert(isMoreSpecific(argumentTypesA, argumentTypesB));
+private void assertMoreSpecific(immutable Type[] parameterTypesA, immutable Type[] parameterTypesB) {
+    assert(isMoreSpecific(parameterTypesA, parameterTypesB));
 }
 
-private void assertLessSpecific(immutable Type[] argumentTypesA, immutable Type[] argumentTypesB) {
-    assert(!isMoreSpecific(argumentTypesA, argumentTypesB));
+private void assertLessSpecific(immutable Type[] parameterTypesA, immutable Type[] parameterTypesB) {
+    assert(!isMoreSpecific(parameterTypesA, parameterTypesB));
 }
 
-private bool isMoreSpecific(immutable Type[] argumentTypesA, immutable Type[] argumentTypesB) {
-    return new immutable Function("f", AtomicType.UINT8, argumentTypesA)
-            .isMoreSpecific(new immutable Function("f", AtomicType.UINT8, argumentTypesB));
+private bool isMoreSpecific(immutable Type[] parameterTypesA, immutable Type[] parameterTypesB) {
+    return new immutable Function("f", parameterTypesA, AtomicType.UINT8)
+            .isMoreSpecific(new immutable Function("f", parameterTypesB, AtomicType.UINT8));
+}
+
+private void assertIsApplicable(immutable Type[] parameterTypes, immutable Type[] argumentTypes) {
+    assert(isApplicable(parameterTypes, argumentTypes));
+}
+
+private void assertNotApplicable(immutable Type[] parameterTypes, immutable Type[] argumentTypes) {
+    assert(!isApplicable(parameterTypes, argumentTypes));
+}
+
+private bool isApplicable(immutable Type[] parameterTypes, immutable Type[] argumentTypes) {
+    return new immutable Function("f", parameterTypes, AtomicType.UINT8).isApplicable(argumentTypes);
 }
