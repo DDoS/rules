@@ -1,6 +1,5 @@
 module ruleslang.util;
 
-import std.array : array;
 import std.algorithm.searching : canFind, findAmong;
 import std.algorithm.iteration : map, reduce, uniq;
 import std.ascii : isAlphaNum, toLower, toUpper;
@@ -57,6 +56,14 @@ public void addMissing(T)(ref T[] to, T[] elements) {
             to ~= element;
         }
     }
+}
+
+public V[K] inverse(K, V)(K[V] array) {
+    V[K] inv;
+    foreach (k, v; array) {
+        inv[v] = k;
+    }
+    return inv;
 }
 
 public string join(string joiner, string stringer = "toString()", T)(T[] things ...) {

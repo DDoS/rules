@@ -87,49 +87,49 @@ private class OperatorExpander : StatementMapper {
 private class OperatorConverter : StatementMapper {
     public override Expression mapSign(Sign expression) {
         auto op = expression.operator;
-        mixin(genConversionUnary!("+", "REAFFIRM_FUNCTION"));
-        mixin(genConversionUnary!("-", "NEGATE_FUNCTION"));
+        mixin(genConversionUnary!"+");
+        mixin(genConversionUnary!"-");
         assert(0);
     }
 
     public override Expression mapLogicalNot(LogicalNot expression) {
         auto op = expression.operator;
-        mixin(genConversionUnary!("!", "LOGICAL_NOT_FUNCTION"));
+        mixin(genConversionUnary!"!");
         assert(0);
     }
 
     public override Expression mapBitwiseNot(BitwiseNot expression) {
         auto op = expression.operator;
-        mixin(genConversionUnary!("~", "BITWISE_NOT_FUNCTION"));
+        mixin(genConversionUnary!"~");
         assert(0);
     }
 
     public override Expression mapExponent(Exponent expression) {
         auto op = expression.operator;
-        mixin(genConversionBinary!("**", "EXPONENT_FUNCTION"));
+        mixin(genConversionBinary!"**");
         assert(0);
     }
 
     public override Expression mapMultiply(Multiply expression) {
         auto op = expression.operator;
-        mixin(genConversionBinary!("*", "MULTIPLY_FUNCTION"));
-        mixin(genConversionBinary!("/", "DIVIDE_FUNCTION"));
-        mixin(genConversionBinary!("%", "REMAINDER_FUNCTION"));
+        mixin(genConversionBinary!"*");
+        mixin(genConversionBinary!"/");
+        mixin(genConversionBinary!"%");
         assert(0);
     }
 
     public override Expression mapAdd(Add expression) {
         auto op = expression.operator;
-        mixin(genConversionBinary!("+", "ADD_FUNCTION"));
-        mixin(genConversionBinary!("-", "SUBTRACT_FUNCTION"));
+        mixin(genConversionBinary!"+");
+        mixin(genConversionBinary!"-");
         assert(0);
     }
 
     public override Expression mapShift(Shift expression) {
         auto op = expression.operator;
-        mixin(genConversionBinary!("<<", "LEFT_SHIFT_FUNCTION"));
-        mixin(genConversionBinary!(">>", "ARITHMETIC_RIGHT_SHIFT_FUNCTION"));
-        mixin(genConversionBinary!(">>>", "LOGICAL_RIGHT_SHIFT_FUNCTION"));
+        mixin(genConversionBinary!"<<");
+        mixin(genConversionBinary!">>");
+        mixin(genConversionBinary!">>>");
         assert(0);
     }
 
@@ -138,73 +138,73 @@ private class OperatorConverter : StatementMapper {
         if (op == "===" || op == "!==") {
             return expression;
         }
-        mixin(genConversionBinary!("==", "EQUALS_FUNCTION"));
-        mixin(genConversionBinary!("!=", "NOT_EQUALS_FUNCTION"));
-        mixin(genConversionBinary!("<", "LESSER_THAN_FUNCTION"));
-        mixin(genConversionBinary!(">", "GREATER_THAN_FUNCTION"));
-        mixin(genConversionBinary!("<=", "LESSER_OR_EQUAL_TO_FUNCTION"));
-        mixin(genConversionBinary!(">=", "GREATER_OR_EQUAL_TO_FUNCTION"));
+        mixin(genConversionBinary!"==");
+        mixin(genConversionBinary!"!=");
+        mixin(genConversionBinary!"<");
+        mixin(genConversionBinary!">");
+        mixin(genConversionBinary!"<=");
+        mixin(genConversionBinary!">=");
         assert(0);
     }
 
     public override Expression mapBitwiseAnd(BitwiseAnd expression) {
         auto op = expression.operator;
-        mixin(genConversionBinary!("&", "BITWISE_AND_FUNCTION"));
+        mixin(genConversionBinary!"&");
         assert(0);
     }
 
     public override Expression mapBitwiseXor(BitwiseXor expression) {
         auto op = expression.operator;
-        mixin(genConversionBinary!("^", "BITWISE_XOR_FUNCTION"));
+        mixin(genConversionBinary!"^");
         assert(0);
     }
 
     public override Expression mapBitwiseOr(BitwiseOr expression) {
         auto op = expression.operator;
-        mixin(genConversionBinary!("|", "BITWISE_OR_FUNCTION"));
+        mixin(genConversionBinary!"|");
         assert(0);
     }
 
     public override Expression mapLogicalAnd(LogicalAnd expression) {
         auto op = expression.operator;
-        mixin(genConversionBinary!("&&", "LOGICAL_AND_FUNCTION"));
+        mixin(genConversionBinary!"&&");
         assert(0);
     }
 
     public override Expression mapLogicalXor(LogicalXor expression) {
         auto op = expression.operator;
-        mixin(genConversionBinary!("^^", "LOGICAL_XOR_FUNCTION"));
+        mixin(genConversionBinary!"^^");
         assert(0);
     }
 
     public override Expression mapLogicalOr(LogicalOr expression) {
         auto op = expression.operator;
-        mixin(genConversionBinary!("||", "LOGICAL_OR_FUNCTION"));
+        mixin(genConversionBinary!"||");
         assert(0);
     }
 
     public override Expression mapConcatenate(Concatenate expression) {
         auto op = expression.operator;
-        mixin(genConversionBinary!("~", "CONCATENATE_FUNCTION"));
+        mixin(genConversionBinary!"~");
         assert(0);
     }
 
     public override Expression mapRange(Range expression) {
         auto op = expression.operator;
-        mixin(genConversionBinary!("..", "RANGE_FUNCTION"));
+        mixin(genConversionBinary!"..");
         assert(0);
     }
 
-    private alias genConversionUnary(string op, string func) = genConversion!(op, func, false);
+    private alias genConversionUnary(string op) = genConversion!(op, false);
 
-    private alias genConversionBinary(string op, string func) = genConversion!(op, func, true);
+    private alias genConversionBinary(string op) = genConversion!(op, true);
 
-    private static string genConversion(string op, string func, bool binary)() {
+    private static string genConversion(string op, bool binary)() {
         string args = binary ? "expression.left, expression.right" : "expression.inner";
         return `
         if (op == "` ~ op ~ `") {
             return new FunctionCall(
-                new NameReference([new Identifier(IntrinsicFunction.` ~ func ~ `, op.start, op.end)]),
+                new NameReference([new Identifier(OPERATOR_TO_FUNCTION[op.getSource()], op.start, op.end)]),
                 [` ~ args ~ `], expression.start, expression.end
             );
         }
