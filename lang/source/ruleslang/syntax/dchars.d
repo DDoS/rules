@@ -78,7 +78,7 @@ public bool isEscapeChar(dchar c) {
 public dchar decodeUnicodeEscape(dstring cs, ref size_t position) {
     auto length = cs.length;
     if (length < 2 || cs[0] != 'u') {
-        throw new Exception(format("Not a valid unicode escape: %s", cs));
+        throw new Error(format("Not a valid unicode escape: %s", cs));
     }
     size_t i = 1;
     while (i < length && i < 9 && cs[i].isHexDigit()) {
@@ -93,7 +93,7 @@ public dchar decodeUnicodeEscape(dstring cs, ref size_t position) {
 public dchar decodeCharEscape(dchar c) {
     auto char_ = c in ESCAPE_CHARS;
     if (char_ is null) {
-        throw new Exception(format("Not a valid escape character: %s", escapeChar(c)));
+        throw new Error(format("Not a valid escape character: %s", escapeChar(c)));
     }
     return *char_;
 }

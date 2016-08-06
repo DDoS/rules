@@ -47,7 +47,7 @@ public immutable class Function {
 
     public bool isMoreSpecific(immutable Function other) {
         if (_parameterTypes.length != other.parameterTypes.length) {
-            throw new Exception("Expected " ~ _parameterTypes.length.to!string ~ " argument types");
+            throw new Error("Expected " ~ _parameterTypes.length.to!string ~ " argument types");
         }
         // Compare argument types pairwise
         // No type can be larger than in other

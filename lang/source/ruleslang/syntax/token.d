@@ -100,7 +100,7 @@ public template SourceToken(Kind kind) {
         public this(string source, size_t start, size_t end) {
             this.source = source;
             if (end < start) {
-                throw new Exception("A token cannot end before it has started");
+                throw new Error("A token cannot end before it has started");
             }
             _start = start;
             _end = end;
@@ -239,10 +239,10 @@ public class StringLiteral : SourceToken!(Kind.STRING_LITERAL), Expression {
     public dstring getValue() {
         auto length = original.length;
         if (length < 2) {
-            throw new Exception("String is missing enclosing quotes");
+            throw new Error("String is missing enclosing quotes");
         }
         if (original[0] != '"') {
-            throw new Exception("String is missing beginning quote");
+            throw new Error("String is missing beginning quote");
         }
         dchar[] buffer = [];
         buffer.reserve(64);
@@ -261,7 +261,7 @@ public class StringLiteral : SourceToken!(Kind.STRING_LITERAL), Expression {
             buffer ~= c;
         }
         if (original[length - 1] != '"') {
-            throw new Exception("String is missing ending quote");
+            throw new Error("String is missing ending quote");
         }
         return buffer.idup;
     }
@@ -360,7 +360,7 @@ public class IntegerLiteral(bool signed) : SourceToken!(signed ? Kind.SIGNED_INT
                     if (radix == 10) {
                         source = "-" ~ source;
                     } else {
-                        throw new Exception("Can't apply a sign to a non-decimal integer");
+                        throw new Error("Can't apply a sign to a non-decimal integer");
                     }
                 }`;
         }
@@ -567,7 +567,7 @@ private void addSourcesForOperator(Op)(dstring[] sources ...) {
     Token function(dstring, size_t) constructor = (dstring source, size_t start) => new Op(source, start);
     foreach (source; sources) {
         if (source in OPERATOR_SOURCES) {
-            throw new Exception("Symbol is declared for two different operators: " ~ source.to!string);
+            throw new Error("Symbol is declared for two different operators: " ~ source.to!string);
         }
         OPERATOR_SOURCES[source] = constructor;
     }

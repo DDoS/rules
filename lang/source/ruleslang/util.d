@@ -7,7 +7,7 @@ import std.ascii : isAlphaNum, toLower, toUpper;
 public T castOrFail(T, S)(S s) {
     T t = cast(T) s;
     if (t is null) {
-        throw new Exception("Cannot cast " ~ __traits(identifier, S) ~ " to " ~ __traits(identifier, T));
+        throw new Error("Cannot cast " ~ __traits(identifier, S) ~ " to " ~ __traits(identifier, T));
     }
     return t;
 }
@@ -83,7 +83,7 @@ public string asciiSnakeToCamelCase(string snake, bool upperFirst = false) {
             continue;
         }
         if (!s.isAlphaNum()) {
-            throw new Exception("Expected only ASCII alphanumeric characters and underscores");
+            throw new Error("Expected only ASCII alphanumeric characters and underscores");
         }
         if (firstWordLetter) {
             s = s.toUpper();
