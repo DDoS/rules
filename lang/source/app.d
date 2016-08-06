@@ -10,6 +10,16 @@ import ruleslang.semantic.tree;
 import ruleslang.semantic.interpret;
 
 void main() {
+	import ruleslang.semantic.context;
+	import ruleslang.semantic.type;
+	import ruleslang.evaluation.value;
+
+	immutable(Type)[] argumentTypes = [];
+	argumentTypes ~= AtomicType.FP32;
+	argumentTypes ~= new immutable FloatLiteralType(132);
+	stdout.writeln(new IntrinsicNameSpace().getFunctions(OperatorFunction.REMAINDER_FUNCTION, argumentTypes));
+	stdout.writeln(typeid(genBinaryOperatorImplementation!(OperatorFunction.REMAINDER_FUNCTION)));
+
 	while (true) {
 		stdout.write("> ");
 		auto source = stdin.readln();

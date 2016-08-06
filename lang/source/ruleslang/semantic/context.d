@@ -132,9 +132,17 @@ public enum string[string] FUNCTION_TO_DLANG_OPERATOR = [
     "opRange": ".p_range("
 ];
 
-private Value applyOperator(immutable Function operator, Value value) {
-    assert (operator.parameterTypes.length == 1);
-    return new ByteValue(0);
+alias FunctionImplementation = immutable(Value) function(immutable(Value)[]);
+
+public FunctionImplementation genBinaryOperatorImplementation(OperatorFunction func)() {
+    FunctionImplementation implementation = (arguments) {
+        if (arguments.length != 2) {
+            // TODO: add evaluator exceptions
+            throw new Exception("Expected two arguments");
+        }
+        return arguments[0].applyBinary!(FUNCTION_TO_DLANG_OPERATOR[func])(arguments[1]);
+    };
+    return implementation;
 }
 
 public class IntrinsicNameSpace : NameSpace {
