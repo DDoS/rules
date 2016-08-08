@@ -2,6 +2,7 @@ module ruleslang.test.semantic.function_;
 
 import ruleslang.semantic.type;
 import ruleslang.semantic.function_;
+import ruleslang.evaluation.value;
 
 unittest {
     assertIsApplicable([], []);
@@ -53,8 +54,8 @@ private void assertLessSpecific(immutable Type[] parameterTypesA, immutable Type
 }
 
 private bool isMoreSpecific(immutable Type[] parameterTypesA, immutable Type[] parameterTypesB) {
-    return new immutable Function("f", parameterTypesA, AtomicType.UINT8)
-            .isMoreSpecific(new immutable Function("f", parameterTypesB, AtomicType.UINT8));
+    return new immutable Function("f", parameterTypesA, AtomicType.UINT8, &noop)
+            .isMoreSpecific(new immutable Function("f", parameterTypesB, AtomicType.UINT8, &noop));
 }
 
 private void assertIsApplicable(immutable Type[] parameterTypes, immutable Type[] argumentTypes) {
@@ -66,5 +67,9 @@ private void assertNotApplicable(immutable Type[] parameterTypes, immutable Type
 }
 
 private bool isApplicable(immutable Type[] parameterTypes, immutable Type[] argumentTypes) {
-    return new immutable Function("f", parameterTypes, AtomicType.UINT8).isApplicable(argumentTypes);
+    return new immutable Function("f", parameterTypes, AtomicType.UINT8, &noop).isApplicable(argumentTypes);
+}
+
+private immutable(Value) noop(immutable(Value)[] arguments) {
+    return valueOf(0);
 }

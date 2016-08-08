@@ -4,70 +4,59 @@ import std.conv : to;
 
 import ruleslang.util;
 
-public immutable interface Value {
-    public string toString();
-    public bool opEquals(inout Value value);
-}
+public immutable union Value {
+    private long data;
+    private float floatView;
+    private double doubleView;
 
-public alias ByteValue = AtomicValue!byte;
-public alias UByteValue = AtomicValue!ubyte;
-public alias ShortValue = AtomicValue!short;
-public alias UShortValue = AtomicValue!ushort;
-public alias IntValue = AtomicValue!int;
-public alias UIntValue = AtomicValue!uint;
-public alias LongValue = AtomicValue!long;
-public alias ULongValue = AtomicValue!ulong;
-public alias FloatValue = AtomicValue!float;
-public alias DoubleValue = AtomicValue!double;
-
-public immutable class AtomicValue(T) : Value if (isAtomicType!T) {
-    private T _value;
-
-    public this(T value) {
-        _value = value;
+    private this(long data) {
+        this.data = data;
     }
 
-    @property public T value() {
-        return _value;
+    private this(float value) {
+        floatView = value;
     }
 
-    public S valueAs(S)() {
-        return cast(S) _value;
+    private this(double value) {
+        doubleView = value;
     }
 
-    public immutable(AtomicValue!T) asValue(T)() if (isAtomicType!T) {
-        return AtomicValue!T.fromCast(_value);
+    @property public T as(T)() if (isAtomicIntegerType!T) {
+        return cast(T) data;
     }
 
-    public immutable(Value) applyUnary(string operator)() {
-        return from(mixin(operator ~ "_value"));
+    @property public T as(T : float)() if (!isAtomicIntegerType!T) {
+        return floatView;
     }
 
-    public immutable(Value) applyBinary(string operator, S)(immutable AtomicValue!S other) {
-        return from(mixin("_value " ~ operator ~ " other.value"));
+    @property public T as(T : double)() if (!isAtomicIntegerType!T) {
+        return doubleView;
     }
 
-    public override string toString() {
-        return _value.to!string;
+    public string toString() {
+        return data.to!string;
     }
 
-    public override bool opEquals(inout Value value) {
-        auto atomic = value.exactCastImmutable!(AtomicValue!T);
-        return atomic !is null && _value == atomic.value;
-    }
-
-    public static immutable(AtomicValue!T) fromCast(S)(S s) if (isAtomicType!S) {
-        return new immutable AtomicValue!T(cast(T) s);
+    public bool opEquals(inout Value other) {
+        return data == other.data;
     }
 }
 
-public immutable(AtomicValue!T) from(T)(T value) if (isAtomicType!T) {
-    return new immutable AtomicValue!T(value);
+public immutable(Value) valueOf(T)(T value) if (isAtomicIntegerType!T) {
+    return immutable Value(cast(long) value);
 }
 
-private bool isAtomicType(T)() {
-    static if (is(T : byte) || is(T : ubyte) || is(T : short) || is(T : ushort) || is(T : int)
-            || is(T : uint) || is(T : long) || is(T : ulong) || is(T : float) || is(T : double)) {
+public immutable(Value) valueOf(T : float)(T value) if (!isAtomicIntegerType!T) {
+    return immutable Value(value);
+}
+
+public immutable(Value) valueOf(T : double)(T value) if (!isAtomicIntegerType!T) {
+    return immutable Value(value);
+}
+
+private bool isAtomicIntegerType(T)() {
+    static if (is(T : bool) || is(T : byte) || is(T : ubyte) || is(T : short) || is(T : ushort)
+            || is(T : int) || is(T : uint) || is(T : long) || is(T : ulong)) {
         return true;
     } else {
         return false;

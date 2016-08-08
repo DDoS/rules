@@ -3,17 +3,22 @@ module ruleslang.semantic.function_;
 import std.conv : to;
 
 import ruleslang.semantic.type;
+import ruleslang.evaluation.value;
 import ruleslang.util;
+
+public alias FunctionImpl = immutable(Value) function(immutable(Value)[]);
 
 public immutable class Function {
     private string _name;
     private Type[] _parameterTypes;
     private Type _returnType;
+    private FunctionImpl _impl;
 
-    public this(string name, immutable Type[] parameterTypes, immutable Type returnType) {
+    public this(string name, immutable Type[] parameterTypes, immutable Type returnType, FunctionImpl impl) {
         _name = name;
         _returnType = returnType;
         _parameterTypes = parameterTypes;
+        _impl = impl;
     }
 
     @property public string name() {
@@ -26,6 +31,10 @@ public immutable class Function {
 
     @property public immutable(Type) returnType() {
         return _returnType;
+    }
+
+    @property public FunctionImpl impl() {
+        return _impl;
     }
 
     public bool isOverload(immutable Function other) {
