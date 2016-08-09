@@ -158,15 +158,15 @@ public class IntrinsicNameSpace : NameSpace {
             return [];
         }
         // If the argument are atomic literals, use their best atomic equivalent
-        immutable(Type)[] literalBestAtomics = [];
+        immutable(Type)[] literalArguments = [];
         foreach (arg; argumentTypes) {
-            auto literal = arg.exactCastImmutable!AtomicLiteralType;
+            auto literal = cast(immutable AtomicLiteralType) arg;
             if (literal !is null) {
-                literalBestAtomics ~= literal.getBestAtomicType();
+                literalArguments ~= literal.getAtomicType();
             }
         }
-        auto literalArguments = literalBestAtomics.length == argumentTypes.length;
-        immutable(Type)[] searchArgumentTypes = literalArguments ? literalBestAtomics : argumentTypes;
+        auto hasLiteralArguments = literalArguments.length == argumentTypes.length;
+        immutable(Type)[] searchArgumentTypes = hasLiteralArguments ? literalArguments : argumentTypes;
         // Search an operator that can be applied to the argument types
         immutable Function[] searchFunctions = searchArgumentTypes.length == 1 ? unaryOperators : binaryOperators;
         immutable(Function)[] functions = [];
@@ -175,11 +175,56 @@ public class IntrinsicNameSpace : NameSpace {
                 functions ~= func;
             }
         }
-        // Modify function signature if arguments are literals to also be literal
-        if (literalArguments) {
-            // TODO: this ^
+        if (!hasLiteralArguments) {
+            return functions;
         }
-        return functions;
+        // Modify function signature if arguments are literals to also be literal
+        immutable(Function)[] literalFunctions = [];
+        foreach (func; functions) {
+            literalFunctions ~= toLiteral(func, argumentTypes);
+        }
+        return literalFunctions;
+    }
+
+    private immutable(Function) toLiteral(immutable Function func, immutable(Type)[] argumentTypes) {
+        // Generate the parameter types by converting the argument type to the equivalent literal type
+        immutable(AtomicLiteralType)[] literalParameters = [];
+        foreach (i, paramType; func.parameterTypes) {
+            auto argType = cast(immutable AtomicLiteralType) argumentTypes[i];
+            assert (argType !is null);
+            if (paramType == AtomicType.FP64) {
+                literalParameters ~= argType.toFloatLiteral();
+            } else if (paramType == AtomicType.SINT64) {
+                literalParameters ~= argType.toSignedIntegerLiteral();
+            } else if (paramType == AtomicType.UINT64) {
+                literalParameters ~= argType.toUnsignedIntegerLiteral();
+            } else {
+                assert (0);
+            }
+        }
+        // Call the function on the literal values to get the value of the return type literal
+        immutable(Value)[] arguments = [];
+        foreach (param; literalParameters) {
+            arguments ~= param.asValue();
+        }
+        immutable Value result = func.impl()(arguments);
+        // Create the return type literal corresponding to the return type
+        auto returnType = cast(immutable AtomicType) func.returnType;
+        assert (returnType !is null);
+        immutable(AtomicLiteralType)* literalReturn;
+        if (returnType == AtomicType.FP64) {
+            immutable(AtomicLiteralType) literal = new immutable FloatLiteralType(result.as!double);
+            literalReturn = &literal;
+        } else if (returnType == AtomicType.SINT64) {
+            immutable(AtomicLiteralType) literal = new immutable SignedIntegerLiteralType(result.as!long);
+            literalReturn = &literal;
+        } else if (returnType == AtomicType.UINT64) {
+            immutable(AtomicLiteralType) literal = new immutable UnsignedIntegerLiteralType(result.as!ulong);
+            literalReturn = &literal;
+        } else {
+            assert (0);
+        }
+        return new immutable Function(func.name, literalParameters, *literalReturn, func.impl);
     }
 }
 
