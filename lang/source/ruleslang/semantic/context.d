@@ -68,14 +68,18 @@ public enum OperatorFunction : string {
     RANGE_FUNCTION = "opRange"
 }
 
-public immutable string[string] OPERATOR_TO_FUNCTION;
+public immutable string[string] UNARY_OPERATOR_TO_FUNCTION;
+public immutable string[string] BINARY_OPERATOR_TO_FUNCTION;
 
 public static this() {
-    string[string] operatorToFunction = [
+    string[string] unaryOperatorsToFunction = [
         "-": "opNegate",
         "+": "opReaffirm",
         "!": "opLogicalNot",
         "~": "opBitwiseNot",
+    ];
+    UNARY_OPERATOR_TO_FUNCTION = unaryOperatorsToFunction.assumeUnique();
+    string[string] binaryOperatorToFunction = [
         "**": "opExponent",
         "*": "opMultiply",
         "/": "opDivide",
@@ -100,7 +104,7 @@ public static this() {
         "~": "opConcatenate",
         "..": "opRange"
     ];
-    OPERATOR_TO_FUNCTION = operatorToFunction.assumeUnique();
+    BINARY_OPERATOR_TO_FUNCTION = binaryOperatorToFunction.assumeUnique();
 }
 
 public class IntrinsicNameSpace : NameSpace {

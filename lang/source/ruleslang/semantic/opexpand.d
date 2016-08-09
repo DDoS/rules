@@ -86,6 +86,12 @@ private class OperatorExpander : StatementMapper {
 
 private class OperatorConverter : StatementMapper {
     public override Expression mapSign(Sign expression) {
+        // Don't convert signs for signed decimal integer literals
+        // because they are actually part of the literal
+        auto integer = cast(SignedIntegerLiteral) expression.inner;
+        if (integer && integer.radix == 10) {
+            return expression;
+        }
         auto op = expression.operator;
         mixin(genConversionUnary!"+");
         mixin(genConversionUnary!"-");
@@ -201,10 +207,11 @@ private class OperatorConverter : StatementMapper {
 
     private static string genConversion(string op, bool binary)() {
         string args = binary ? "expression.left, expression.right" : "expression.inner";
+        string conv = binary ? "BINARY_OPERATOR_TO_FUNCTION" : "UNARY_OPERATOR_TO_FUNCTION";
         return `
         if (op == "` ~ op ~ `") {
             return new FunctionCall(
-                new NameReference([new Identifier(OPERATOR_TO_FUNCTION[op.getSource()], op.start, op.end)]),
+                new NameReference([new Identifier(` ~ conv ~ `[op.getSource()], op.start, op.end)]),
                 [` ~ args ~ `], expression.start, expression.end
             );
         }

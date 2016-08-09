@@ -10,6 +10,38 @@ import ruleslang.test.assertion;
 
 unittest {
     assertEqual(
+        "Assignment(a = FunctionCall(opReaffirm(b)))",
+        parseAndExpand("a = +b")
+    );
+    assertEqual(
+        "Assignment(a = FunctionCall(opReaffirm(UnsignedIntegerLiteral(1))))",
+        parseAndExpand("a = +1u")
+    );
+    assertEqual(
+        "Assignment(a = Sign(+SignedIntegerLiteral(1)))",
+        parseAndExpand("a = +1")
+    );
+    assertEqual(
+        "Assignment(a = FunctionCall(opNegate(b)))",
+        parseAndExpand("a = -b")
+    );
+    assertEqual(
+        "Assignment(a = FunctionCall(opNegate(UnsignedIntegerLiteral(1))))",
+        parseAndExpand("a = -1u")
+    );
+    assertEqual(
+        "Assignment(a = Sign(-SignedIntegerLiteral(1)))",
+        parseAndExpand("a = -1")
+    );
+    assertEqual(
+        "Assignment(a = FunctionCall(opLogicalNot(b)))",
+        parseAndExpand("a = !b")
+    );
+    assertEqual(
+        "Assignment(a = FunctionCall(opBitwiseNot(b)))",
+        parseAndExpand("a = ~b")
+    );
+    assertEqual(
         "Assignment(a = FunctionCall(opExponent(a, b)))",
         parseAndExpand("a **= b")
     );

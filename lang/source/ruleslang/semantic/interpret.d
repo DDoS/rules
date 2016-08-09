@@ -75,7 +75,16 @@ public immutable class Interpreter {
     }
 
     public immutable(Node) interpretSign(Sign sign) {
-        return NullNode.INSTANCE;
+        auto integer = cast(SignedIntegerLiteral) sign.inner;
+        if (integer && integer.radix == 10) {
+            bool overflow;
+            auto value = integer.getValue(sign.operator == "-", overflow);
+            if (overflow) {
+                throw new SourceException("Signed integer overflow", sign);
+            }
+            return new immutable SignedIntegerLiteralNode(value);
+        }
+        assert (0);
     }
 
     public immutable(Node) interpretLogicalNot(LogicalNot expression) {
