@@ -5,6 +5,7 @@ import std.algorithm.searching : canFind;
 import std.exception : assumeUnique;
 import std.math: isNaN, isInfinity;
 import std.utf : codeLength;
+import std.bigint : BigInt;
 
 import ruleslang.evaluation.value;
 import ruleslang.util;
@@ -267,19 +268,20 @@ public immutable interface LiteralType : Type {
 public immutable interface AtomicLiteralType : LiteralType {
     public immutable(Value) asValue();
     public immutable(AtomicType) getAtomicType();
-    public immutable(SignedIntegerLiteralType) toSignedIntegerLiteral();
-    public immutable(UnsignedIntegerLiteralType) toUnsignedIntegerLiteral();
-    public immutable(FloatLiteralType) toFloatLiteral();
 }
 
-public immutable class SignedIntegerLiteralType : AtomicLiteralType {
-    private long _value;
+public immutable class IntegerLiteralType : AtomicLiteralType {
+    private BigInt _value;
 
     public this(long value) {
-        _value = value;
+        _value = BigInt(value);
     }
 
-    @property public long value() {
+    public this(ulong value) {
+        _value = BigInt(value);
+    }
+
+    @property public BigInt value() {
         return _value;
     }
 
@@ -292,7 +294,8 @@ public immutable class SignedIntegerLiteralType : AtomicLiteralType {
         if (atomic is null) {
             return false;
         }
-        if (atomic.inRange(_value)) {
+        bool inRange = _value < 0 ? atomic.inRange(cast(long) _value) : atomic.inRange(cast(ulong) _value);
+        if (inRange) {
             if (atomic.isFloat()) {
                 conversions.thenIntegerToFloat();
                 conversions.thenFloatLiteralNarrow();
@@ -305,95 +308,23 @@ public immutable class SignedIntegerLiteralType : AtomicLiteralType {
     }
 
     public override immutable(Value) asValue() {
-        return valueOf(_value);
+        return _value < 0 ? valueOf(cast(long) _value) : valueOf(cast(ulong) _value);
     }
 
     public override immutable(AtomicType) getAtomicType() {
         return _value < 0 ? AtomicType.SINT64 : AtomicType.UINT64;
     }
 
-    public override immutable(SignedIntegerLiteralType) toSignedIntegerLiteral() {
-        return this;
-    }
-
-    public override immutable(UnsignedIntegerLiteralType) toUnsignedIntegerLiteral() {
-        if (_value < 0) {
-            throw new Error("Can't convert a negative value to unsigned");
-        }
-        return new immutable UnsignedIntegerLiteralType(cast(ulong) _value);
-    }
-
-    public override immutable(FloatLiteralType) toFloatLiteral() {
-        return new immutable FloatLiteralType(_value);
+    public immutable(FloatLiteralType) toFloatLiteral() {
+        return _value < 0 ? new immutable FloatLiteralType(cast(long) _value)
+                : new immutable FloatLiteralType(cast(ulong) _value);
     }
 
     public override string toString() {
-        return format("sint_lit(%d)", _value);
+        return format("int_lit(%d)", _value);
     }
 
-    mixin literalTypeOpEquals!SignedIntegerLiteralType;
-}
-
-public immutable class UnsignedIntegerLiteralType : AtomicLiteralType {
-    private ulong _value;
-
-    public this(ulong value) {
-        _value = value;
-    }
-
-    @property public ulong value() {
-        return _value;
-    }
-
-    public override bool convertibleTo(inout Type type, ref TypeConversionChain conversions) {
-        if (opEquals(type)) {
-            conversions.thenIdentity();
-            return true;
-        }
-        auto atomic = cast(immutable AtomicType) type;
-        if (atomic is null) {
-            return false;
-        }
-        if (atomic.inRange(_value)) {
-            if (atomic.isFloat()) {
-                conversions.thenIntegerToFloat();
-                conversions.thenFloatLiteralNarrow();
-            } else {
-                conversions.thenIntegerLiteralNarrow();
-            }
-            return true;
-        }
-        return false;
-    }
-
-    public override immutable(Value) asValue() {
-        return valueOf(_value);
-    }
-
-    public override immutable(AtomicType) getAtomicType() {
-        return AtomicType.UINT64;
-    }
-
-    public override immutable(SignedIntegerLiteralType) toSignedIntegerLiteral() {
-        if (_value > long.max) {
-            throw new Error("Value is too large for signed");
-        }
-        return new immutable SignedIntegerLiteralType(cast(long) _value);
-    }
-
-    public override immutable(UnsignedIntegerLiteralType) toUnsignedIntegerLiteral() {
-        return this;
-    }
-
-    public override immutable(FloatLiteralType) toFloatLiteral() {
-        return new immutable FloatLiteralType(_value);
-    }
-
-    public override string toString() {
-        return format("uint_lit(%d)", _value);
-    }
-
-    mixin literalTypeOpEquals!UnsignedIntegerLiteralType;
+    mixin literalTypeOpEquals!IntegerLiteralType;
 }
 
 public immutable class FloatLiteralType : AtomicLiteralType {
@@ -429,19 +360,6 @@ public immutable class FloatLiteralType : AtomicLiteralType {
 
     public override immutable(AtomicType) getAtomicType() {
         return AtomicType.FP64;
-    }
-
-    public override immutable(SignedIntegerLiteralType) toSignedIntegerLiteral() {
-        throw new Error("Can't convert a float to an integer");
-
-    }
-
-    public override immutable(UnsignedIntegerLiteralType) toUnsignedIntegerLiteral() {
-        throw new Error("Can't convert a float to an integer");
-    }
-
-    public override immutable(FloatLiteralType) toFloatLiteral() {
-        return this;
     }
 
     public override string toString() {

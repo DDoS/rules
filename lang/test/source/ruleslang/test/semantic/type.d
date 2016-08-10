@@ -66,29 +66,29 @@ unittest {
 }
 
 unittest {
-    assertConvertible(new immutable SignedIntegerLiteralType(323), new immutable SignedIntegerLiteralType(323),
+    assertConvertible(new immutable IntegerLiteralType(323L), new immutable IntegerLiteralType(323L),
         TypeConversion.IDENTITY);
-    assertNotConvertible(new immutable SignedIntegerLiteralType(323), new immutable SignedIntegerLiteralType(322));
-    assertConvertible(new immutable SignedIntegerLiteralType(323), AtomicType.UINT16,
+    assertNotConvertible(new immutable IntegerLiteralType(323L), new immutable IntegerLiteralType(322L));
+    assertConvertible(new immutable IntegerLiteralType(323L), AtomicType.UINT16,
         TypeConversion.INTEGER_LITERAL_NARROW);
-    assertConvertible(new immutable SignedIntegerLiteralType(65504), AtomicType.FP16,
+    assertConvertible(new immutable IntegerLiteralType(65504L), AtomicType.FP16,
         TypeConversion.INTEGER_TO_FLOAT, TypeConversion.FLOAT_LITERAL_NARROW);
-    assertNotConvertible(new immutable SignedIntegerLiteralType(65505), AtomicType.FP16);
-    assertConvertible(new immutable SignedIntegerLiteralType(65505), AtomicType.FP32,
+    assertNotConvertible(new immutable IntegerLiteralType(65505L), AtomicType.FP16);
+    assertConvertible(new immutable IntegerLiteralType(65505L), AtomicType.FP32,
         TypeConversion.INTEGER_TO_FLOAT, TypeConversion.FLOAT_LITERAL_NARROW);
-    assertNotConvertible(new immutable SignedIntegerLiteralType(323), AtomicType.UINT8);
-    assertConvertible(new immutable SignedIntegerLiteralType(323), AtomicType.SINT16,
+    assertNotConvertible(new immutable IntegerLiteralType(323L), AtomicType.UINT8);
+    assertConvertible(new immutable IntegerLiteralType(323L), AtomicType.SINT16,
         TypeConversion.INTEGER_LITERAL_NARROW);
-    assertNotConvertible(new immutable SignedIntegerLiteralType(323), AtomicType.SINT8);
-    assertNotConvertible(new immutable SignedIntegerLiteralType(-1), AtomicType.UINT64);
-    assertConvertible(new immutable UnsignedIntegerLiteralType(127), new immutable UnsignedIntegerLiteralType(127),
+    assertNotConvertible(new immutable IntegerLiteralType(323L), AtomicType.SINT8);
+    assertNotConvertible(new immutable IntegerLiteralType(-1L), AtomicType.UINT64);
+    assertConvertible(new immutable IntegerLiteralType(127UL), new immutable IntegerLiteralType(127UL),
         TypeConversion.IDENTITY);
-    assertNotConvertible(new immutable UnsignedIntegerLiteralType(127), new immutable UnsignedIntegerLiteralType(126));
-    assertConvertible(new immutable UnsignedIntegerLiteralType(127), AtomicType.SINT8,
+    assertNotConvertible(new immutable IntegerLiteralType(127UL), new immutable IntegerLiteralType(126UL));
+    assertConvertible(new immutable IntegerLiteralType(127UL), AtomicType.SINT8,
         TypeConversion.INTEGER_LITERAL_NARROW);
-    assertConvertible(new immutable UnsignedIntegerLiteralType(9223372036854775807L), AtomicType.SINT64,
+    assertConvertible(new immutable IntegerLiteralType(9223372036854775807L), AtomicType.SINT64,
         TypeConversion.INTEGER_LITERAL_NARROW);
-    assertNotConvertible(new immutable UnsignedIntegerLiteralType(9223372036854775808uL), AtomicType.SINT64);
+    assertNotConvertible(new immutable IntegerLiteralType(9223372036854775808uL), AtomicType.SINT64);
     assertConvertible(new immutable FloatLiteralType(10.0e10), new immutable FloatLiteralType(10.0e10),
         TypeConversion.IDENTITY);
     assertNotConvertible(new immutable FloatLiteralType(10.0e10), new immutable FloatLiteralType(11.0e10));

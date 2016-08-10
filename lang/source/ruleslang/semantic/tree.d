@@ -49,11 +49,9 @@ public immutable class BooleanLiteralNode : TypedNode {
 }
 
 public immutable class StringLiteralNode : TypedNode {
-    private dstring _value;
     private StringLiteralType type;
 
     public this(dstring value) {
-        _value = value;
         type = new immutable StringLiteralType(value);
     }
 
@@ -66,39 +64,19 @@ public immutable class StringLiteralNode : TypedNode {
     }
 
     public override string toString() {
-        return format("StringLiteral(%s)", _value);
+        return format("StringLiteral(%s)", type.value);
     }
 }
 
-public immutable class SignedIntegerLiteralNode : TypedNode {
-    private long _value;
-    private SignedIntegerLiteralType type;
+public immutable class IntegerLiteralNode : TypedNode {
+    private IntegerLiteralType type;
 
     public this(long value) {
-        _value = value;
-        type = new immutable SignedIntegerLiteralType(value);
+        type = new immutable IntegerLiteralType(value);
     }
-
-    public override Node[] getChildren() {
-        return [];
-    }
-
-    public override immutable(Type) getType() {
-        return type;
-    }
-
-    public override string toString() {
-        return format("SignedIntegerLiteral(%d)", _value);
-    }
-}
-
-public immutable class UnsignedIntegerLiteralNode : TypedNode {
-    private ulong _value;
-    private UnsignedIntegerLiteralType type;
 
     public this(ulong value) {
-        _value = value;
-        type = new immutable UnsignedIntegerLiteralType(value);
+        type = new immutable IntegerLiteralType(value);
     }
 
     public override Node[] getChildren() {
@@ -110,16 +88,14 @@ public immutable class UnsignedIntegerLiteralNode : TypedNode {
     }
 
     public override string toString() {
-        return format("UnsignedIntegerLiteral(%d)", _value);
+        return format("SignedIntegerLiteral(%d)", type.value);
     }
 }
 
 public immutable class FloatLiteralNode : TypedNode {
-    private double _value;
     private FloatLiteralType type;
 
     public this(double value) {
-        _value = value;
         type = new immutable FloatLiteralType(value);
     }
 
@@ -132,6 +108,6 @@ public immutable class FloatLiteralNode : TypedNode {
     }
 
     public override string toString() {
-        return format("FloatLiteral(%g)", _value);
+        return format("FloatLiteral(%g)", type.value);
     }
 }

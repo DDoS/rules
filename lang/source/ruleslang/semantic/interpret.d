@@ -20,7 +20,7 @@ public immutable class Interpreter {
     }
 
     public immutable(Node) interpretCharacterLiteral(CharacterLiteral expression) {
-        return NullNode.INSTANCE;
+        return new immutable IntegerLiteralNode(cast(ulong) expression.getValue());
     }
 
     public immutable(Node) interpretSignedIntegerLiteral(SignedIntegerLiteral integer) {
@@ -29,7 +29,7 @@ public immutable class Interpreter {
         if (overflow) {
             throw new SourceException("Signed integer overflow", integer);
         }
-        return new immutable SignedIntegerLiteralNode(value);
+        return new immutable IntegerLiteralNode(value);
     }
 
     public immutable(Node) interpretUnsignedIntegerLiteral(UnsignedIntegerLiteral integer) {
@@ -38,7 +38,7 @@ public immutable class Interpreter {
         if (overflow) {
             throw new SourceException("Unsigned integer overflow", integer);
         }
-        return new immutable UnsignedIntegerLiteralNode(value);
+        return new immutable IntegerLiteralNode(value);
     }
 
     public immutable(Node) interpretFloatLiteral(FloatLiteral floating) {
@@ -86,7 +86,7 @@ public immutable class Interpreter {
             if (overflow) {
                 throw new SourceException("Signed integer overflow", sign);
             }
-            return new immutable SignedIntegerLiteralNode(value);
+            return new immutable IntegerLiteralNode(value);
         }
         assert (0);
     }
