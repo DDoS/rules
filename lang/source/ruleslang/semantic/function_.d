@@ -14,7 +14,7 @@ public immutable class Function {
     private Type _returnType;
     private FunctionImpl _impl;
 
-    public this(string name, immutable Type[] parameterTypes, immutable Type returnType, FunctionImpl impl) {
+    public this(string name, immutable(Type)[] parameterTypes, immutable Type returnType, FunctionImpl impl) {
         _name = name;
         _returnType = returnType;
         _parameterTypes = parameterTypes;

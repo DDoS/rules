@@ -16,7 +16,6 @@ public enum TypeConversion {
     FLOAT_WIDEN,
     INTEGER_LITERAL_NARROW,
     FLOAT_LITERAL_NARROW,
-    ARRAY_TO_COMPONENT,
     SIZED_ARRAY_SHORTEN,
     SIZED_ARRAY_TO_UNSIZED,
     STRING_LITERAL_TO_UTF8,
@@ -507,14 +506,6 @@ public immutable class SizedArrayType : ArrayType {
     }
 
     public override bool convertibleTo(inout Type type, ref TypeConversionChain conversions) {
-        // If the sized array has size 1, we can interpret it as its component type
-        if (_size == 1) {
-            auto copy = conversions.clone().thenArrayToComponent();
-            if (componentType.convertibleTo(type, copy)) {
-                conversions = copy;
-                return true;
-            }
-        }
         auto arrayType = cast(immutable ArrayType) type;
         if (arrayType is null) {
             return false;

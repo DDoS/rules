@@ -36,7 +36,7 @@ unittest {
     assertMoreSpecific([AtomicType.UINT32], [AtomicType.FP32]);
 
     assertLessSpecific([AtomicType.UINT8], [new immutable SizedArrayType(AtomicType.UINT8, 1)]);
-    assertMoreSpecific([new immutable SizedArrayType(AtomicType.UINT8, 1)], [AtomicType.UINT8]);
+    assertLessSpecific([new immutable SizedArrayType(AtomicType.UINT8, 1)], [AtomicType.UINT8]);
 
     assertLessSpecific([new immutable SizedArrayType(AtomicType.UINT8, 1)], [new immutable SizedArrayType(AtomicType.UINT8, 2)]);
     assertMoreSpecific([new immutable SizedArrayType(AtomicType.UINT8, 2)], [new immutable SizedArrayType(AtomicType.UINT8, 1)]);

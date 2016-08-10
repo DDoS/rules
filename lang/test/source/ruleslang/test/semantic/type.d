@@ -111,15 +111,9 @@ unittest {
     assertNotConvertible(new immutable StringLiteralType("21"d), new immutable StringLiteralType("1"d));
     assertConvertible(new immutable StringLiteralType("12"d), new immutable StringLiteralType("1"d),
         TypeConversion.SIZED_ARRAY_SHORTEN);
-    assertConvertible(new immutable StringLiteralType("1"d), AtomicType.UINT8,
-        TypeConversion.STRING_LITERAL_TO_UTF8, TypeConversion.ARRAY_TO_COMPONENT, TypeConversion.IDENTITY);
     assertNotConvertible(new immutable StringLiteralType("ç"d), AtomicType.UINT8);
-    assertConvertible(new immutable StringLiteralType("ç"d), AtomicType.UINT16,
-        TypeConversion.STRING_LITERAL_TO_UTF16, TypeConversion.ARRAY_TO_COMPONENT, TypeConversion.IDENTITY);
     assertNotConvertible(new immutable StringLiteralType("11"d), AtomicType.UINT8);
     assertNotConvertible(new immutable StringLiteralType("Ʃ"d), AtomicType.UINT8);
-    assertConvertible(new immutable StringLiteralType("Ʃ"d), AtomicType.UINT16,
-        TypeConversion.STRING_LITERAL_TO_UTF16, TypeConversion.ARRAY_TO_COMPONENT, TypeConversion.IDENTITY);
     assertConvertible(new immutable StringLiteralType("1"d), new immutable SizedArrayType(AtomicType.UINT32, 1),
         TypeConversion.IDENTITY);
     assertConvertible(new immutable StringLiteralType("1"d), new immutable SizedArrayType(AtomicType.UINT16, 1),
@@ -165,8 +159,6 @@ unittest {
     assertConvertible(new immutable SizedArrayType(AtomicType.UINT8, 1), new immutable ArrayType(AtomicType.UINT8),
         TypeConversion.SIZED_ARRAY_TO_UNSIZED);
     assertNotConvertible(new immutable SizedArrayType(AtomicType.UINT8, 1), new immutable ArrayType(AtomicType.SINT8));
-    assertConvertible(new immutable SizedArrayType(AtomicType.UINT8, 1), AtomicType.UINT8,
-        TypeConversion.ARRAY_TO_COMPONENT, TypeConversion.IDENTITY);
     assertNotConvertible(new immutable SizedArrayType(AtomicType.UINT8, 0), AtomicType.UINT8);
     assertNotConvertible(new immutable SizedArrayType(AtomicType.UINT8, 2), AtomicType.UINT8);
     assertNotConvertible(new immutable SizedArrayType(AtomicType.UINT8, 1), AtomicType.SINT8);

@@ -194,6 +194,7 @@ public class IntrinsicNameSpace : NameSpace {
         // Generate the parameter types by converting the argument type to the equivalent literal type
         immutable(AtomicLiteralType)[] literalParameters = [];
         foreach (i, paramType; func.parameterTypes) {
+            // Only convert functions with 64 bit numeric parameter types
             auto argType = cast(immutable AtomicLiteralType) argumentTypes[i];
             assert (argType !is null);
             if (paramType == AtomicType.FP64) {
@@ -215,6 +216,7 @@ public class IntrinsicNameSpace : NameSpace {
         // Create the return type literal corresponding to the return type
         auto returnType = cast(immutable AtomicType) func.returnType;
         assert (returnType !is null);
+        // Using a pointer here because you can't assign an immutable value even if uninitialized
         immutable(AtomicLiteralType)* literalReturn;
         if (returnType == AtomicType.FP64) {
             immutable(AtomicLiteralType) literal = new immutable FloatLiteralType(result.as!double);
