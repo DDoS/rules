@@ -29,10 +29,10 @@ public immutable class NullNode : Node {
 }
 
 public immutable class BooleanLiteralNode : TypedNode {
-    private bool _value;
+    private BooleanLiteralType type;
 
     public this(bool value) {
-        _value = value;
+        type = new immutable BooleanLiteralType(value);
     }
 
     public override Node[] getChildren() {
@@ -40,11 +40,11 @@ public immutable class BooleanLiteralNode : TypedNode {
     }
 
     public override immutable(Type) getType() {
-        return AtomicType.BOOL;
+        return type;
     }
 
     public override string toString() {
-        return format("BooleanLiteral(%s)", _value);
+        return format("BooleanLiteral(%s)", type.value);
     }
 }
 

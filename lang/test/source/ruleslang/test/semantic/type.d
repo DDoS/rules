@@ -66,6 +66,17 @@ unittest {
 }
 
 unittest {
+    assertConvertible(new immutable BooleanLiteralType(true), new immutable BooleanLiteralType(true),
+        TypeConversion.IDENTITY);
+    assertNotConvertible(new immutable BooleanLiteralType(true), new immutable BooleanLiteralType(false));
+    assertNotConvertible(new immutable BooleanLiteralType(false), new immutable BooleanLiteralType(true));
+    assertConvertible(new immutable BooleanLiteralType(false), new immutable BooleanLiteralType(false),
+        TypeConversion.IDENTITY);
+    assertConvertible(new immutable BooleanLiteralType(true), AtomicType.BOOL,
+        TypeConversion.IDENTITY);
+    assertConvertible(new immutable BooleanLiteralType(false), AtomicType.BOOL,
+        TypeConversion.IDENTITY);
+    assertNotConvertible(new immutable BooleanLiteralType(false), AtomicType.UINT8);
     assertConvertible(new immutable IntegerLiteralType(323L), new immutable IntegerLiteralType(323L),
         TypeConversion.IDENTITY);
     assertNotConvertible(new immutable IntegerLiteralType(323L), new immutable IntegerLiteralType(322L));

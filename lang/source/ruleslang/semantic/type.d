@@ -270,6 +270,46 @@ public immutable interface AtomicLiteralType : LiteralType {
     public immutable(AtomicType) getAtomicType();
 }
 
+public immutable class BooleanLiteralType : AtomicLiteralType {
+    private bool _value;
+
+    public this(bool value) {
+        _value = value;
+    }
+
+    @property public bool value() {
+        return _value;
+    }
+
+    public override bool convertibleTo(inout Type type, ref TypeConversionChain conversions) {
+        if (opEquals(type)) {
+            conversions.thenIdentity();
+            return true;
+        }
+        // Can only cast to the atomic type bool
+        auto atomic = cast(immutable AtomicType) type;
+        if (atomic !is null && atomic == AtomicType.BOOL) {
+            conversions.thenIdentity();
+            return true;
+        }
+        return false;
+    }
+
+    public override immutable(Value) asValue() {
+        return valueOf(_value);
+    }
+
+    public override immutable(AtomicType) getAtomicType() {
+        return AtomicType.BOOL;
+    }
+
+    public override string toString() {
+        return format("bool_lit(%s)", _value);
+    }
+
+    mixin literalTypeOpEquals!BooleanLiteralType;
+}
+
 public immutable class IntegerLiteralType : AtomicLiteralType {
     private BigInt _value;
 

@@ -195,7 +195,9 @@ public class IntrinsicNameSpace : NameSpace {
         immutable(AtomicLiteralType)[] literalParameters = [];
         foreach (i, paramType; func.parameterTypes) {
             // Only convert functions with 64 bit numeric parameter types
-            if (paramType == AtomicType.FP64) {
+            if (paramType == AtomicType.BOOL) {
+                literalParameters ~= argumentTypes[i].castOrFail!(immutable BooleanLiteralType);
+            } else if (paramType == AtomicType.FP64) {
                 auto floatLiteral = cast(immutable FloatLiteralType) argumentTypes[i];
                 if (floatLiteral !is null) {
                     literalParameters ~= floatLiteral;
@@ -219,7 +221,10 @@ public class IntrinsicNameSpace : NameSpace {
         assert (returnType !is null);
         // Using a pointer here because you can't assign an immutable value even if uninitialized
         immutable(AtomicLiteralType)* literalReturn;
-        if (returnType == AtomicType.FP64) {
+        if (returnType == AtomicType.BOOL) {
+            immutable(AtomicLiteralType) literal = new immutable BooleanLiteralType(result.as!bool);
+            literalReturn = &literal;
+        } else if (returnType == AtomicType.FP64) {
             immutable(AtomicLiteralType) literal = new immutable FloatLiteralType(result.as!double);
             literalReturn = &literal;
         } else if (returnType == AtomicType.SINT64) {
