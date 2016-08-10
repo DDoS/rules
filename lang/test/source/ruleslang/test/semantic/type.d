@@ -89,6 +89,11 @@ unittest {
     assertConvertible(new immutable IntegerLiteralType(9223372036854775807L), AtomicType.SINT64,
         TypeConversion.INTEGER_LITERAL_NARROW);
     assertNotConvertible(new immutable IntegerLiteralType(9223372036854775808uL), AtomicType.SINT64);
+    assertConvertible(new immutable IntegerLiteralType(12UL), new immutable FloatLiteralType(12),
+        TypeConversion.INTEGER_TO_FLOAT);
+    assertNotConvertible(new immutable IntegerLiteralType(11UL), new immutable FloatLiteralType(12));
+    assertConvertible(new immutable IntegerLiteralType(-12L), new immutable FloatLiteralType(-12),
+        TypeConversion.INTEGER_TO_FLOAT);
     assertConvertible(new immutable FloatLiteralType(10.0e10), new immutable FloatLiteralType(10.0e10),
         TypeConversion.IDENTITY);
     assertNotConvertible(new immutable FloatLiteralType(10.0e10), new immutable FloatLiteralType(11.0e10));

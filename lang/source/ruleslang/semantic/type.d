@@ -290,6 +290,14 @@ public immutable class IntegerLiteralType : AtomicLiteralType {
             conversions.thenIdentity();
             return true;
         }
+        // Can cast to a float literal type if converting the value to floating point gives the same value
+        auto floatLiteral = type.exactCastImmutable!(FloatLiteralType);
+        if (floatLiteral !is null
+                && (_value < 0 ? floatLiteral.value == cast(long) _value : floatLiteral.value == cast(ulong) _value)) {
+            conversions.thenIntegerToFloat();
+            return true;
+        }
+        // Can cast to an atomic type if in range
         auto atomic = cast(immutable AtomicType) type;
         if (atomic is null) {
             return false;
@@ -343,6 +351,7 @@ public immutable class FloatLiteralType : AtomicLiteralType {
             conversions.thenIdentity();
             return true;
         }
+        // Can cast to an atomic type if in range
         auto atomic = cast(immutable AtomicType) type;
         if (atomic is null) {
             return false;
