@@ -19,6 +19,10 @@ public immutable class Interpreter {
         return new immutable StringLiteralNode(expression.getValue());
     }
 
+    public immutable(Node) interpretCharacterLiteral(CharacterLiteral expression) {
+        return NullNode.INSTANCE;
+    }
+
     public immutable(Node) interpretSignedIntegerLiteral(SignedIntegerLiteral integer) {
         bool overflow;
         auto value = integer.getValue(false, overflow);

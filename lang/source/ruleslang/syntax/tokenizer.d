@@ -104,6 +104,9 @@ public class Tokenizer {
             } else if (chars.head() == '"') {
                 auto position = chars.count;
                 token = new StringLiteral(chars.collectStringLiteral(), position);
+            } else if (chars.head() == '\'') {
+                auto position = chars.count;
+                token = new CharacterLiteral(chars.collectCharacterLiteral(), position);
             } else if (chars.head().isDecimalDigit()) {
                 token = chars.collectNumberLiteral();
             } else {
@@ -226,7 +229,7 @@ private dstring collectStringLiteral(DCharReader chars) {
         } else if (chars.head().isLineWhiteSpace()) {
             chars.collect();
         } else if (chars.collectEscapeSequence()) {
-            // Nothing to do, it is already collected
+            // Nothing to do, it is already collected by the "if" call
         } else {
             // Not part of a string literal body, end here
             break;
@@ -235,6 +238,30 @@ private dstring collectStringLiteral(DCharReader chars) {
     // Closing "
     if (chars.head() != '"') {
         throw new SourceException("Expected closing \"", chars.head(), chars.count);
+    }
+    chars.collect();
+    return chars.popCollected();
+}
+
+private dstring collectCharacterLiteral(DCharReader chars) {
+    // Opening '
+    if (chars.head() != '\'') {
+        throw new SourceException("Expected opening \'", chars.head(), chars.count);
+    }
+    chars.collect();
+    // Character contents
+    if (chars.head().isPrintChar() && chars.head() != '\'' && chars.head() != '\\') {
+        chars.collect();
+    } else if (chars.head().isLineWhiteSpace()) {
+        chars.collect();
+    } else if (chars.collectEscapeSequence()) {
+        // Nothing to do, it is already collected by the "if" call
+    } else {
+        throw new SourceException("CharacterLiteral has an empty body", chars.head(), chars.count);
+    }
+    // Closing '
+    if (chars.head() != '\'') {
+        throw new SourceException("Expected closing \'", chars.head(), chars.count);
     }
     chars.collect();
     return chars.popCollected();

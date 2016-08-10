@@ -78,22 +78,31 @@ float = ([decimalDigitSequence], ".", decimalDigitSequence, [exponentPart])
 boolean = "true" | "false" ;
 
 (* bell, backspace, horizontal tab, line feed, vertical tab, form feed,
-    carriage return, double quote and backslash *)
-charEscape = "\a" | "\b" | "\t" | "\n" | "\v" | "\f" | "\r" | '\"' | "\\" ;
+    carriage return, double quote, single quote and backslash *)
+charEscape = "\a" | "\b" | "\t" | "\n" | "\v" | "\f" | "\r" | '\"' | "\'"
+    | "\\" ;
 (* Hexadecimal sequence to be converted to  unicode code point in the string *)
 unicodeEscape = "\u", hexDigit, [hexDigit, [hexDigit, [hexDigit, [hexDigit
     [hexDigit, [hexDigit, [hexDigit]]]]]]];
-(* String are any ASCII char, excluding double quotes and new line chars,
-    but with escape sequences *)
+
+(* String are any ASCII characters, excluding double quotes and new line
+    characters, but with escape sequences *)
 string = '"', {
     (printChar - '"' - "\") | lineWsChar | charEscape | unicodeEscape
 }, '"' ;
+
+(* A char is like a string, but with only one character, and with single quotes
+    instead of doubles *)
+char = "'", (
+    (printChar - "'" - "\") | lineWsChar | charEscape | unicodeEscape
+), "'" ;
 
 (* These are the tokens used by the abstract syntax *)
 
 identifierToken = identifierStart, {identifierBody} ;
 literalToken = (
-    signedIntegerLiteral | unsignedIntegerLiteral | float | boolean | string
+    signedIntegerLiteral | unsignedIntegerLiteral | float | boolean
+    | string | char
 ) ;
 symbolToken = symbol ;
 keywordToken = keyword ;

@@ -6,6 +6,8 @@ import std.format : format;
 import std.uni : isGraphical;
 import std.algorithm.iteration : map, reduce;
 
+import ruleslang.util;
+
 private immutable dchar[dchar] ESCAPE_CHARS;
 private immutable dchar[dchar] CHAR_ESCAPES;
 
@@ -19,12 +21,10 @@ public static this() {
         'f': '\f',
         'r': '\r',
         '"': '"',
+        '\'': '\'',
         '\\': '\\'
     ];
-    dchar[dchar] reverse;
-    foreach (c; forward.keys) {
-        reverse[forward[c]] = c;
-    }
+    dchar[dchar] reverse = forward.inverse();
     forward.rehash;
     reverse.rehash;
     ESCAPE_CHARS = assumeUnique(forward);

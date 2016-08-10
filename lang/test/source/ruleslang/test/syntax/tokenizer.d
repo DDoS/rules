@@ -67,6 +67,13 @@ unittest {
 }
 
 unittest {
+    assertLexNoIndent("'a'", "CharacterLiteral('a')");
+    assertLexNoIndent("'\\''", "CharacterLiteral('\\'')");
+    assertLexNoIndent("'\\n'", "CharacterLiteral('\\n')");
+    assertLexNoIndent("'\\u00000000'", "CharacterLiteral('\\u00000000')");
+}
+
+unittest {
     assertLexNoIndent("0b0", "SignedIntegerLiteral(0b0)");
     assertLexNoIndent("0b11", "SignedIntegerLiteral(0b11)");
     assertLexNoIndent("0B110101", "SignedIntegerLiteral(0B110101)");

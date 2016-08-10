@@ -38,6 +38,7 @@ public enum Kind {
     OTHER_SYMBOL,
     BOOLEAN_LITERAL,
     STRING_LITERAL,
+    CHARACTER_LITERAL,
     SIGNED_INTEGER_LITERAL,
     UNSIGNED_INTEGER_LITERAL,
     FLOAT_LITERAL,
@@ -244,26 +245,11 @@ public class StringLiteral : SourceToken!(Kind.STRING_LITERAL), Expression {
         if (original[0] != '"') {
             throw new Error("String is missing beginning quote");
         }
-        dchar[] buffer = [];
-        buffer.reserve(64);
-        for (size_t i = 1; i < length - 1; ) {
-            dchar c = original[i];
-            i += 1;
-            if (c == '\\') {
-                c = original[i];
-                i += 1;
-                if (c == 'u') {
-                    c = original[i - 1 .. $].decodeUnicodeEscape(i);
-                } else {
-                    c = c.decodeCharEscape();
-                }
-            }
-            buffer ~= c;
-        }
+        auto value = original[1 .. length - 1].decodeStringContent();
         if (original[length - 1] != '"') {
             throw new Error("String is missing ending quote");
         }
-        return buffer.idup;
+        return value;
     }
 
     public override string toString() {
@@ -276,11 +262,88 @@ public class StringLiteral : SourceToken!(Kind.STRING_LITERAL), Expression {
     }
 }
 
-public alias SignedIntegerLiteral = IntegerLiteral!true;
-public alias UnsignedIntegerLiteral = IntegerLiteral!false;
+public class CharacterLiteral : SourceToken!(Kind.CHARACTER_LITERAL), Expression {
+    private dstring original;
 
-public class IntegerLiteral(bool signed) : SourceToken!(signed ? Kind.SIGNED_INTEGER_LITERAL : Kind.UNSIGNED_INTEGER_LITERAL),
-        Expression {
+    public this(dstring source, size_t start) {
+        this(source, start, start + source.length - 1);
+    }
+
+    public this(dstring source, size_t start, size_t end) {
+        super(source, start, end);
+        original = source;
+    }
+
+    @property public override size_t start() {
+        return super.start;
+    }
+
+    @property public override size_t end() {
+        return super.end;
+    }
+
+    public override Expression map(ExpressionMapper mapper) {
+        return mapper.mapCharacterLiteral(this);
+    }
+
+    public override immutable(Node) interpret() {
+        return Interpreter.INSTANCE.interpretCharacterLiteral(this);
+    }
+
+    public dchar getValue() {
+        auto length = original.length;
+        if (length < 2) {
+            throw new Error("Character is missing enclosing quotes");
+        }
+        if (original[0] != '\'') {
+            throw new Error("Character is missing beginning quote");
+        }
+        auto value = original[1 .. length - 1].decodeStringContent();
+        if (original[length - 1] != '\'') {
+            throw new Error("Character is missing ending quote");
+        }
+        if (value.length != 1) {
+            throw new Error("Character is not exactly one character long");
+        }
+        return value[0];
+    }
+
+    public override string toString() {
+        return super.toString();
+    }
+
+    unittest {
+        auto a = new CharacterLiteral("'h'"d, 0);
+        assert(a.getValue() == 'h');
+        auto b = new CharacterLiteral("'\\''"d, 0);
+        assert(b.getValue() == '\'');
+        auto c = new CharacterLiteral("'\\u0041'"d, 0);
+        assert(c.getValue() == 'A');
+    }
+}
+
+private dstring decodeStringContent(dstring data) {
+    dchar[] buffer = [];
+    buffer.reserve(64);
+    for (size_t i = 0; i < data.length; ) {
+        dchar c = data[i];
+        i += 1;
+        if (c == '\\') {
+            c = data[i];
+            i += 1;
+            if (c == 'u') {
+                c = data[i - 1 .. $].decodeUnicodeEscape(i);
+            } else {
+                c = c.decodeCharEscape();
+            }
+        }
+        buffer ~= c;
+    }
+    return buffer.idup;
+}
+
+
+public class SignedIntegerLiteral : SourceToken!(Kind.SIGNED_INTEGER_LITERAL), Expression {
     private uint _radix;
 
     public this(dstring source, size_t start) {
@@ -289,23 +352,7 @@ public class IntegerLiteral(bool signed) : SourceToken!(signed ? Kind.SIGNED_INT
 
     public this(dstring source, size_t start, size_t end) {
         super(source, start, end);
-        if (source.length > 2) {
-            switch (source[1]) {
-                case 'b':
-                case 'B':
-                    _radix = 2;
-                    break;
-                case 'x':
-                case 'X':
-                    _radix = 16;
-                    break;
-                default:
-                    _radix = 10;
-                    break;
-            }
-        } else {
-            _radix = 10;
-        }
+        _radix = source.getRadix();
     }
 
     @property public uint radix() {
@@ -321,84 +368,139 @@ public class IntegerLiteral(bool signed) : SourceToken!(signed ? Kind.SIGNED_INT
     }
 
     public override Expression map(ExpressionMapper mapper) {
-        static if (signed) {
-            return mapper.mapSignedIntegerLiteral(this);
-        } else {
-            return mapper.mapUnsignedIntegerLiteral(this);
-        }
+        return mapper.mapSignedIntegerLiteral(this);
     }
 
     public override immutable(Node) interpret() {
-        static if (signed) {
-            return Interpreter.INSTANCE.interpretSignedIntegerLiteral(this);
-        } else {
-            return Interpreter.INSTANCE.interpretUnsignedIntegerLiteral(this);
-        }
+        return Interpreter.INSTANCE.interpretSignedIntegerLiteral(this);
     }
 
     public override string getSource() {
         return super.getSource();
     }
 
-    static if (signed) {
-        public long getValue(bool sign, ref bool overflow) {
-            mixin (genGetValue());
+    public long getValue(bool sign, ref bool overflow) {
+        auto source = getSource().replace("_", "");
+        if (radix != 10) {
+            source = source[2 .. $];
         }
-    } else {
-        public ulong getValue(ref bool overflow) {
-            mixin (genGetValue());
+        if (sign) {
+            if (radix == 10) {
+                source = "-" ~ source;
+            } else {
+                throw new Error("Can't apply a sign to a non-decimal integer");
+            }
         }
-    }
-
-    private static string genGetValue() {
-        auto source = `auto source = getSource().replace("_", "");
-            if (radix != 10) {
-                source = source[2 .. $];
-            }`;
-        static if (signed) {
-            source ~= `if (sign) {
-                    if (radix == 10) {
-                        source = "-" ~ source;
-                    } else {
-                        throw new Error("Can't apply a sign to a non-decimal integer");
-                    }
-                }`;
-        }
-        source ~= `try {
+        try {
             overflow = false;
-            return source.to!` ~ (signed ? "long" : "ulong") ~ `(_radix);
+            return source.to!long(_radix);
         } catch (ConvOverflowException) {
             overflow = true;
             return -1;
-        }`;
-        return source;
+        }
     }
 
     public override string toString() {
         return super.toString();
     }
+
+    unittest {
+        bool overflow;
+        auto a = new SignedIntegerLiteral("424_32", 0);
+        assert(a.getValue(false, overflow) == 42432);
+        assert(a.getValue(true, overflow) == -42432);
+        assert(!overflow);
+        auto b = new SignedIntegerLiteral("0xFFFF", 0);
+        assert(b.getValue(false, overflow) == 0xFFFF);
+        auto c = new SignedIntegerLiteral("0b1110", 0);
+        assert(c.getValue(false, overflow) == 0b1110);
+        auto e = new SignedIntegerLiteral("9223372036854775808", 0);
+        assert(e.getValue(true, overflow) == 0x8000000000000000L);
+        assert(!overflow);
+        e.getValue(false, overflow);
+        assert(overflow);
+        auto f = new SignedIntegerLiteral("9223372036854775809", 0);
+        f.getValue(true, overflow);
+        assert(overflow);
+    }
 }
 
-unittest {
-    bool overflow;
-    auto a = new SignedIntegerLiteral("424_32", 0);
-    assert(a.getValue(false, overflow) == 42432);
-    assert(a.getValue(true, overflow) == -42432);
-    assert(!overflow);
-    auto b = new SignedIntegerLiteral("0xFFFF", 0);
-    assert(b.getValue(false, overflow) == 0xFFFF);
-    auto c = new SignedIntegerLiteral("0b1110", 0);
-    assert(c.getValue(false, overflow) == 0b1110);
-    auto d = new UnsignedIntegerLiteral("9223372036854775808", 0);
-    assert(d.getValue(overflow) == 9223372036854775808uL);
-    auto e = new SignedIntegerLiteral("9223372036854775808", 0);
-    assert(e.getValue(true, overflow) == 0x8000000000000000L);
-    assert(!overflow);
-    e.getValue(false, overflow);
-    assert(overflow);
-    auto f = new SignedIntegerLiteral("9223372036854775809", 0);
-    f.getValue(true, overflow);
-    assert(overflow);
+public class UnsignedIntegerLiteral : SourceToken!(Kind.UNSIGNED_INTEGER_LITERAL), Expression {
+    private uint _radix;
+
+    public this(dstring source, size_t start) {
+        this(source, start, start + source.length - 1);
+    }
+
+    public this(dstring source, size_t start, size_t end) {
+        super(source, start, end);
+        _radix = source.getRadix();
+    }
+
+    @property public uint radix() {
+        return _radix;
+    }
+
+    @property public override size_t start() {
+        return super.start;
+    }
+
+    @property public override size_t end() {
+        return super.end;
+    }
+
+    public override Expression map(ExpressionMapper mapper) {
+        return mapper.mapUnsignedIntegerLiteral(this);
+    }
+
+    public override immutable(Node) interpret() {
+        return Interpreter.INSTANCE.interpretUnsignedIntegerLiteral(this);
+    }
+
+    public override string getSource() {
+        return super.getSource();
+    }
+
+    public ulong getValue(ref bool overflow) {
+        auto source = getSource().replace("_", "");
+        if (radix != 10) {
+            source = source[2 .. $];
+        }
+        try {
+            overflow = false;
+            return source.to!ulong(_radix);
+        } catch (ConvOverflowException) {
+            overflow = true;
+            return -1;
+        }
+    }
+
+    public override string toString() {
+        return super.toString();
+    }
+
+    unittest {
+        bool overflow;
+        auto d = new UnsignedIntegerLiteral("9223372036854775808", 0);
+        assert(d.getValue(overflow) == 9223372036854775808uL);
+        assert(!overflow);
+    }
+}
+
+private uint getRadix(dstring source) {
+    if (source.length <= 2) {
+        return 10;
+    }
+    switch (source[1]) {
+        case 'b':
+        case 'B':
+            return 2;
+        case 'x':
+        case 'X':
+            return 16;
+        default:
+            return 10;
+    }
 }
 
 public class FloatLiteral : SourceToken!(Kind.FLOAT_LITERAL), Expression {
@@ -542,6 +644,8 @@ public string toString(Kind kind) {
             return "BooleanLiteral";
         case STRING_LITERAL:
             return "StringLiteral";
+        case CHARACTER_LITERAL:
+            return "CharacterLiteral";
         case SIGNED_INTEGER_LITERAL:
             return "SignedIntegerLiteral";
         case UNSIGNED_INTEGER_LITERAL:
