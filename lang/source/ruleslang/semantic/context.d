@@ -2,39 +2,112 @@ module ruleslang.semantic.context;
 
 import std.exception : assumeUnique;
 import std.meta : AliasSeq;
+import std.format : format;
 
 import ruleslang.semantic.type;
-import ruleslang.semantic.function_;
+import ruleslang.semantic.symbol;
 import ruleslang.evaluation.value;
 import ruleslang.util;
 
 public class Context {
-    private Context parent;
     private ForeignNameSpace foreignNames;
     private ImportedNameSpace importedNames;
     private ScopeNameSpace scopeNames;
     private IntrinsicNameSpace intrisicNames;
+    private NameSpace[] priority;
+
+    public this() {
+        foreignNames = new ForeignNameSpace();
+        importedNames = new ImportedNameSpace();
+        scopeNames = new ScopeNameSpace();
+        intrisicNames = new IntrinsicNameSpace();
+        priority = [
+            cast(NameSpace) intrisicNames, cast(NameSpace) scopeNames, cast(NameSpace) importedNames
+        ];
+    }
+
+    public immutable(Field) resolveField(string name) {
+        // Search the name spaces in order of priority
+        foreach (names; priority) {
+            auto field = names.getField(name);
+            if (field !is null) {
+                return field;
+            }
+        }
+        return null;
+    }
+
+    public immutable(Function) resolveFunction(string name, immutable(Type)[] argumentTypes) {
+        // Search the name spaces in order of priority
+        foreach (names; priority) {
+            auto functions = names.getFunctions(name, argumentTypes);
+            if (functions.length > 0) {
+                return functions.resolveOverloads();
+            }
+        }
+        return null;
+    }
+}
+
+private immutable(Function) resolveOverloads(immutable(Function)[] functions) {
+    for (size_t a = 0; a < functions.length; a++) {
+        auto funcA = functions[a];
+        for (size_t b = 0; b < functions.length; b++) {
+            auto funcB = functions[b];
+            // Don't compare the function with itself
+            if (funcA is funcB) {
+                continue;
+            }
+            // Remove the least specific functions
+            if (funcA.isMoreSpecific(funcB)) {
+                functions = functions[0 .. b] ~ functions[b + 1 .. $];
+            }
+        }
+    }
+    // Only one function should remain
+    assert (functions.length > 0);
+    if (functions.length > 1) {
+        // TODO: semantic exceptions
+        throw new Exception(format("Cannot resolve overloads, any of the following functions are applicable:\n",
+                functions.join!"\n"()));
+    }
+    return functions[0];
 }
 
 public interface NameSpace {
+    public immutable(Field) getField(string name);
     public immutable(Function)[] getFunctions(string name, immutable(Type)[] argumentTypes);
 }
 
 public class ForeignNameSpace : NameSpace {
+    public override immutable(Field) getField(string name) {
+        return null;
+    }
+
     public override immutable(Function)[] getFunctions(string name, immutable(Type)[] argumentTypes) {
-        assert(0);
+        return [];
     }
 }
 
 public class ImportedNameSpace : NameSpace {
+    public override immutable(Field) getField(string name) {
+        return null;
+    }
+
     public override immutable(Function)[] getFunctions(string name, immutable(Type)[] argumentTypes) {
-        assert(0);
+        return [];
     }
 }
 
 public class ScopeNameSpace : NameSpace {
+    private ScopeNameSpace parent;
+
+    public override immutable(Field) getField(string name) {
+        return null;
+    }
+
     public override immutable(Function)[] getFunctions(string name, immutable(Type)[] argumentTypes) {
-        assert(0);
+        return [];
     }
 }
 
@@ -161,6 +234,10 @@ public class IntrinsicNameSpace : NameSpace {
         // Operators ternary ... if ... else ...
         functions ~= genTernaryFunctions!(OperatorFunction.CONDITIONAL_FUNCTION, Constant!bool, Same, Same, AllTypes)();
         ternaryOperators = functions.idup;
+    }
+
+    public override immutable(Field) getField(string name) {
+        return null;
     }
 
     public override immutable(Function)[] getFunctions(string name, immutable(Type)[] argumentTypes) {

@@ -3,28 +3,35 @@ module ruleslang.semantic.tree;
 import std.format : format;
 
 import ruleslang.semantic.type;
+import ruleslang.semantic.symbol;
+import ruleslang.util;
 
 public immutable interface Node {
-    public Node[] getChildren();
+    public immutable(Node)[] getChildren();
     public string toString();
 }
 
 public immutable interface TypedNode : Node {
+    public immutable(TypedNode)[] getChildren();
     public immutable(Type) getType();
 }
 
-public immutable class NullNode : Node {
+public immutable class NullNode : TypedNode {
     public static immutable NullNode INSTANCE = new immutable NullNode();
 
     private this() {
     }
 
-    public override Node[] getChildren() {
+    public override immutable(TypedNode)[] getChildren() {
         return [];
     }
 
+    public override immutable(Type) getType() {
+        return AtomicType.BOOL;
+    }
+
     public override string toString() {
-        return "NullNode()";
+        return "Null()";
     }
 }
 
@@ -35,7 +42,7 @@ public immutable class BooleanLiteralNode : TypedNode {
         type = new immutable BooleanLiteralType(value);
     }
 
-    public override Node[] getChildren() {
+    public override immutable(TypedNode)[] getChildren() {
         return [];
     }
 
@@ -55,7 +62,7 @@ public immutable class StringLiteralNode : TypedNode {
         type = new immutable StringLiteralType(value);
     }
 
-    public override Node[] getChildren() {
+    public override immutable(TypedNode)[] getChildren() {
         return [];
     }
 
@@ -79,7 +86,7 @@ public immutable class IntegerLiteralNode : TypedNode {
         type = new immutable IntegerLiteralType(value);
     }
 
-    public override Node[] getChildren() {
+    public override immutable(TypedNode)[] getChildren() {
         return [];
     }
 
@@ -99,7 +106,7 @@ public immutable class FloatLiteralNode : TypedNode {
         type = new immutable FloatLiteralType(value);
     }
 
-    public override Node[] getChildren() {
+    public override immutable(TypedNode)[] getChildren() {
         return [];
     }
 
@@ -109,5 +116,47 @@ public immutable class FloatLiteralNode : TypedNode {
 
     public override string toString() {
         return format("FloatLiteral(%g)", type.value);
+    }
+}
+
+public immutable class FieldAccessNode : TypedNode {
+    private Field field;
+
+    public this(immutable Field field) {
+        this.field = field;
+    }
+
+    public override immutable(TypedNode)[] getChildren() {
+        return [];
+    }
+
+    public override immutable(Type) getType() {
+        return field.type();
+    }
+
+    public override string toString() {
+        return format("FieldAccess(%s)", field.toString());
+    }
+}
+
+public immutable class FunctionCallNode : TypedNode {
+    private Function func;
+    private TypedNode[] arguments;
+
+    public this(immutable Function func, immutable(TypedNode)[] arguments) {
+        this.func = func;
+        this.arguments = arguments;
+    }
+
+    public override immutable(TypedNode)[] getChildren() {
+        return arguments;
+    }
+
+    public override immutable(Type) getType() {
+        return func.returnType();
+    }
+
+    public override string toString() {
+        return format("FunctionCall(%s(%s))", func.name(), arguments.join!", "());
     }
 }

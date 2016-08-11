@@ -9,12 +9,13 @@ import ruleslang.syntax.ast.type;
 import ruleslang.syntax.ast.statement;
 import ruleslang.syntax.ast.mapper;
 import ruleslang.semantic.tree;
+import ruleslang.semantic.context;
 import ruleslang.semantic.interpret;
 import ruleslang.util;
 
 public interface Expression : SourceIndexed {
     public Expression map(ExpressionMapper mapper);
-    public immutable(Node) interpret();
+    public immutable(TypedNode) interpret(Context context);
     public string toString();
 }
 
@@ -22,30 +23,35 @@ public interface Reference : Expression {
 }
 
 public class NameReference : Reference {
-    private Identifier[] name;
+    private Identifier[] _name;
 
     public this(Identifier[] name) {
-        this.name = name;
+        assert (name.length > 0);
+        _name = name;
     }
 
     @property public override size_t start() {
-        return name[0].start;
+        return _name[0].start;
     }
 
     @property public override size_t end() {
-        return name[$ - 1].end;
+        return _name[$ - 1].end;
+    }
+
+    @property public Identifier[] name() {
+        return _name;
     }
 
     public override Expression map(ExpressionMapper mapper) {
         return mapper.mapNameReference(this);
     }
 
-    public override immutable(Node) interpret() {
-        return Interpreter.INSTANCE.interpretNameReference(this);
+    public override immutable(TypedNode) interpret(Context context) {
+        return Interpreter.INSTANCE.interpretNameReference(context, this);
     }
 
     public override string toString() {
-        return name.join!(".", "getSource()")();
+        return _name.join!(".", "getSource()")();
     }
 }
 
@@ -97,8 +103,8 @@ public class CompositeLiteral : Expression {
         return mapper.mapCompositeLiteral(this);
     }
 
-    public override immutable(Node) interpret() {
-        return Interpreter.INSTANCE.interpretCompositeLiteral(this);
+    public override immutable(TypedNode) interpret(Context context) {
+        return Interpreter.INSTANCE.interpretCompositeLiteral(context, this);
     }
 
     public override string toString() {
@@ -129,8 +135,8 @@ public class Initializer : Expression {
         return mapper.mapInitializer(this);
     }
 
-    public override immutable(Node) interpret() {
-        return Interpreter.INSTANCE.interpretInitializer(this);
+    public override immutable(TypedNode) interpret(Context context) {
+        return Interpreter.INSTANCE.interpretInitializer(context, this);
     }
 
     public override string toString() {
@@ -159,8 +165,8 @@ public class ContextMemberAccess : Reference {
         return mapper.mapContextMemberAccess(this);
     }
 
-    public override immutable(Node) interpret() {
-        return Interpreter.INSTANCE.interpretContextMemberAccess(this);
+    public override immutable(TypedNode) interpret(Context context) {
+        return Interpreter.INSTANCE.interpretContextMemberAccess(context, this);
     }
 
     public override string toString() {
@@ -190,8 +196,8 @@ public class MemberAccess : Reference {
         return mapper.mapMemberAccess(this);
     }
 
-    public override immutable(Node) interpret() {
-        return Interpreter.INSTANCE.interpretMemberAccess(this);
+    public override immutable(TypedNode) interpret(Context context) {
+        return Interpreter.INSTANCE.interpretMemberAccess(context, this);
     }
 
     public override string toString() {
@@ -224,8 +230,8 @@ public class ArrayAccess : Reference {
         return mapper.mapArrayAccess(this);
     }
 
-    public override immutable(Node) interpret() {
-        return Interpreter.INSTANCE.interpretArrayAccess(this);
+    public override immutable(TypedNode) interpret(Context context) {
+        return Interpreter.INSTANCE.interpretArrayAccess(context, this);
     }
 
     public override string toString() {
@@ -234,8 +240,8 @@ public class ArrayAccess : Reference {
 }
 
 public class FunctionCall : Expression, Statement {
-    private Expression value;
-    private Expression[] arguments;
+    private Expression _value;
+    private Expression[] _arguments;
     private size_t _start;
     private size_t _end;
 
@@ -244,8 +250,8 @@ public class FunctionCall : Expression, Statement {
     }
 
     public this(Expression value, Expression[] arguments, size_t start, size_t end) {
-        this.value = value;
-        this.arguments = arguments;
+        _value = value;
+        _arguments = arguments;
         _start = start;
         _end = end;
     }
@@ -258,16 +264,24 @@ public class FunctionCall : Expression, Statement {
         return _end;
     }
 
+    @property public Expression value() {
+        return _value;
+    }
+
+    @property public Expression[] arguments() {
+        return _arguments;
+    }
+
     public override Expression map(ExpressionMapper mapper) {
-        value = value.map(mapper);
-        foreach (i, argument; arguments) {
-            arguments[i] = argument.map(mapper);
+        _value = _value.map(mapper);
+        foreach (i, argument; _arguments) {
+            _arguments[i] = argument.map(mapper);
         }
         return mapper.mapFunctionCall(this);
     }
 
-    public override immutable(Node) interpret() {
-        return Interpreter.INSTANCE.interpretFunctionCall(this);
+    public override immutable(TypedNode) interpret(Context context) {
+        return Interpreter.INSTANCE.interpretFunctionCall(context, this);
     }
 
     public override Statement map(StatementMapper mapper) {
@@ -275,7 +289,7 @@ public class FunctionCall : Expression, Statement {
     }
 
     public override string toString() {
-        return format("FunctionCall(%s(%s))", value.toString(), arguments.join!", "());
+        return format("FunctionCall(%s(%s))", _value.toString(), _arguments.join!", "());
     }
 }
 
@@ -310,8 +324,8 @@ public template Unary(string name, Op) {
             mixin("return mapper.map" ~ name ~ "(this);");
         }
 
-        public override immutable(Node) interpret() {
-            mixin("return Interpreter.INSTANCE.interpret" ~ name ~ "(this);");
+        public override immutable(TypedNode) interpret(Context context) {
+            mixin("return Interpreter.INSTANCE.interpret" ~ name ~ "(context, this);");
         }
 
         public override string toString() {
@@ -362,8 +376,8 @@ public template Binary(string name, Op) {
             mixin("return mapper.map" ~ name ~ "(this);");
         }
 
-        public override immutable(Node) interpret() {
-            mixin("return Interpreter.INSTANCE.interpret" ~ name ~ "(this);");
+        public override immutable(TypedNode) interpret(Context context) {
+            mixin("return Interpreter.INSTANCE.interpret" ~ name ~ "(context, this);");
         }
 
         public override string toString() {
@@ -434,8 +448,8 @@ public class Compare : Expression {
         return mapper.mapCompare(this);
     }
 
-    public override immutable(Node) interpret() {
-        return Interpreter.INSTANCE.interpretCompare(this);
+    public override immutable(TypedNode) interpret(Context context) {
+        return Interpreter.INSTANCE.interpretCompare(context, this);
     }
 
     public override string toString() {
@@ -488,8 +502,8 @@ public class TypeCompare : Expression {
         return mapper.mapTypeCompare(this);
     }
 
-    public override immutable(Node) interpret() {
-        return Interpreter.INSTANCE.interpretTypeCompare(this);
+    public override immutable(TypedNode) interpret(Context context) {
+        return Interpreter.INSTANCE.interpretTypeCompare(context, this);
     }
 
     public override string toString() {
@@ -535,8 +549,8 @@ public class Conditional : Expression {
         return mapper.mapConditional(this);
     }
 
-    public override immutable(Node) interpret() {
-        return Interpreter.INSTANCE.interpretConditional(this);
+    public override immutable(TypedNode) interpret(Context context) {
+        return Interpreter.INSTANCE.interpretConditional(context, this);
     }
 
     public override string toString() {

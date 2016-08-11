@@ -12,6 +12,7 @@ import ruleslang.syntax.source;
 import ruleslang.syntax.ast.expression;
 import ruleslang.syntax.ast.mapper;
 import ruleslang.semantic.tree;
+import ruleslang.semantic.context;
 import ruleslang.semantic.interpret;
 
 public enum Kind {
@@ -184,8 +185,8 @@ public class BooleanLiteral : SourceToken!(Kind.BOOLEAN_LITERAL), Expression {
         return mapper.mapBooleanLiteral(this);
     }
 
-    public override immutable(Node) interpret() {
-        return Interpreter.INSTANCE.interpretBooleanLiteral(this);
+    public override immutable(TypedNode) interpret(Context context) {
+        return Interpreter.INSTANCE.interpretBooleanLiteral(context, this);
     }
 
     public bool getValue() {
@@ -233,8 +234,8 @@ public class StringLiteral : SourceToken!(Kind.STRING_LITERAL), Expression {
         return mapper.mapStringLiteral(this);
     }
 
-    public override immutable(Node) interpret() {
-        return Interpreter.INSTANCE.interpretStringLiteral(this);
+    public override immutable(TypedNode) interpret(Context context) {
+        return Interpreter.INSTANCE.interpretStringLiteral(context, this);
     }
 
     public dstring getValue() {
@@ -286,8 +287,8 @@ public class CharacterLiteral : SourceToken!(Kind.CHARACTER_LITERAL), Expression
         return mapper.mapCharacterLiteral(this);
     }
 
-    public override immutable(Node) interpret() {
-        return Interpreter.INSTANCE.interpretCharacterLiteral(this);
+    public override immutable(TypedNode) interpret(Context context) {
+        return Interpreter.INSTANCE.interpretCharacterLiteral(context, this);
     }
 
     public dchar getValue() {
@@ -371,8 +372,8 @@ public class SignedIntegerLiteral : SourceToken!(Kind.SIGNED_INTEGER_LITERAL), E
         return mapper.mapSignedIntegerLiteral(this);
     }
 
-    public override immutable(Node) interpret() {
-        return Interpreter.INSTANCE.interpretSignedIntegerLiteral(this);
+    public override immutable(TypedNode) interpret(Context context) {
+        return Interpreter.INSTANCE.interpretSignedIntegerLiteral(context, this);
     }
 
     public override string getSource() {
@@ -453,8 +454,8 @@ public class UnsignedIntegerLiteral : SourceToken!(Kind.UNSIGNED_INTEGER_LITERAL
         return mapper.mapUnsignedIntegerLiteral(this);
     }
 
-    public override immutable(Node) interpret() {
-        return Interpreter.INSTANCE.interpretUnsignedIntegerLiteral(this);
+    public override immutable(TypedNode) interpret(Context context) {
+        return Interpreter.INSTANCE.interpretUnsignedIntegerLiteral(context, this);
     }
 
     public override string getSource() {
@@ -524,8 +525,8 @@ public class FloatLiteral : SourceToken!(Kind.FLOAT_LITERAL), Expression {
         return mapper.mapFloatLiteral(this);
     }
 
-    public override immutable(Node) interpret() {
-        return Interpreter.INSTANCE.interpretFloatLiteral(this);
+    public override immutable(TypedNode) interpret(Context context) {
+        return Interpreter.INSTANCE.interpretFloatLiteral(context, this);
     }
 
     public double getValue(ref bool overflow) {

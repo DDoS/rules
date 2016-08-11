@@ -1,7 +1,7 @@
-module ruleslang.test.semantic.function_;
+module ruleslang.test.semantic.symbol;
 
 import ruleslang.semantic.type;
-import ruleslang.semantic.function_;
+import ruleslang.semantic.symbol;
 import ruleslang.evaluation.value;
 
 unittest {

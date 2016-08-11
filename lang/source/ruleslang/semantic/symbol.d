@@ -1,4 +1,4 @@
-module ruleslang.semantic.function_;
+module ruleslang.semantic.symbol;
 
 import std.conv : to;
 
@@ -6,9 +6,39 @@ import ruleslang.semantic.type;
 import ruleslang.evaluation.value;
 import ruleslang.util;
 
+public immutable interface Symbol {
+    @property public string name();
+}
+
+public immutable class Field : Symbol {
+    private string _name;
+    private Type _type;
+
+    public this(string name, immutable Type type) {
+        _name = name;
+        _type = type;
+    }
+
+    @property public override string name() {
+        return _name;
+    }
+
+    @property public immutable(Type) type() {
+        return _type;
+    }
+
+    public string toString() {
+        return _type.toString() ~ " " ~ _name;
+    }
+
+    public bool opEquals(immutable Field other) {
+        return _name == other.name;
+    }
+}
+
 public alias FunctionImpl = immutable(Value) function(immutable(Value)[]);
 
-public immutable class Function {
+public immutable class Function : Symbol {
     private string _name;
     private Type[] _parameterTypes;
     private Type _returnType;
@@ -21,7 +51,7 @@ public immutable class Function {
         _impl = impl;
     }
 
-    @property public string name() {
+    @property public override string name() {
         return _name;
     }
 
@@ -80,7 +110,7 @@ public immutable class Function {
     }
 
     public string toString() {
-        return name ~ "(" ~ _parameterTypes.join!", "() ~ ") " ~ _returnType.toString();
+        return _name ~ "(" ~ _parameterTypes.join!", "() ~ ") " ~ _returnType.toString();
     }
 
     public bool opEquals(immutable Function other) {
