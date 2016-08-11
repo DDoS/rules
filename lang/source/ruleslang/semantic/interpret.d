@@ -92,39 +92,39 @@ public immutable class Interpreter {
     }
 
     public immutable(Node) interpretLogicalNot(LogicalNot expression) {
-        return NullNode.INSTANCE;
+        assert (0);
     }
 
     public immutable(Node) interpretBitwiseNot(BitwiseNot expression) {
-        return NullNode.INSTANCE;
+        assert (0);
     }
 
     public immutable(Node) interpretExponent(Exponent expression) {
-        return NullNode.INSTANCE;
+        assert (0);
     }
 
     public immutable(Node) interpretInfix(Infix expression) {
-        return NullNode.INSTANCE;
+        assert (0);
     }
 
     public immutable(Node) interpretMultiply(Multiply expression) {
-        return NullNode.INSTANCE;
+        assert (0);
     }
 
     public immutable(Node) interpretAdd(Add expression) {
-        return NullNode.INSTANCE;
+        assert (0);
     }
 
     public immutable(Node) interpretShift(Shift expression) {
-        return NullNode.INSTANCE;
+        assert (0);
     }
 
     public immutable(Node) interpretCompare(Compare expression) {
-        return NullNode.INSTANCE;
+        assert (0);
     }
 
     public immutable(Node) interpretValueCompare(ValueCompare expression) {
-        return NullNode.INSTANCE;
+        assert (0);
     }
 
     public immutable(Node) interpretTypeCompare(TypeCompare expression) {
@@ -132,38 +132,38 @@ public immutable class Interpreter {
     }
 
     public immutable(Node) interpretBitwiseAnd(BitwiseAnd expression) {
-        return NullNode.INSTANCE;
+        assert (0);
     }
 
     public immutable(Node) interpretBitwiseXor(BitwiseXor expression) {
-        return NullNode.INSTANCE;
+        assert (0);
     }
 
     public immutable(Node) interpretBitwiseOr(BitwiseOr expression) {
-        return NullNode.INSTANCE;
+        assert (0);
     }
 
     public immutable(Node) interpretLogicalAnd(LogicalAnd expression) {
-        return NullNode.INSTANCE;
+        assert (0);
     }
 
     public immutable(Node) interpretLogicalXor(LogicalXor expression) {
-        return NullNode.INSTANCE;
+        assert (0);
     }
 
     public immutable(Node) interpretLogicalOr(LogicalOr expression) {
-        return NullNode.INSTANCE;
+        assert (0);
     }
 
     public immutable(Node) interpretConcatenate(Concatenate expression) {
-        return NullNode.INSTANCE;
+        assert (0);
     }
 
     public immutable(Node) interpretRange(Range expression) {
-        return NullNode.INSTANCE;
+        assert (0);
     }
 
     public immutable(Node) interpretConditional(Conditional expression) {
-        return NullNode.INSTANCE;
+        assert (0);
     }
 }

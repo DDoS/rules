@@ -1,8 +1,9 @@
 module ruleslang.util;
 
+import std.conv : to;
 import std.algorithm.searching : canFind, findAmong;
 import std.algorithm.iteration : map, reduce, uniq;
-import std.ascii : isAlphaNum, toLower, toUpper;
+import std.ascii : isDigit, isAlphaNum, toLower, toUpper;
 
 public T castOrFail(T, S)(S s) {
     T t = cast(T) s;
@@ -94,4 +95,35 @@ public string asciiSnakeToCamelCase(string snake, bool upperFirst = false) {
         camel[i++] = s;
     }
     return camel[0 .. i].idup;
+}
+
+public string positionalReplace(string source, string[] items...) {
+    auto length = items.length;
+    if (length > 10) {
+        throw new Error("A max of 10 items is supported");
+    }
+    char[] buffer = [];
+    if (!__ctfe) {
+        buffer.reserve(source.length);
+    }
+    auto marker = false;
+    foreach (c; source) {
+        if (marker) {
+            if (c == '$') {
+                buffer ~= '$';
+            } else if (c.isDigit()) {
+                size_t index = c - '0';
+                if (index >= length) {
+                    throw new Error("No item for index " ~ index.to!string);
+                }
+                buffer ~= items[index];
+            }
+            marker = false;
+        } else if (c == '$') {
+            marker = true;
+        } else {
+            buffer ~= c;
+        }
+    }
+    return buffer.idup;
 }

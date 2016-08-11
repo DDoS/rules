@@ -105,6 +105,10 @@ unittest {
         "Assignment(a = FunctionCall(opConcatenate(a, b)))",
         parseAndExpand("a ~= b")
     );
+    assertEqual(
+        "Assignment(a = FunctionCall(opConditional(b, c, d)))",
+        parseAndExpand("a = c if b else d")
+    );
 }
 
 unittest {

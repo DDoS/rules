@@ -65,7 +65,8 @@ public enum OperatorFunction : string {
     LOGICAL_XOR_FUNCTION = "opLogicalXor",
     LOGICAL_OR_FUNCTION = "opLogicalOr",
     CONCATENATE_FUNCTION = "opConcatenate",
-    RANGE_FUNCTION = "opRange"
+    RANGE_FUNCTION = "opRange",
+    CONDITIONAL_FUNCTION = "opConditional"
 }
 
 public immutable string[string] UNARY_OPERATOR_TO_FUNCTION;
@@ -110,6 +111,7 @@ public static this() {
 public class IntrinsicNameSpace : NameSpace {
     private static immutable immutable(Function)[] unaryOperators;
     private static immutable immutable(Function)[] binaryOperators;
+    private static immutable immutable(Function)[] ternaryOperators;
 
     public static this() {
         alias IntegerTypes = AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong);
@@ -155,13 +157,17 @@ public class IntrinsicNameSpace : NameSpace {
         functions ~= genBinaryFunctions!(OperatorFunction.LOGICAL_OR_FUNCTION, Same, Same, bool)();
         // TODO: operators ~, ..
         binaryOperators = functions.idup;
+        functions.length = 0;
+        // Operators ternary ... if ... else ...
+        functions ~= genTernaryFunctions!(OperatorFunction.CONDITIONAL_FUNCTION, Constant!bool, Same, Same, AllTypes)();
+        ternaryOperators = functions.idup;
     }
 
     public override immutable(Function)[] getFunctions(string name, immutable(Type)[] argumentTypes) {
-        if (argumentTypes.length <= 0 || argumentTypes.length > 2) {
+        if (argumentTypes.length <= 0 || argumentTypes.length > 3) {
             return [];
         }
-        // If the argument are atomic literals, use their best atomic equivalent
+        // If the argument are atomic literals, use their atomic equivalent
         immutable(Type)[] literalArguments = [];
         foreach (arg; argumentTypes) {
             auto literal = cast(immutable AtomicLiteralType) arg;
@@ -171,8 +177,19 @@ public class IntrinsicNameSpace : NameSpace {
         }
         auto hasLiteralArguments = literalArguments.length == argumentTypes.length;
         immutable(Type)[] searchArgumentTypes = hasLiteralArguments ? literalArguments : argumentTypes;
-        // Search an operator that can be applied to the argument types
-        immutable Function[] searchFunctions = searchArgumentTypes.length == 1 ? unaryOperators : binaryOperators;
+        // Search for functions that can be applied to the argument types
+        immutable(Function)[] searchFunctions;
+        final switch (searchArgumentTypes.length) {
+            case 1:
+                searchFunctions = unaryOperators;
+                break;
+            case 2:
+                searchFunctions = binaryOperators;
+                break;
+            case 3:
+                searchFunctions = ternaryOperators;
+                break;
+        }
         immutable(Function)[] functions = [];
         foreach (func; searchFunctions) {
             if (name == func.name && func.isApplicable(searchArgumentTypes)) {
@@ -292,6 +309,23 @@ private immutable(Function)[] genBinaryFunctions(OperatorFunction func,
     return funcs;
 }
 
+private immutable(Function)[] genTernaryFunctions(OperatorFunction func,
+        alias LeftFromMiddle, alias RightFromMiddle, alias ReturnFromMiddle, Middle, Middles...)() {
+    alias Left = LeftFromMiddle!Middle;
+    alias Right = RightFromMiddle!Middle;
+    alias Return = ReturnFromMiddle!Middle;
+    auto leftType = atomicTypeFor!Left();
+    auto middleType = atomicTypeFor!Middle();
+    auto rightType = atomicTypeFor!Right();
+    auto returnType = atomicTypeFor!Return();
+    auto impl = genTernaryOperatorImpl!(func, Left, Middle, Right, Return)();
+    auto funcs = [new immutable Function(func, [leftType, middleType, rightType], returnType, impl)];
+    static if (Middles.length > 0) {
+        funcs ~= genTernaryFunctions!(func, LeftFromMiddle, RightFromMiddle, ReturnFromMiddle, Middles)();
+    }
+    return funcs;
+}
+
 private immutable(AtomicType) atomicTypeFor(T)() {
     static if (is(T == bool)) {
         return AtomicType.BOOL;
@@ -321,33 +355,34 @@ private immutable(AtomicType) atomicTypeFor(T)() {
 }
 
 private enum string[string] FUNCTION_TO_DLANG_OPERATOR = [
-    "opNegate": "-",
-    "opReaffirm": "+",
-    "opLogicalNot": "!",
-    "opBitwiseNot": "~",
-    "opExponent": "^^",
-    "opMultiply": "*",
-    "opDivide": "/",
-    "opRemainder": "%",
-    "opAdd": "+",
-    "opSubtract": "-",
-    "opLeftShift": "<<",
-    "opArithmeticRightShift": ">>",
-    "opLogicalRightShift": ">>>",
-    "opEquals": "==",
-    "opNotEquals": "!=",
-    "opLesserThan": "<",
-    "opGreaterThan": ">",
-    "opLesserOrEqualTo": "<=",
-    "opGreaterOrEqualTo": ">=",
-    "opBitwiseAnd": "&",
-    "opBitwiseXor": "^",
-    "opBitwiseOr": "|",
-    "opLogicalAnd": "&&",
-    "opLogicalXor": "^",
-    "opLogicalOr": "||",
-    "opConcatenate": "~",
-    "opRange": ".p_range("
+    "opNegate": "-$0",
+    "opReaffirm": "+$0",
+    "opLogicalNot": "!$0",
+    "opBitwiseNot": "~$0",
+    "opExponent": "$0 ^^ $1",
+    "opMultiply": "$0 * $1",
+    "opDivide": "$0 / $1",
+    "opRemainder": "$0 % $1",
+    "opAdd": "$0 + $1",
+    "opSubtract": "$0 - $1",
+    "opLeftShift": "$0 << $1",
+    "opArithmeticRightShift": "$0 >> $1",
+    "opLogicalRightShift": "$0 >>> $1",
+    "opEquals": "$0 == $1",
+    "opNotEquals": "$0 != $1",
+    "opLesserThan": "$0 < $1",
+    "opGreaterThan": "$0 > $1",
+    "opLesserOrEqualTo": "$0 <= $1",
+    "opGreaterOrEqualTo": "$0 >= $1",
+    "opBitwiseAnd": "$0 & $1",
+    "opBitwiseXor": "$0 ^ $1",
+    "opBitwiseOr": "$0 | $1",
+    "opLogicalAnd": "$0 && $1",
+    "opLogicalXor": "$0 ^ $1",
+    "opLogicalOr": "$0 || $1",
+    "opConcatenate": "$0 ~ $1",
+    "opRange": "$0.p_range($1)",
+    "opConditional": "$0 ? $1 : $2"
 ];
 
 private FunctionImpl genUnaryOperatorImpl(OperatorFunction func, Inner, Return)() {
@@ -356,7 +391,8 @@ private FunctionImpl genUnaryOperatorImpl(OperatorFunction func, Inner, Return)(
             // TODO: add evaluator exceptions
             throw new Exception("Expected one arguments");
         }
-        return valueOf(cast(Return) mixin(FUNCTION_TO_DLANG_OPERATOR[func] ~ "arguments[0].as!Inner"));
+        enum op = FUNCTION_TO_DLANG_OPERATOR[func].positionalReplace("arguments[0].as!Inner");
+        return valueOf(cast(Return) mixin("(" ~ op ~ ")"));
     };
     return implementation;
 }
@@ -367,8 +403,21 @@ private FunctionImpl genBinaryOperatorImpl(OperatorFunction func, Left, Right, R
             // TODO: add evaluator exceptions
             throw new Exception("Expected two arguments");
         }
-        return valueOf(cast(Return) mixin("(arguments[0].as!Left"
-                ~ FUNCTION_TO_DLANG_OPERATOR[func] ~ "arguments[1].as!Right)"));
+        enum op = FUNCTION_TO_DLANG_OPERATOR[func].positionalReplace("arguments[0].as!Left", "arguments[1].as!Right");
+        return valueOf(cast(Return) mixin("(" ~ op ~ ")"));
+    };
+    return implementation;
+}
+
+private FunctionImpl genTernaryOperatorImpl(OperatorFunction func, Left, Middle, Right, Return)() {
+    FunctionImpl implementation = (arguments) {
+        if (arguments.length != 3) {
+            // TODO: add evaluator exceptions
+            throw new Exception("Expected three arguments");
+        }
+        enum op = FUNCTION_TO_DLANG_OPERATOR[func].positionalReplace("arguments[0].as!Left", "arguments[1].as!Middle",
+                "arguments[2].as!Right");
+        return valueOf(cast(Return) mixin("(" ~ op ~ ")"));
     };
     return implementation;
 }
