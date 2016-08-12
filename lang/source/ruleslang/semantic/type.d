@@ -567,3 +567,26 @@ public immutable class StringLiteralType : SizedArrayType, LiteralType {
 
     mixin literalTypeOpEquals!StringLiteralType;
 }
+
+public immutable class StructureType : Type {
+    public immutable(Type) getMemberType(string name) {
+        return null;
+    }
+
+    public override bool convertibleTo(inout Type type, ref TypeConversionChain conversions) {
+        if (opEquals(type)) {
+            conversions.thenIdentity();
+            return true;
+        }
+        return false;
+    }
+
+    public override string toString() {
+        return format("{}");
+    }
+
+    public override bool opEquals(inout Type type) {
+        auto structureType = type.exactCastImmutable!(StructureType);
+        return this is structureType;
+    }
+}

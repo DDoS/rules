@@ -135,7 +135,32 @@ public immutable class FieldAccessNode : TypedNode {
     }
 
     public override string toString() {
-        return format("FieldAccess(%s)", field.toString());
+        return format("FieldAccess(%s)", field.name);
+    }
+}
+
+public immutable class MemberAccessNode : TypedNode {
+    private TypedNode value;
+    private string name;
+    private Type type;
+
+    public this(immutable TypedNode value, string name) {
+        this.value = value;
+        this.name = name;
+        type = value.getType().castOrFail!(immutable StructureType)().getMemberType(name);
+        assert (type !is null);
+    }
+
+    public override immutable(TypedNode)[] getChildren() {
+        return [value];
+    }
+
+    public override immutable(Type) getType() {
+        return type;
+    }
+
+    public override string toString() {
+        return format("MemberAccessNode(%s(%s))", value.toString(), name);
     }
 }
 

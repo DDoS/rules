@@ -61,6 +61,7 @@ private immutable(Function) resolveOverloads(immutable(Function)[] functions) {
             // Remove the least specific functions
             if (funcA.isMoreSpecific(funcB)) {
                 functions = functions[0 .. b] ~ functions[b + 1 .. $];
+                b -= 1;
             }
         }
     }
@@ -68,8 +69,8 @@ private immutable(Function) resolveOverloads(immutable(Function)[] functions) {
     assert (functions.length > 0);
     if (functions.length > 1) {
         // TODO: semantic exceptions
-        throw new Exception(format("Cannot resolve overloads, any of the following functions are applicable:\n",
-                functions.join!"\n"()));
+        throw new Exception(format("Cannot resolve overloads, any of the following functions are applicable:\n    %s",
+                functions.join!"\n    "()));
     }
     return functions[0];
 }

@@ -175,24 +175,32 @@ public class ContextMemberAccess : Reference {
 }
 
 public class MemberAccess : Reference {
-    private Expression value;
-    private Identifier name;
+    private Expression _value;
+    private Identifier _name;
 
     public this(Expression value, Identifier name) {
-        this.value = value;
-        this.name = name;
+        _value = value;
+        _name = name;
     }
 
     @property public override size_t start() {
-        return value.start;
+        return _value.start;
     }
 
     @property public override size_t end() {
-        return name.end;
+        return _name.end;
+    }
+
+    @property public Expression value() {
+        return _value;
+    }
+
+    @property public Identifier name() {
+        return _name;
     }
 
     public override Expression map(ExpressionMapper mapper) {
-        value = value.map(mapper);
+        _value = _value.map(mapper);
         return mapper.mapMemberAccess(this);
     }
 
@@ -201,7 +209,7 @@ public class MemberAccess : Reference {
     }
 
     public override string toString() {
-        return format("MemberAccess(%s.%s)", value.toString(), name.getSource());
+        return format("MemberAccess(%s.%s)", _value.toString(), _name.getSource());
     }
 }
 

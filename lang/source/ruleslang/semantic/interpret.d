@@ -8,6 +8,7 @@ import ruleslang.syntax.ast.expression;
 import ruleslang.semantic.tree;
 import ruleslang.semantic.context;
 import ruleslang.semantic.type;
+import ruleslang.semantic.symbol;
 import ruleslang.util;
 
 public immutable class Interpreter {
@@ -55,14 +56,40 @@ public immutable class Interpreter {
         return new immutable FloatLiteralNode(value);
     }
 
-    public immutable(FieldAccessNode) interpretNameReference(Context context, NameReference nameReference) {
-        auto field = context.resolveField(nameReference.name[0].getSource());
+    public immutable(TypedNode) interpretNameReference(Context context, NameReference nameReference) {
+        return interpretNameReference(context, nameReference.name);
+    }
+
+    private immutable(TypedNode) interpretNameReference(Context context, Identifier[] name) {
+        // The first name is always that of a field
+        auto field = context.resolveField(name[0].getSource());
         if (field is null) {
             // TODO: semantic exceptions
-            throw new Exception(format("No field found for name %s", nameReference.toString()));
+            throw new Exception(format("No field found for name %s", name[0].getSource()));
         }
-        // TODO: resolve subsequent name parts as type membes
-        return new immutable FieldAccessNode(field);
+        immutable(TypedNode) fieldAccess = new immutable FieldAccessNode(field);
+        // If the name has more parts, treat the next as a structure member accesses
+        immutable(TypedNode)* lastAccess = &fieldAccess;
+        foreach (part; name[1 .. $]) {
+            // First check the last access is a structure type (otherwise it has no members)
+            auto lastAccessType = (*lastAccess).getType();
+            auto structureType = cast(immutable StructureType) lastAccessType;
+            if (structureType is null) {
+                // TODO: semantic exceptions
+                throw new Exception(format("Type %s has no members", lastAccessType.toString()));
+            }
+            // Now if it is, check for the memeber
+            auto memberName = part.getSource();
+            auto member = structureType.getMemberType(memberName);
+            if (member is null) {
+                // TODO: semantic exceptions
+                throw new Exception(format("No member named %s in type %s", memberName, structureType.toString()));
+            }
+            // Wrap the last access in the member access
+            immutable(TypedNode) memberAccess = new immutable MemberAccessNode(*lastAccess, memberName);
+            lastAccess = &memberAccess;
+        }
+        return *lastAccess;
     }
 
     public immutable(TypedNode) interpretCompositeLiteral(Context context, CompositeLiteral expression) {
@@ -97,34 +124,101 @@ public immutable class Interpreter {
             argumentTypes ~= node.getType();
         }
         // Now figure out if the call value is the name of a function or an actual value
-        auto nameReference = cast(NameReference) call.value;
-        if (nameReference !is null && nameReference.name.length == 1) {
-            // A function call name should have only one part
-            auto simpleName = nameReference.name[0].getSource();
-            auto field = context.resolveField(simpleName);
-            auto func = context.resolveFunction(simpleName, argumentTypes);
-            // It should not resolve to both a field and a function
-            if (field !is null && func !is null) {
-                throw new Exception(format("Found a field and a function for the name %s", simpleName));
+        auto value = call.value;
+        auto nameReference = cast(NameReference) value;
+        if (nameReference is null) {
+            // If the value isn't a name reference, we might have a member access
+            // Either the accessed member is a function type or UFCS is being used
+            auto memberAccess = cast(MemberAccess) value;
+            if (memberAccess is null) {
+                // No member, this is just a value call (no function name is given)
+                return interpretValueCall(value.interpret(context), argumentNodes, argumentTypes);
             }
-            if (field !is null) {
-                // Treat a field like a value
-                return interpretValueCall(new immutable FieldAccessNode(field), argumentNodes);
-            }
-            if (func is null) {
-                // Found nothing!
-                // TODO: semantic exceptions
-                throw new Exception(format("No function found for call %s(%s)", simpleName, argumentTypes.join!", "()));
-            }
-            // It's a function call
-            return new immutable FunctionCallNode(func, argumentNodes);
+            // Otherwise the value is being called with the member name as the function name
+            auto lastName = memberAccess.name.getSource();
+            auto valueNode = memberAccess.value.interpret(context);
+            return interpretValueFunctionCall(context, lastName, valueNode, argumentNodes, argumentTypes);
         }
-        // The value isn't a name, just interpret it
-        return interpretValueCall(call.value.interpret(context), argumentNodes);
+        // We treat simple and multi-part name references separately
+        auto name = nameReference.name;
+        if (name.length == 1) {
+            // Simple name references require disambiguation between field and functions
+            return interpretSimpleFunctionCall(context, name[0].getSource(), argumentNodes, argumentTypes);
+        }
+        // Multi-part name references require disambiguation between members and functions
+        auto lastName = name[$ - 1].getSource();
+        auto valueNode = interpretNameReference(context, name[0 .. $ - 1]);
+        return interpretValueFunctionCall(context, lastName, valueNode, argumentNodes, argumentTypes);
     }
 
-    private immutable(TypedNode) interpretValueCall(immutable(Node) value, immutable(Node)[] argumentNodes) {
-        assert (0);
+    private immutable(TypedNode) interpretSimpleFunctionCall(Context context, string name,
+            immutable(TypedNode)[] argumentNodes, immutable(Type)[] argumentTypes) {
+        // If the value is a single part name, then it is either a field
+        // or a function
+        auto field = context.resolveField(name);
+        auto func = context.resolveFunction(name, argumentTypes);
+        // It should not resolve to both a field and a function
+        if (field !is null && func !is null) {
+            throw new Exception(format("Found a field and a function for the name %s", name));
+        }
+        // Treat a field like a value
+        if (field !is null) {
+            return interpretValueCall(new immutable FieldAccessNode(field), argumentNodes, argumentTypes);
+        }
+        // Otherwise use the function
+        if (func is null) {
+            functionNotFound(name, argumentTypes);
+        }
+        return new immutable FunctionCallNode(func, argumentNodes);
+    }
+
+    private immutable(TypedNode) interpretValueFunctionCall(Context context, string name, immutable TypedNode valueNode,
+            immutable(TypedNode)[] argumentNodes, immutable(Type)[] argumentTypes) {
+        // If the value is a multi-part name, then all but the last part should
+        // resolve to some value. The last name is either a structure member or
+        // the name of a function (when using UFCS). The member has priority
+        auto structureType = cast(immutable StructureType) valueNode.getType();
+        if (structureType !is null) {
+            // If the name points to a structure, check if the last part is a member
+            auto memberType = structureType.getMemberType(name);
+            if (memberType !is null) {
+                return interpretValueCall(new immutable MemberAccessNode(valueNode, name), argumentNodes, argumentTypes);
+            }
+        }
+        // Otherwise apply the UFCS transformation: the last part becomes the function name
+        // and value of the previous parts become the first argument of the call
+        // Example: a.b.c(d, e) -> c(a.b, d, e)
+        argumentNodes = valueNode ~ argumentNodes;
+        argumentTypes = valueNode.getType() ~ argumentTypes;
+        auto func = context.resolveFunction(name, argumentTypes);
+        if (func is null) {
+            functionNotFound(name, argumentTypes);
+        }
+        return new immutable FunctionCallNode(func, argumentNodes);
+    }
+
+    private immutable(TypedNode) interpretValueCall(immutable(TypedNode) valueNode, immutable(TypedNode)[] argumentNodes,
+            immutable(Type)[] argumentTypes) {
+        /*
+            TODO: when function type are added, check if value is one and call it, instead of doing UFCS immediately
+            auto functionType = cast(immutable FunctionType) valueNode.getType();
+            if (functionType is null) {
+                // TODO: semantic exceptions
+                throw new Exception(format("Type %s is not callable", valueNode.getType()));
+            }
+            if (!functionType.isApplicable(argumentNodes)) {
+                // TODO: semantic exceptions
+                throw new Exception(format("Type %s is not callable with %s", valueNode.getType(), argumentTypes.join!", "()));
+            }
+            return new immutable ValueCallNode(valueNode, argumentNodes);
+        */
+        // TODO: semantic exceptions
+        throw new Exception(format("Type %s is not callable", valueNode.getType()));
+    }
+
+    private immutable(FunctionCallNode) functionNotFound(string name, immutable(Type)[] argumentTypes) {
+        // TODO: semantic exceptions
+        throw new Exception(format("No function found for call %s(%s)", name, argumentTypes.join!", "()));
     }
 
     public immutable(TypedNode) interpretSign(Context context, Sign sign) {
