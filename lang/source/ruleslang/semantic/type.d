@@ -333,7 +333,7 @@ public immutable class IntegerLiteralType : AtomicLiteralType {
         // Can cast to a float literal type if converting the value to floating point gives the same value
         auto floatLiteral = type.exactCastImmutable!(FloatLiteralType);
         if (floatLiteral !is null
-                && (_value < 0 ? floatLiteral.value == cast(long) _value : floatLiteral.value == cast(ulong) _value)) {
+                && (_value > long.max ? floatLiteral.value == cast(ulong) _value : floatLiteral.value == cast(long) _value)) {
             conversions.thenIntegerToFloat();
             return true;
         }
@@ -342,7 +342,7 @@ public immutable class IntegerLiteralType : AtomicLiteralType {
         if (atomic is null) {
             return false;
         }
-        bool inRange = _value < 0 ? atomic.inRange(cast(long) _value) : atomic.inRange(cast(ulong) _value);
+        bool inRange = _value > long.max ? atomic.inRange(cast(ulong) _value) : atomic.inRange(cast(long) _value);
         if (inRange) {
             if (atomic.isFloat()) {
                 conversions.thenIntegerToFloat();
@@ -356,16 +356,16 @@ public immutable class IntegerLiteralType : AtomicLiteralType {
     }
 
     public override immutable(Value) asValue() {
-        return _value < 0 ? valueOf(cast(long) _value) : valueOf(cast(ulong) _value);
+        return _value > long.max ? valueOf(cast(ulong) _value) : valueOf(cast(long) _value);
     }
 
     public override immutable(AtomicType) getAtomicType() {
-        return _value < 0 ? AtomicType.SINT64 : AtomicType.UINT64;
+        return _value > long.max ? AtomicType.UINT64 : AtomicType.SINT64;
     }
 
     public immutable(FloatLiteralType) toFloatLiteral() {
-        return _value < 0 ? new immutable FloatLiteralType(cast(long) _value)
-                : new immutable FloatLiteralType(cast(ulong) _value);
+        return _value > long.max ? new immutable FloatLiteralType(cast(ulong) _value)
+                : new immutable FloatLiteralType(cast(long) _value);
     }
 
     public override string toString() {
