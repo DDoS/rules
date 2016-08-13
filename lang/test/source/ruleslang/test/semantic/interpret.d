@@ -21,6 +21,10 @@ unittest {
         interpret("-1.0")
     );
     assertEqual(
+        "FunctionCall(opBitwiseNot(IntegerLiteral(4294967295))) | int_lit(-4294967296)",
+        interpret("0xFFFFFFFF.opBitwiseNot()")
+    );
+    assertEqual(
         "FunctionCall(opLogicalNot(BooleanLiteral(true))) | bool_lit(false)",
         interpret("!true")
     );
@@ -45,6 +49,14 @@ unittest {
             ~ " | bool_lit(true)",
         interpret("1 + 1 == 2")
     );
+    assertInterpretFails("!1");
+    assertInterpretFails("~true");
+    assertInterpretFails("~1.");
+    assertInterpretFails("lol");
+    assertInterpretFails("1()");
+    //assertInterpretFails("1.lol");
+    assertInterpretFails("1.lol()");
+    assertInterpretFails("1.opAdd()");
 }
 
 private string interpret(string source) {
@@ -52,10 +64,26 @@ private string interpret(string source) {
     if (tokenizer.head().getKind() == Kind.INDENTATION) {
         tokenizer.advance();
     }
-    auto node = tokenizer
+    return tokenizer
             .parseExpression()
             .expandOperators()
-            .interpret(new Context());
+            .interpret(new Context())
+            .getInfo();
+}
+
+private void assertInterpretFails(string source) {
+    try {
+        auto node = source.interpret();
+        throw new AssertionError("Expected a source exception, but got node:\n" ~ node);
+    } catch (SourceException exception) {
+        debug (verboseFails) {
+            import std.stdio : stderr;
+            stderr.writeln(exception.getErrorInformation(source).toString());
+        }
+    }
+}
+
+private string getInfo(immutable Node node) {
     string str = node.toString();
     auto typedNode = cast(immutable TypedNode) node;
     if (typedNode !is null) {

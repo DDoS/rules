@@ -117,6 +117,9 @@ public class SourceException : Exception, SourceIndexed {
     }
 
     public immutable(ErrorInformation)* getErrorInformation(string source) {
+        if (source.length == 0) {
+            return new ErrorInformation(this.msg, "", "", 0, 0, 0);
+        }
         // find the line number the error occurred on
         size_t lineNumber = findLine(source, min(_start, source.length - 1));
         // find start and end of line containing the offender
