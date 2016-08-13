@@ -94,11 +94,20 @@ public class ForeignNameSpace : NameSpace {
 
 public class ImportedNameSpace : NameSpace {
     public override immutable(Field) getField(string name) {
-        return null;
+        // TODO: used for testing, remove me when done
+        if (name != "test") {
+            return null;
+        }
+        return new immutable Field("test", AtomicType.UINT32);
     }
 
     public override immutable(Function)[] getFunctions(string name, immutable(Type)[] argumentTypes) {
-        return [];
+        // TODO: used for testing, remove me when done
+        if (name != "opReaffirm") {
+            return null;
+        }
+        return [new immutable Function("opReaffirm", [AtomicType.UINT32], AtomicType.UINT32,
+                genUnaryOperatorImpl!(OperatorFunction.REAFFIRM_FUNCTION, uint, uint))];
     }
 }
 

@@ -95,7 +95,7 @@ public immutable class IntegerLiteralNode : TypedNode {
     }
 
     public override string toString() {
-        return format("SignedIntegerLiteral(%d)", type.value);
+        return format("IntegerLiteral(%d)", type.value);
     }
 }
 
@@ -160,7 +160,7 @@ public immutable class MemberAccessNode : TypedNode {
     }
 
     public override string toString() {
-        return format("MemberAccessNode(%s(%s))", value.toString(), name);
+        return format("MemberAccess(%s(%s))", value.toString(), name);
     }
 }
 

@@ -9,6 +9,10 @@ import ruleslang.syntax.ast.statement;
 import ruleslang.syntax.ast.mapper;
 import ruleslang.semantic.context;
 
+public Expression expandOperators(Expression target) {
+    return target.map(new OperatorExpander()).map(new OperatorConverter());
+}
+
 public Statement expandOperators(Statement target) {
     return target.map(new OperatorExpander()).map(new OperatorConverter());
 }
