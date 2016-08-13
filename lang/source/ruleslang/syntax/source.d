@@ -98,9 +98,14 @@ public class SourceException : Exception, SourceIndexed {
     }
 
     public this(string message, SourceIndexed problem) {
+        this(message, problem.start, problem.end);
+    }
+
+    public this(string message, size_t start, size_t end) {
         super(message);
-        _start = problem.start;
-        _end = problem.end;
+        assert(start <= end);
+        _start = start;
+        _end = end;
     }
 
     @property public override size_t start() {

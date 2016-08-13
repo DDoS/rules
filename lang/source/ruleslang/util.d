@@ -21,6 +21,15 @@ public immutable(T) exactCastImmutable(T, S)(S s) {
     return t;
 }
 
+public T collectExceptionMessage(T, E = Exception)(lazy T expression, out string message) {
+    try {
+        return expression();
+    } catch (E exception) {
+        message = exception.msg;
+        return null;
+    }
+}
+
 public T[][T] transitiveClosure(T)(T[][T] adjacencies) {
     T[][T] result;
     bool wasReduced = void;

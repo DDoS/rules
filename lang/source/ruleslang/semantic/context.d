@@ -68,7 +68,6 @@ private immutable(Function) resolveOverloads(immutable(Function)[] functions) {
     // Only one function should remain
     assert (functions.length > 0);
     if (functions.length > 1) {
-        // TODO: semantic exceptions
         throw new Exception(format("Cannot resolve overloads, any of the following functions are applicable:\n    %s",
                 functions.join!"\n    "()));
     }
@@ -465,10 +464,7 @@ private enum string[string] FUNCTION_TO_DLANG_OPERATOR = [
 
 private FunctionImpl genUnaryOperatorImpl(OperatorFunction func, Inner, Return)() {
     FunctionImpl implementation = (arguments) {
-        if (arguments.length != 1) {
-            // TODO: add evaluator exceptions
-            throw new Exception("Expected one arguments");
-        }
+        assert (arguments.length == 1);
         enum op = FUNCTION_TO_DLANG_OPERATOR[func].positionalReplace("arguments[0].as!Inner");
         return valueOf(cast(Return) mixin("(" ~ op ~ ")"));
     };
@@ -477,10 +473,7 @@ private FunctionImpl genUnaryOperatorImpl(OperatorFunction func, Inner, Return)(
 
 private FunctionImpl genBinaryOperatorImpl(OperatorFunction func, Left, Right, Return)() {
     FunctionImpl implementation = (arguments) {
-        if (arguments.length != 2) {
-            // TODO: add evaluator exceptions
-            throw new Exception("Expected two arguments");
-        }
+        assert (arguments.length == 2);
         enum op = FUNCTION_TO_DLANG_OPERATOR[func].positionalReplace("arguments[0].as!Left", "arguments[1].as!Right");
         return valueOf(cast(Return) mixin("(" ~ op ~ ")"));
     };
@@ -489,10 +482,7 @@ private FunctionImpl genBinaryOperatorImpl(OperatorFunction func, Left, Right, R
 
 private FunctionImpl genTernaryOperatorImpl(OperatorFunction func, Left, Middle, Right, Return)() {
     FunctionImpl implementation = (arguments) {
-        if (arguments.length != 3) {
-            // TODO: add evaluator exceptions
-            throw new Exception("Expected three arguments");
-        }
+        assert (arguments.length == 3);
         enum op = FUNCTION_TO_DLANG_OPERATOR[func].positionalReplace("arguments[0].as!Left", "arguments[1].as!Middle",
                 "arguments[2].as!Right");
         return valueOf(cast(Return) mixin("(" ~ op ~ ")"));
