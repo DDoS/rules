@@ -28,6 +28,8 @@ public class Context {
 
     public immutable(Field) resolveField(string name) {
         // Search the name spaces in order of priority
+        // Allowing higher priority ones to shadow the others
+        // TODO: allow shawdowing?
         foreach (names; priority) {
             auto field = names.getField(name);
             if (field !is null) {
@@ -38,12 +40,13 @@ public class Context {
     }
 
     public immutable(Function) resolveFunction(string name, immutable(Type)[] argumentTypes) {
-        // Search the name spaces in order of priority
+        // Search the name spaces in order of priority, but without shadowing
+        immutable(Function)[] functions;
         foreach (names; priority) {
-            auto functions = names.getFunctions(name, argumentTypes);
-            if (functions.length > 0) {
-                return functions.resolveOverloads();
-            }
+            functions ~= names.getFunctions(name, argumentTypes);
+        }
+        if (functions.length > 0) {
+            return functions.resolveOverloads();
         }
         return null;
     }
@@ -68,7 +71,7 @@ private immutable(Function) resolveOverloads(immutable(Function)[] functions) {
     // Only one function should remain
     assert (functions.length > 0);
     if (functions.length > 1) {
-        throw new Exception(format("Cannot resolve overloads, any of the following functions are applicable:\n    %s",
+        throw new Exception(format("Cannot resolve overloads, any of the following functions are applicable:\n    %s\n",
                 functions.join!"\n    "()));
     }
     return functions[0];
