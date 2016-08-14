@@ -46,7 +46,7 @@ public immutable class BooleanLiteralNode : TypedNode {
         return [];
     }
 
-    public override immutable(Type) getType() {
+    public override immutable(BooleanLiteralType) getType() {
         return type;
     }
 
@@ -66,12 +66,12 @@ public immutable class StringLiteralNode : TypedNode {
         return [];
     }
 
-    public override immutable(Type) getType() {
+    public override immutable(StringLiteralType) getType() {
         return type;
     }
 
     public override string toString() {
-        return format("StringLiteral(%s)", type.value);
+        return format("StringLiteral(\"%s\")", type.value);
     }
 }
 
@@ -86,7 +86,7 @@ public immutable class SignedIntegerLiteralNode : TypedNode {
         return [];
     }
 
-    public override immutable(Type) getType() {
+    public override immutable(SignedIntegerLiteralType) getType() {
         return type;
     }
 
@@ -106,7 +106,7 @@ public immutable class UnsignedIntegerLiteralNode : TypedNode {
         return [];
     }
 
-    public override immutable(Type) getType() {
+    public override immutable(UnsignedIntegerLiteralType) getType() {
         return type;
     }
 
@@ -126,7 +126,7 @@ public immutable class FloatLiteralNode : TypedNode {
         return [];
     }
 
-    public override immutable(Type) getType() {
+    public override immutable(FloatLiteralType) getType() {
         return type;
     }
 
@@ -177,6 +177,45 @@ public immutable class MemberAccessNode : TypedNode {
 
     public override string toString() {
         return format("MemberAccess(%s(%s))", value.toString(), name);
+    }
+}
+
+public immutable class ArrayIndexNode : TypedNode {
+    private TypedNode valueNode;
+    private TypedNode indexNode;
+    private Type type;
+
+    public this(immutable TypedNode valueNode, immutable TypedNode indexNode) {
+        this.valueNode = valueNode;
+        this.indexNode = indexNode;
+        auto arrayType = cast(immutable ArrayType) valueNode.getType();
+        assert (arrayType !is null);
+        auto stringType = cast(immutable StringLiteralType) arrayType;
+        if (stringType !is null) {
+            auto integerLiteralIndex = cast(immutable IntegerLiteralType) indexNode.getType();
+            if (integerLiteralIndex !is null) {
+                auto index = integerLiteralIndex.unsignedValue();
+                auto str = stringType.value;
+                if (index >= str.length) {
+                    throw new Exception(format("Index value %d is out of range of string \"%s\"", index, str));
+                }
+                type = new immutable UnsignedIntegerLiteralType(str[index]);
+                return;
+            }
+        }
+        type = arrayType.componentType();
+    }
+
+    public override immutable(TypedNode)[] getChildren() {
+        return [valueNode, indexNode];
+    }
+
+    public override immutable(Type) getType() {
+        return type;
+    }
+
+    public override string toString() {
+        return format("ArrayAccess(%s[%s]))", valueNode.toString(), indexNode.toString());
     }
 }
 

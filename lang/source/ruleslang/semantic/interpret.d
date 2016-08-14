@@ -108,8 +108,30 @@ public immutable class Interpreter {
         return new immutable MemberAccessNode(valueNode, memberName);
     }
 
-    public immutable(TypedNode) interpretArrayAccess(Context context, ArrayAccess expression) {
-        return NullNode.INSTANCE;
+    public immutable(TypedNode) interpretArrayAccess(Context context, ArrayAccess arrayAccess) {
+        // Interpret both the value and the index
+        auto valueNode = arrayAccess.value.interpret(context);
+        auto indexNode = arrayAccess.index.interpret(context);
+        // Check if the value type is an array
+        auto valueType = valueNode.getType();
+        auto arrayType = cast(immutable ArrayType) valueType;
+        if (arrayType is null) {
+            throw new SourceException(format("Not an array type %s", valueType.toString()), arrayAccess.value);
+        }
+        // Check if the index type is a uint64
+        auto indexType = indexNode.getType();
+        auto conversions = new TypeConversionChain();
+        if (!indexType.convertibleTo(AtomicType.UINT64, conversions)) {
+            throw new SourceException(format("Index type %s is not convertible to uint64", indexType.toString()),
+                    arrayAccess.index);
+        }
+        // Attempt to create the node. This can fail if the index is out of range (determined through literal types)
+        string exceptionMessage;
+        auto node = collectExceptionMessage(new immutable ArrayIndexNode(valueNode, indexNode), exceptionMessage);
+        if (exceptionMessage !is null) {
+            throw new SourceException(exceptionMessage, arrayAccess);
+        }
+        return node;
     }
 
     public immutable(TypedNode) interpretFunctionCall(Context context, FunctionCall call) {

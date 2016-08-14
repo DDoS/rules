@@ -214,13 +214,13 @@ public class MemberAccess : Reference {
 }
 
 public class ArrayAccess : Reference {
-    private Expression value;
-    private Expression index;
+    private Expression _value;
+    private Expression _index;
     private size_t _end;
 
     public this(Expression value, Expression index, size_t end) {
-        this.value = value;
-        this.index = index;
+        _value = value;
+        _index = index;
         _end = end;
     }
 
@@ -232,9 +232,17 @@ public class ArrayAccess : Reference {
         return _end;
     }
 
+    @property public Expression value() {
+        return _value;
+    }
+
+    @property public Expression index() {
+        return _index;
+    }
+
     public override Expression map(ExpressionMapper mapper) {
-        value = value.map(mapper);
-        index = index.map(mapper);
+        _value = _value.map(mapper);
+        _index = _index.map(mapper);
         return mapper.mapArrayAccess(this);
     }
 
@@ -243,7 +251,7 @@ public class ArrayAccess : Reference {
     }
 
     public override string toString() {
-        return format("ArrayAccess(%s[%s])", value.toString(), index.toString());
+        return format("ArrayAccess(%s[%s])", _value.toString(), _index.toString());
     }
 }
 

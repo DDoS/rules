@@ -322,6 +322,8 @@ public immutable class BooleanLiteralType : AtomicLiteralType {
 }
 
 public immutable interface IntegerLiteralType : AtomicLiteralType {
+    public ulong unsignedValue();
+    public long signedValue();
     public immutable(FloatLiteralType) toFloatLiteral();
 }
 
@@ -378,6 +380,14 @@ private template IntegerLiteralTypeTemplate(T) {
             } else {
                 return AtomicType.SINT64;
             }
+        }
+
+        public override ulong unsignedValue() {
+            return cast(ulong) _value;
+        }
+
+        public override long signedValue() {
+            return cast(long) _value;
         }
 
         public override immutable(FloatLiteralType) toFloatLiteral() {
