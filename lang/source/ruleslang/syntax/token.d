@@ -559,9 +559,9 @@ public class FloatLiteral : SourceToken!(Kind.FLOAT_LITERAL), Expression {
         auto a = new FloatLiteral("1_10e12", 0);
         assert(a.getValue(overflow) == 1_10e12);
         assert(!overflow);
-    	auto b = new FloatLiteral("1.1", 0);
+        auto b = new FloatLiteral("1.1", 0);
         assert(b.getValue(overflow) == 1.1);
-    	auto c = new FloatLiteral(".1", 0);
+        auto c = new FloatLiteral(".1", 0);
         assert(c.getValue(overflow) == 0.1);
         auto d = new FloatLiteral("-1e1000", 0);
         d.getValue(overflow);
