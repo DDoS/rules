@@ -13,7 +13,7 @@ import ruleslang.test.assertion;
 
 unittest {
     assertEqual(
-        "IntegerLiteral(1) | int_lit(1)",
+        "SignedIntegerLiteral(1) | sint_lit(1)",
         interpret("+1")
     );
     assertEqual(
@@ -21,7 +21,7 @@ unittest {
         interpret("-1.0")
     );
     assertEqual(
-        "FunctionCall(opBitwiseNot(IntegerLiteral(4294967295))) | int_lit(-4294967296)",
+        "FunctionCall(opBitwiseNot(SignedIntegerLiteral(4294967295))) | sint_lit(-4294967296)",
         interpret("0xFFFFFFFF.opBitwiseNot()")
     );
     assertEqual(
@@ -29,25 +29,37 @@ unittest {
         interpret("!true")
     );
     assertEqual(
-        "FunctionCall(opAdd(IntegerLiteral(1), IntegerLiteral(-3))) | int_lit(-2)",
+        "FunctionCall(opAdd(SignedIntegerLiteral(1), SignedIntegerLiteral(-3))) | sint_lit(-2)",
         interpret("1 + -3")
     );
     assertEqual(
-        "FunctionCall(opAdd(IntegerLiteral(1), IntegerLiteral(2))) | int_lit(3)",
+        "FunctionCall(opAdd(SignedIntegerLiteral(1), SignedIntegerLiteral(2))) | sint_lit(3)",
         interpret("opAdd(1, 2)")
     );
     assertEqual(
-        "FunctionCall(opAdd(IntegerLiteral(1), IntegerLiteral(2))) | int_lit(3)",
+        "FunctionCall(opAdd(SignedIntegerLiteral(1), SignedIntegerLiteral(2))) | sint_lit(3)",
         interpret("1.opAdd(2)")
     );
     assertEqual(
-        "FunctionCall(opAdd(IntegerLiteral(1), IntegerLiteral(2))) | int_lit(3)",
-        interpret("1 opAdd 2")
+        "FunctionCall(opAdd(UnsignedIntegerLiteral(1), UnsignedIntegerLiteral(2))) | uint_lit(3)",
+        interpret("1u opAdd 2u")
     );
     assertEqual(
-        "FunctionCall(opEquals(FunctionCall(opAdd(IntegerLiteral(1), IntegerLiteral(1))), IntegerLiteral(2)))"
+        "FunctionCall(opAdd(UnsignedIntegerLiteral(1), SignedIntegerLiteral(2))) | fp_lit(3)",
+        interpret("1u opAdd 2")
+    );
+    assertEqual(
+        "FunctionCall(opEquals(FunctionCall(opAdd(SignedIntegerLiteral(1), SignedIntegerLiteral(1))), SignedIntegerLiteral(2)))"
             ~ " | bool_lit(true)",
         interpret("1 + 1 == 2")
+    );
+    assertEqual(
+        "FunctionCall(opLeftShift(SignedIntegerLiteral(1), UnsignedIntegerLiteral(2))) | sint_lit(4)",
+        interpret("1 << 2u")
+    );
+    assertEqual(
+        "FunctionCall(opLeftShift(UnsignedIntegerLiteral(1), UnsignedIntegerLiteral(2))) | uint_lit(4)",
+        interpret("1u << '\\u2'")
     );
     assertInterpretFails("!1");
     assertInterpretFails("~true");
@@ -57,6 +69,7 @@ unittest {
     //assertInterpretFails("1.lol");
     assertInterpretFails("1.lol()");
     assertInterpretFails("1.opAdd()");
+    assertInterpretFails("1 << 2");
 }
 
 private string interpret(string source) {

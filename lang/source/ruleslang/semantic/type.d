@@ -166,37 +166,48 @@ public immutable class AtomicType : Type {
         return fp;
     }
 
-    public bool inRange(T)(T value) if (!__traits(isIntegral, T) || !__traits(isFloating, T)) {
-        // Signed int
-        if (signed && !fp) {
+    public bool inRange(T)(T value) if (__traits(isIntegral, T) || __traits(isFloating, T)) {
+        if (fp) {
+            // Check if the value fits in this float type range
             static if (__traits(isFloating, T)) {
-                return false;
-            } else {
-                return cast(long) value >= (cast(long) -1 << (bitCount - 1)) && value <= (cast(long) -1 >>> (65 - bitCount));
+                // If the value is a float, NaN and infinity are part of the valid range
+                if (isNaN(value) || isInfinity(value)) {
+                    return true;
+                }
+            }
+            final switch (bitCount) {
+                case 16:
+                    return value >= -65504.0f && value <= 65504.0f;
+                case 32:
+                    return value >= -0x1.fffffeP+127f && value <= 0x1.fffffeP+127f;
+                case 64:
+                    return value >= -0x1.fffffffffffffP+1023 && value <= 0x1.fffffffffffffP+1023;
             }
         }
-        // Unsigned int
-        if (!fp) {
-            static if (__traits(isFloating, T)) {
-                return false;
-            } else {
-                return value >= 0 && value <= (cast(ulong) -1 >>> (64 - bitCount));
-            }
-        }
-        // Float
+        // A float is never in range of an int type
         static if (__traits(isFloating, T)) {
-            if (isNaN(value) || isInfinity(value)) {
-                return true;
+            return false;
+        } else static if (__traits(isUnsigned, T)) {
+            // The value is an unsigned int
+            if (!signed) {
+                // The type is an unsigned int
+                return checkUnsignedRange(value);
             }
+            // The type is signed, only need to check the upper limit
+            return value <= cast(ulong) (-1L >>> (65 - bitCount));
+        } else {
+            //  The value is a signed int
+            if (!signed) {
+                // The type is an unsigned int
+                return checkUnsignedRange(value);
+            }
+            // The type is a signed int
+            return value >= cast(long) (-1L << (bitCount - 1)) && value <= cast(long) (-1L >>> (65 - bitCount));
         }
-        final switch (bitCount) {
-            case 16:
-                return value >= -65504.0f && value <= 65504.0f;
-            case 32:
-                return value >= -0x1.fffffeP+127f && value <= 0x1.fffffeP+127f;
-            case 64:
-                return value >= -0x1.fffffffffffffP+1023 && value <= 0x1.fffffffffffffP+1023;
-        }
+    }
+
+    private bool checkUnsignedRange(T)(T value) {
+        return value >= 0 && cast(ulong) value <= (cast(ulong) -1 >>> (64 - bitCount));
     }
 
     public override bool convertibleTo(inout Type type, ref TypeConversionChain conversions) {
@@ -310,69 +321,79 @@ public immutable class BooleanLiteralType : AtomicLiteralType {
     mixin literalTypeOpEquals!BooleanLiteralType;
 }
 
-public immutable class IntegerLiteralType : AtomicLiteralType {
-    private BigInt _value;
+public immutable interface IntegerLiteralType : AtomicLiteralType {
+    public immutable(FloatLiteralType) toFloatLiteral();
+}
 
-    public this(long value) {
-        _value = BigInt(value);
-    }
+public alias SignedIntegerLiteralType = IntegerLiteralTypeTemplate!long;
+public alias UnsignedIntegerLiteralType = IntegerLiteralTypeTemplate!ulong;
 
-    public this(ulong value) {
-        _value = BigInt(value);
-    }
+private template IntegerLiteralTypeTemplate(T) {
+    public immutable class IntegerLiteralTypeTemplate : IntegerLiteralType {
+        private T _value;
 
-    @property public BigInt value() {
-        return _value;
-    }
-
-    public override bool convertibleTo(inout Type type, ref TypeConversionChain conversions) {
-        if (opEquals(type)) {
-            conversions.thenIdentity();
-            return true;
+        public this(T value) {
+            _value = value;
         }
-        // Can cast to a float literal type if converting the value to floating point gives the same value
-        auto floatLiteral = type.exactCastImmutable!(FloatLiteralType);
-        if (floatLiteral !is null
-                && (_value > long.max ? floatLiteral.value == cast(ulong) _value : floatLiteral.value == cast(long) _value)) {
-            conversions.thenIntegerToFloat();
-            return true;
+
+        @property public T value() {
+            return _value;
         }
-        // Can cast to an atomic type if in range
-        auto atomic = cast(immutable AtomicType) type;
-        if (atomic is null) {
+
+        public override bool convertibleTo(inout Type type, ref TypeConversionChain conversions) {
+            if (opEquals(type)) {
+                conversions.thenIdentity();
+                return true;
+            }
+            // Can cast to a float literal type if converting the value to floating point gives the same value
+            auto floatLiteral = type.exactCastImmutable!(FloatLiteralType);
+            if (floatLiteral !is null && floatLiteral.value == _value) {
+                conversions.thenIntegerToFloat();
+                return true;
+            }
+            // Can cast to an atomic type if in range
+            auto atomic = cast(immutable AtomicType) type;
+            if (atomic is null) {
+                return false;
+            }
+            if (atomic.inRange(_value)) {
+                if (atomic.isFloat()) {
+                    conversions.thenIntegerToFloat();
+                    conversions.thenFloatLiteralNarrow();
+                } else {
+                    conversions.thenIntegerLiteralNarrow();
+                }
+                return true;
+            }
             return false;
         }
-        bool inRange = _value > long.max ? atomic.inRange(cast(ulong) _value) : atomic.inRange(cast(long) _value);
-        if (inRange) {
-            if (atomic.isFloat()) {
-                conversions.thenIntegerToFloat();
-                conversions.thenFloatLiteralNarrow();
-            } else {
-                conversions.thenIntegerLiteralNarrow();
-            }
-            return true;
+
+        public override immutable(Value) asValue() {
+            return valueOf(_value);
         }
-        return false;
-    }
 
-    public override immutable(Value) asValue() {
-        return _value > long.max ? valueOf(cast(ulong) _value) : valueOf(cast(long) _value);
-    }
+        public override immutable(AtomicType) getAtomicType() {
+            static if (__traits(isUnsigned, T)) {
+                return AtomicType.UINT64;
+            } else {
+                return AtomicType.SINT64;
+            }
+        }
 
-    public override immutable(AtomicType) getAtomicType() {
-        return _value > long.max ? AtomicType.UINT64 : AtomicType.SINT64;
-    }
+        public override immutable(FloatLiteralType) toFloatLiteral() {
+            return new immutable FloatLiteralType(_value);
+        }
 
-    public immutable(FloatLiteralType) toFloatLiteral() {
-        return _value > long.max ? new immutable FloatLiteralType(cast(ulong) _value)
-                : new immutable FloatLiteralType(cast(long) _value);
-    }
+        public override string toString() {
+            static if (__traits(isUnsigned, T)) {
+                return format("uint_lit(%d)", _value);
+            } else {
+                return format("sint_lit(%d)", _value);
+            }
+        }
 
-    public override string toString() {
-        return format("int_lit(%d)", _value);
+        mixin literalTypeOpEquals!(IntegerLiteralTypeTemplate!T);
     }
-
-    mixin literalTypeOpEquals!IntegerLiteralType;
 }
 
 public immutable class FloatLiteralType : AtomicLiteralType {

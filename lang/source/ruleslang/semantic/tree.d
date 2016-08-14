@@ -75,15 +75,11 @@ public immutable class StringLiteralNode : TypedNode {
     }
 }
 
-public immutable class IntegerLiteralNode : TypedNode {
-    private IntegerLiteralType type;
+public immutable class SignedIntegerLiteralNode : TypedNode {
+    private SignedIntegerLiteralType type;
 
     public this(long value) {
-        type = new immutable IntegerLiteralType(value);
-    }
-
-    public this(ulong value) {
-        type = new immutable IntegerLiteralType(value);
+        type = new immutable SignedIntegerLiteralType(value);
     }
 
     public override immutable(TypedNode)[] getChildren() {
@@ -95,7 +91,27 @@ public immutable class IntegerLiteralNode : TypedNode {
     }
 
     public override string toString() {
-        return format("IntegerLiteral(%d)", type.value);
+        return format("SignedIntegerLiteral(%d)", type.value);
+    }
+}
+
+public immutable class UnsignedIntegerLiteralNode : TypedNode {
+    private UnsignedIntegerLiteralType type;
+
+    public this(long value) {
+        type = new immutable UnsignedIntegerLiteralType(value);
+    }
+
+    public override immutable(TypedNode)[] getChildren() {
+        return [];
+    }
+
+    public override immutable(Type) getType() {
+        return type;
+    }
+
+    public override string toString() {
+        return format("UnsignedIntegerLiteral(%d)", type.value);
     }
 }
 

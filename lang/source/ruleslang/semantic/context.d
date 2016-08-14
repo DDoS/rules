@@ -310,8 +310,10 @@ public class IntrinsicNameSpace : NameSpace {
                 } else {
                     literalParameters ~= argumentTypes[i].castOrFail!(immutable IntegerLiteralType).toFloatLiteral();
                 }
-            } else if (paramType == AtomicType.SINT64 || paramType == AtomicType.UINT64) {
-                literalParameters ~= argumentTypes[i].castOrFail!(immutable IntegerLiteralType);
+            } else if (paramType == AtomicType.SINT64) {
+                literalParameters ~= argumentTypes[i].castOrFail!(immutable SignedIntegerLiteralType);
+            } else if (paramType == AtomicType.UINT64) {
+                literalParameters ~= argumentTypes[i].castOrFail!(immutable UnsignedIntegerLiteralType);
             } else {
                 assert (0);
             }
@@ -334,10 +336,10 @@ public class IntrinsicNameSpace : NameSpace {
             immutable(AtomicLiteralType) literal = new immutable FloatLiteralType(result.as!double);
             literalReturn = &literal;
         } else if (returnType == AtomicType.SINT64) {
-            immutable(AtomicLiteralType) literal = new immutable IntegerLiteralType(result.as!long);
+            immutable(AtomicLiteralType) literal = new immutable SignedIntegerLiteralType(result.as!long);
             literalReturn = &literal;
         } else if (returnType == AtomicType.UINT64) {
-            immutable(AtomicLiteralType) literal = new immutable IntegerLiteralType(result.as!ulong);
+            immutable(AtomicLiteralType) literal = new immutable UnsignedIntegerLiteralType(result.as!ulong);
             literalReturn = &literal;
         } else {
             assert (0);

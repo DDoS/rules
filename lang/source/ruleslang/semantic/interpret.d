@@ -25,26 +25,29 @@ public immutable class Interpreter {
         return new immutable StringLiteralNode(expression.getValue());
     }
 
-    public immutable(IntegerLiteralNode) interpretCharacterLiteral(Context context, CharacterLiteral expression) {
-        return new immutable IntegerLiteralNode(cast(ulong) expression.getValue());
+    public immutable(UnsignedIntegerLiteralNode) interpretCharacterLiteral(Context context,
+            CharacterLiteral expression) {
+        return new immutable UnsignedIntegerLiteralNode(cast(ulong) expression.getValue());
     }
 
-    public immutable(IntegerLiteralNode) interpretSignedIntegerLiteral(Context context, SignedIntegerLiteral integer) {
+    public immutable(SignedIntegerLiteralNode) interpretSignedIntegerLiteral(Context context,
+            SignedIntegerLiteral integer) {
         bool overflow;
         auto value = integer.getValue(false, overflow);
         if (overflow) {
             throw new SourceException("Signed integer overflow", integer);
         }
-        return new immutable IntegerLiteralNode(value);
+        return new immutable SignedIntegerLiteralNode(value);
     }
 
-    public immutable(IntegerLiteralNode) interpretUnsignedIntegerLiteral(Context context, UnsignedIntegerLiteral integer) {
+    public immutable(UnsignedIntegerLiteralNode) interpretUnsignedIntegerLiteral(Context context,
+            UnsignedIntegerLiteral integer) {
         bool overflow;
         auto value = integer.getValue(overflow);
         if (overflow) {
             throw new SourceException("Unsigned integer overflow", integer);
         }
-        return new immutable IntegerLiteralNode(value);
+        return new immutable UnsignedIntegerLiteralNode(value);
     }
 
     public immutable(FloatLiteralNode) interpretFloatLiteral(Context context, FloatLiteral floating) {
@@ -240,7 +243,7 @@ public immutable class Interpreter {
             if (overflow) {
                 throw new SourceException("Signed integer overflow", sign);
             }
-            return new immutable IntegerLiteralNode(value);
+            return new immutable SignedIntegerLiteralNode(value);
         }
         assert (0);
     }
