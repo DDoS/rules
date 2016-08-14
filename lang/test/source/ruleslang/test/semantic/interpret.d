@@ -66,7 +66,7 @@ unittest {
     assertInterpretFails("~1.");
     assertInterpretFails("lol");
     assertInterpretFails("1()");
-    //assertInterpretFails("1.lol");
+    assertInterpretFails("1.lol");
     assertInterpretFails("1.lol()");
     assertInterpretFails("1.opAdd()");
     assertInterpretFails("1 << 2");
@@ -89,7 +89,7 @@ private void assertInterpretFails(string source) {
         auto node = source.interpret();
         throw new AssertionError("Expected a source exception, but got node:\n" ~ node);
     } catch (SourceException exception) {
-        debug (verboseFails) {
+        debug (verboseTests) {
             import std.stdio : stderr;
             stderr.writeln(exception.getErrorInformation(source).toString());
         }

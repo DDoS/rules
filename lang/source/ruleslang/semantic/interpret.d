@@ -71,21 +71,7 @@ public immutable class Interpreter {
         // If the name has more parts, treat the next as a structure member accesses
         immutable(TypedNode)* lastAccess = &fieldAccess;
         foreach (i, part; name[1 .. $]) {
-            // First check the last access is a structure type (otherwise it has no members)
-            auto lastAccessType = (*lastAccess).getType();
-            auto structureType = cast(immutable StructureType) lastAccessType;
-            if (structureType is null) {
-                throw new SourceException(format("Type %s has no members", lastAccessType.toString()), name[i]);
-            }
-            // Now if it is, check for the member
-            auto memberName = part.getSource();
-            auto member = structureType.getMemberType(memberName);
-            if (member is null) {
-                throw new SourceException(format("No member named %s in type %s", memberName,
-                        structureType.toString()), part);
-            }
-            // Wrap the last access in the member access
-            immutable(TypedNode) memberAccess = new immutable MemberAccessNode(*lastAccess, memberName);
+            immutable(TypedNode) memberAccess = interpretMemberAccess(new NameReference(name[0 .. i + 1]), *lastAccess, part);
             lastAccess = &memberAccess;
         }
         return *lastAccess;
@@ -103,8 +89,23 @@ public immutable class Interpreter {
         return NullNode.INSTANCE;
     }
 
-    public immutable(TypedNode) interpretMemberAccess(Context context, MemberAccess expression) {
-        return NullNode.INSTANCE;
+    public immutable(MemberAccessNode) interpretMemberAccess(Context context, MemberAccess memberAccess) {
+        auto valueNode = memberAccess.value.interpret(context);
+        return interpretMemberAccess(memberAccess.value, valueNode, memberAccess.name);
+    }
+
+    private static immutable(MemberAccessNode) interpretMemberAccess(Expression value, immutable(TypedNode) valueNode,
+            Identifier name) {
+        auto structureType = cast(immutable StructureType) valueNode.getType();
+        if (structureType is null) {
+            throw new SourceException(format("Type %s has no members", valueNode.getType()), value);
+        }
+        auto memberName = name.getSource();
+        auto memberType = structureType.getMemberType(memberName);
+        if (memberType is null) {
+            throw new SourceException(format("No member named %s in type %s", memberName, structureType.toString()), name);
+        }
+        return new immutable MemberAccessNode(valueNode, memberName);
     }
 
     public immutable(TypedNode) interpretArrayAccess(Context context, ArrayAccess expression) {
