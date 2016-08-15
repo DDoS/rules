@@ -51,7 +51,7 @@ public class NameReference : Reference {
     }
 
     public override string toString() {
-        return _name.join!(".", "getSource()")();
+        return _name.join!(".", "a.getSource()")();
     }
 }
 

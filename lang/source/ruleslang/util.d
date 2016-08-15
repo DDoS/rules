@@ -1,6 +1,7 @@
 module ruleslang.util;
 
 import std.conv : to;
+import std.range.primitives : isInputRange;
 import std.algorithm.searching : canFind, findAmong;
 import std.algorithm.iteration : map, reduce, uniq;
 import std.ascii : isDigit, isAlphaNum, toLower, toUpper;
@@ -76,11 +77,12 @@ public V[K] inverse(K, V)(K[V] array) {
     return inv;
 }
 
-public string join(string joiner, string stringer = "toString()", T)(T[] things ...) {
+public string join(string joiner, string stringer = "a.toString()", Range)(Range things)
+        if (isInputRange!Range) {
     if (things.length <= 0) {
         return "";
     }
-    return things.map!("a." ~ stringer).reduce!("a ~ \"" ~ joiner ~ "\" ~ b")();
+    return things.map!stringer().reduce!("a ~ \"" ~ joiner ~ "\" ~ b")();
 }
 
 public string asciiSnakeToCamelCase(string snake, bool upperFirst = false) {

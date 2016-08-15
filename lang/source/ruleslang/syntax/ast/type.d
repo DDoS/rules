@@ -41,9 +41,8 @@ public class NamedType : Type {
     }
 
     public override string toString() {
-        auto componentName = name.join!(".", "getSource()")();
-        auto dimensionsString = dimensions.length <= 0 ? "" :
-            dimensions.map!"a is null ? \"\" : a.toString()"().map!"\"[\" ~ a ~ \"]\""().reduce!"a ~ b"();
+        auto componentName = name.join!(".", "a.getSource()")();
+        auto dimensionsString = dimensions.join!("", "\"[\" ~ (a is null ? \"\" : a.toString()) ~ \"]\"");
         return componentName ~ dimensionsString;
     }
 }

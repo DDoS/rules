@@ -46,7 +46,7 @@ public class TypeConversionChain {
     }
 
     public override string toString() {
-        return format("Conversions(%s)", chain.join!(" -> ", "to!string"));
+        return format("Conversions(%s)", chain.join!(" -> ", "a.to!string"));
     }
 
     private mixin template generateBuilderMethods(string conversion, conversions...) {
