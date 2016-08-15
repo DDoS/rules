@@ -14,30 +14,38 @@ public interface Statement : SourceIndexed {
 }
 
 public class InitializerAssignment : Statement {
-    private Expression target;
-    private CompositeLiteral literal;
+    private Expression _target;
+    private CompositeLiteral _literal;
 
     public this(Expression target, CompositeLiteral literal) {
-        this.target = target;
-        this.literal = literal;
+        _target = target;
+        _literal = literal;
     }
 
     @property public override size_t start() {
-        return target.start;
+        return _target.start;
     }
 
     @property public override size_t end() {
-        return literal.end;
+        return _literal.end;
+    }
+
+    @property public Expression target() {
+        return _target;
+    }
+
+    @property public CompositeLiteral literal() {
+        return _literal;
     }
 
     public override Statement map(StatementMapper mapper) {
-        target = target.map(mapper);
-        literal = literal.map(mapper).castOrFail!CompositeLiteral();
+        _target = _target.map(mapper);
+        _literal = _literal.map(mapper).castOrFail!CompositeLiteral();
         return mapper.mapInitializerAssignment(this);
     }
 
     public override string toString() {
-        return format("InitializerAssignment(%s = %s)", target.toString(), literal.toString());
+        return format("InitializerAssignment(%s = %s)", _target.toString(), _literal.toString());
     }
 }
 

@@ -77,8 +77,108 @@ public immutable class Interpreter {
         return *lastAccess;
     }
 
-    public immutable(TypedNode) interpretCompositeLiteral(Context context, CompositeLiteral expression) {
-        return NullNode.INSTANCE;
+    public immutable(TypedNode) interpretCompositeLiteral(Context context, CompositeLiteral compositeLiteral) {
+        auto values = compositeLiteral.values;
+        if (values.length == 0) {
+            // This is the any type. It has no members
+            return AnyTypeLiteralNode.INSTANCE;
+        }
+        // Determine the type from the first label
+        // Un-labeled is tuple, integer labeled is array and identifier labeled is struct
+        auto label = values[0].label;
+        if (label is null) {
+            return interpretTupleLiteral(context, compositeLiteral);
+        }
+        switch (label.getKind()) with (Kind) {
+            case IDENTIFIER:
+                return interpretStructLiteral(context, compositeLiteral);
+            case SIGNED_INTEGER_LITERAL:
+            case UNSIGNED_INTEGER_LITERAL:
+                return interpretArrayLiteral(context, compositeLiteral);
+            default:
+                throw new SourceException(format("Unsupported label type %s", label.getKind().toString()), label);
+        }
+    }
+
+    private static immutable(TypedNode) interpretTupleLiteral(Context context, CompositeLiteral compositeLiteral) {
+        immutable(TypedNode)[] valueNodes = [];
+        foreach (LabeledExpression value; compositeLiteral.values) {
+            valueNodes ~= value.expression.interpret(context);
+            auto label = value.label;
+            // Tuples are un-labeled
+            if (label !is null) {
+                throw new SourceException("Did not expect a label since the other members are not labeled", label);
+            }
+        }
+        return new immutable TupleLiteralNode(valueNodes);
+    }
+
+    private static immutable(TypedNode) interpretStructLiteral(Context context, CompositeLiteral compositeLiteral) {
+        immutable(TypedNode)[] valueNodes = [];
+        string[] labels;
+        foreach (LabeledExpression value; compositeLiteral.values) {
+            valueNodes ~= value.expression.interpret(context);
+            auto label = value.label;
+            // Structs only have identifier labels
+            if (label is null) {
+                throw new SourceException("Expected a label on the expression", value.expression);
+            }
+            if (label.getKind() != Kind.IDENTIFIER) {
+                throw new SourceException("Struct label must be an identifier", label);
+            }
+            labels ~= label.getSource();
+        }
+        return new immutable StructLiteralNode(valueNodes, labels);
+    }
+
+    private static immutable(TypedNode) interpretArrayLiteral(Context context, CompositeLiteral compositeLiteral) {
+        immutable(TypedNode)[] valueNodes = [];
+        immutable(ArrayLabel)[] labels = [];
+        foreach (LabeledExpression value; compositeLiteral.values) {
+            valueNodes ~= value.expression.interpret(context);
+            labels ~= checkArrayLabel(value);
+        }
+        return new immutable ArrayLiteralNode(valueNodes, labels);
+    }
+
+    private static immutable(ArrayLabel) checkArrayLabel(LabeledExpression labeledExpression) {
+        // A label must be present
+        auto label = labeledExpression.label;
+        if (label is null) {
+            throw new SourceException("Expected a label on the expression", labeledExpression.expression);
+        }
+        // It can be a signed integer, as long as it is positive
+        auto signedIntegerLabel = cast(SignedIntegerLiteral) label;
+        if (signedIntegerLabel !is null) {
+            bool overflow;
+            long index = signedIntegerLabel.getValue(false, overflow);
+            if (overflow) {
+                throw new SourceException("Signed integer overflow", signedIntegerLabel);
+            }
+            if (index < 0) {
+                throw new SourceException("Index cannot be negative", signedIntegerLabel);
+            }
+            return immutable ArrayLabel(cast(ulong) index);
+        }
+        // It can be an unsigned integer
+        auto unsignedIntegerLabel = cast(UnsignedIntegerLiteral) label;
+        if (unsignedIntegerLabel !is null) {
+            bool overflow;
+            ulong index = unsignedIntegerLabel.getValue(overflow);
+            if (overflow) {
+                throw new SourceException("Unsigned integer overflow", unsignedIntegerLabel);
+            }
+            return immutable ArrayLabel(index);
+        }
+        // It can be the identifier "other"
+        auto identifierLabel = cast(Identifier) label;
+        if (identifierLabel !is null) {
+            if (identifierLabel.getSource() != "other") {
+                throw new SourceException("The only valid identifier for an array label is \"other\"", identifierLabel);
+            }
+            return ArrayLabel.OTHER;
+        }
+        throw new SourceException(format("Not a valid array label %s", label.getSource()), label);
     }
 
     public immutable(TypedNode) interpretInitializer(Context context, Initializer expression) {

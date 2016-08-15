@@ -56,34 +56,42 @@ public class NameReference : Reference {
 }
 
 public class LabeledExpression {
-    private Token label;
-    private Expression expression;
+    private Token _label;
+    private Expression _expression;
 
     public this(Token label, Expression expression) {
-        this.label = label;
-        this.expression = expression;
+        _label = label;
+        _expression = expression;
     }
 
     @property public size_t start() {
-        return label is null ? expression.start : label.start;
+        return _label is null ? _expression.start : _label.start;
     }
 
     @property public size_t end() {
-        return expression.end;
+        return _expression.end;
+    }
+
+    @property public Token label() {
+        return _label;
+    }
+
+    @property public Expression expression() {
+        return _expression;
     }
 
     public override string toString() {
-        return (label is null ? "" : label.getSource() ~ ": ") ~ expression.toString();
+        return (_label is null ? "" : _label.getSource() ~ ": ") ~ _expression.toString();
     }
 }
 
 public class CompositeLiteral : Expression {
-    private LabeledExpression[] values;
+    private LabeledExpression[] _values;
     private size_t _start;
     private size_t _end;
 
     public this(LabeledExpression[] values, size_t start, size_t end) {
-        this.values = values;
+        _values = values;
         _start = start;
         _end = end;
     }
@@ -96,9 +104,13 @@ public class CompositeLiteral : Expression {
         return _end;
     }
 
+    @property public LabeledExpression[] values() {
+        return _values;
+    }
+
     public override Expression map(ExpressionMapper mapper) {
-        foreach (i, value; values) {
-            values[i].expression = value.expression.map(mapper);
+        foreach (i, value; _values) {
+            _values[i]._expression = value._expression.map(mapper);
         }
         return mapper.mapCompositeLiteral(this);
     }
@@ -108,7 +120,7 @@ public class CompositeLiteral : Expression {
     }
 
     public override string toString() {
-        return format("CompositeLiteral({%s})", values.join!", "());
+        return format("CompositeLiteral({%s})", _values.join!", "());
     }
 }
 

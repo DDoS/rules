@@ -1,5 +1,7 @@
 module ruleslang.semantic.tree;
 
+import std.conv : to;
+import std.range : zip;
 import std.format : format;
 
 import ruleslang.semantic.type;
@@ -132,6 +134,111 @@ public immutable class FloatLiteralNode : TypedNode {
 
     public override string toString() {
         return format("FloatLiteral(%g)", type.value);
+    }
+}
+
+public immutable class AnyTypeLiteralNode : TypedNode {
+    public static immutable AnyTypeLiteralNode INSTANCE = new immutable AnyTypeLiteralNode();
+
+    private this() {
+    }
+
+    public override immutable(TypedNode)[] getChildren() {
+        return [];
+    }
+
+    public override immutable(Type) getType() {
+        // TODO
+        return AtomicType.BOOL;
+    }
+
+    public override string toString() {
+        return "AnyTypeLiteralNode({})";
+    }
+}
+
+public immutable class TupleLiteralNode : TypedNode {
+    private TypedNode[] values;
+
+    public this(immutable(TypedNode)[] values) {
+        this.values = values;
+    }
+
+    public override immutable(TypedNode)[] getChildren() {
+        return values;
+    }
+
+    public override immutable(Type) getType() {
+        // TODO
+        return AtomicType.BOOL;
+    }
+
+    public override string toString() {
+        return format("TupleLiteral({%s})", values.join!", "());
+    }
+}
+
+public immutable class StructLiteralNode : TupleLiteralNode {
+    private string[] labels;
+
+    public this(immutable(TypedNode)[] values, string[] labels) {
+        super(values);
+        this.labels = labels.idup;
+    }
+
+    public override immutable(Type) getType() {
+        // TODO
+        return AtomicType.BOOL;
+    }
+
+    public override string toString() {
+        return format("StructLiteral({%s})", zip(labels, values).join!(", ", "a[0] ~ \": \" ~ a[1].toString()"));
+    }
+}
+
+public immutable struct ArrayLabel {
+    public static immutable ArrayLabel OTHER = immutable ArrayLabel(0, true);
+    private ulong _index;
+    private bool _other;
+
+    public this(ulong index) {
+        this(index, false);
+    }
+
+    private this(ulong index, bool other) {
+        _index = index;
+        _other = other;
+    }
+
+    @property public ulong index() {
+        assert (!_other);
+        return _index;
+    }
+
+    @property public bool other() {
+        return _other;
+    }
+
+    public string toString() {
+        return _other ? "other" : _index.to!string;
+    }
+}
+
+public immutable class ArrayLiteralNode : TupleLiteralNode {
+    private ArrayLabel[] labels;
+
+    public this(immutable(TypedNode)[] values, immutable(ArrayLabel)[] labels) {
+        super(values);
+        this.labels = labels.idup;
+    }
+
+    public override immutable(Type) getType() {
+        // TODO
+        return AtomicType.BOOL;
+    }
+
+    public override string toString() {
+        return format("ArrayLiteral({%s})", zip(labels, values).join!(", ", "a[0].toString() ~ \": \" ~ a[1].toString()"));
     }
 }
 

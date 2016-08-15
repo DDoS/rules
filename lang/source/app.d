@@ -28,11 +28,17 @@ void main() {
                 auto assignment = cast(Assignment) statement;
                 if (assignment !is null) {
                     assignment.value.interpret(context).printSemantic();
-                } else {
-                    auto functionCall = cast(FunctionCall) statement;
-                    if (functionCall !is null) {
-                        functionCall.interpret(context).printSemantic();
-                    }
+                    continue;
+                }
+                auto functionCall = cast(FunctionCall) statement;
+                if (functionCall !is null) {
+                    functionCall.interpret(context).printSemantic();
+                    continue;
+                }
+                auto initializerAssignment = cast(InitializerAssignment) statement;
+                if (initializerAssignment !is null) {
+                    initializerAssignment.literal.interpret(context).printSemantic();
+                    continue;
                 }
             }
         } catch (SourceException exception) {
