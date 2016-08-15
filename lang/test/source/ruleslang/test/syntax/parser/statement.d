@@ -25,6 +25,12 @@ unittest {
         "InitializerAssignment(a = CompositeLiteral({a, b, CompositeLiteral({v})}))",
         parse("a = {a, b, {v}}")
     );
+
+    assertEqual(
+        "Assignment(a = Initializer(test[]{SignedIntegerLiteral(1), StringLiteral(\"2\"),"
+                ~ " CompositeLiteral({hey: FloatLiteral(2.1)})}))",
+        parse("a = test[] {1, \"2\", {hey: 2.1}}")
+    );
 }
 
 unittest {

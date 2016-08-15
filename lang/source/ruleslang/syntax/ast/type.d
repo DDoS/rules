@@ -35,7 +35,7 @@ public class NamedType : Type {
 
     public override Type map(ExpressionMapper mapper) {
         foreach (i, dimension; dimensions) {
-            dimensions[i] = dimension.map(mapper);
+            dimensions[i] = dimension is null ? null : dimension.map(mapper);
         }
         return mapper.mapNamedType(this);
     }
