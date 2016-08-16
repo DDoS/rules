@@ -147,8 +147,7 @@ public immutable class AnyTypeLiteralNode : TypedNode {
     }
 
     public override immutable(Type) getType() {
-        // TODO
-        return AtomicType.BOOL;
+        return StructureType.EMPTY;
     }
 
     public override string toString() {
@@ -158,9 +157,15 @@ public immutable class AnyTypeLiteralNode : TypedNode {
 
 public immutable class TupleLiteralNode : TypedNode {
     private TypedNode[] values;
+    private Type type;
 
     public this(immutable(TypedNode)[] values) {
+        this(values, new immutable TupleType(values.getTypes()));
+    }
+
+    private this(immutable(TypedNode)[] values, immutable Type type) {
         this.values = values;
+        this.type = type;
     }
 
     public override immutable(TypedNode)[] getChildren() {
@@ -168,8 +173,7 @@ public immutable class TupleLiteralNode : TypedNode {
     }
 
     public override immutable(Type) getType() {
-        // TODO
-        return AtomicType.BOOL;
+        return type;
     }
 
     public override string toString() {
@@ -181,18 +185,22 @@ public immutable class StructLiteralNode : TupleLiteralNode {
     private string[] labels;
 
     public this(immutable(TypedNode)[] values, string[] labels) {
-        super(values);
+        assert(values.length > 0);
         this.labels = labels.idup;
+        super(values, new immutable StructureType(values.getTypes(), this.labels));
     }
 
-    public override immutable(Type) getType() {
-        // TODO
-        return AtomicType.BOOL;
     public override string toString() {
         return format("StructLiteral({%s})", stringZip!": "(labels, values).join!", "());
     }
+}
 
+private immutable(Type)[] getTypes(immutable(TypedNode)[] values) {
+    immutable(Type)[] valueTypes = [];
+    foreach (value; values) {
+        valueTypes ~= value.getType();
     }
+    return valueTypes;
 }
 
 public immutable struct ArrayLabel {

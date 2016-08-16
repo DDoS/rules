@@ -5,7 +5,6 @@ import std.algorithm.searching : canFind;
 import std.exception : assumeUnique;
 import std.math: isNaN, isInfinity;
 import std.utf : codeLength;
-import std.bigint : BigInt;
 
 import ruleslang.evaluation.value;
 import ruleslang.util;
@@ -20,7 +19,8 @@ public enum TypeConversion {
     SIZED_ARRAY_SHORTEN,
     SIZED_ARRAY_TO_UNSIZED,
     STRING_LITERAL_TO_UTF8,
-    STRING_LITERAL_TO_UTF16
+    STRING_LITERAL_TO_UTF16,
+    REFERENCE_WIDENING
 }
 
 public class TypeConversionChain {
@@ -449,7 +449,142 @@ public immutable class FloatLiteralType : AtomicLiteralType {
     mixin literalTypeOpEquals!FloatLiteralType;
 }
 
-public immutable class ArrayType : Type {
+public immutable interface CompositeType : Type {
+    public bool hasMoreMembers(ulong count);
+    public immutable(Type) getMemberType(ulong index);
+}
+
+public immutable class TupleType : CompositeType {
+    private Type[] _memberTypes;
+
+    public this(immutable(Type)[] memberTypes) {
+        _memberTypes = memberTypes;
+    }
+
+    @property public immutable(Type)[] memberTypes() {
+        return _memberTypes;
+    }
+
+    public override bool convertibleTo(inout Type type, ref TypeConversionChain conversions) {
+        // Allow identity conversion is allowed
+        if (opEquals(type)) {
+            conversions.thenIdentity();
+            return true;
+        }
+        // Can convert to another composite type if its members are an ordered subset
+        auto compositeType = cast(immutable CompositeType) type;
+        if (compositeType is null) {
+            return false;
+        }
+        if (compositeType.hasMoreMembers(_memberTypes.length)) {
+            return false;
+        }
+        // Only allow identity conversion between members
+        foreach (i, memberType; _memberTypes) {
+            auto otherMemberType = compositeType.getMemberType(i);
+            if (otherMemberType !is null && memberType != otherMemberType) {
+                return false;
+            }
+        }
+        conversions.thenReferenceWidening();
+        return true;
+    }
+
+    public override bool hasMoreMembers(ulong count) {
+        return  _memberTypes.length > count;
+    }
+
+    public override immutable(Type) getMemberType(ulong index) {
+        return index >= _memberTypes.length ? null : _memberTypes[index];
+    }
+
+    public override string toString() {
+        return format("{%s}", _memberTypes.join!", ");
+    }
+
+    public override bool opEquals(inout Type type) {
+        auto tupleType = type.exactCastImmutable!(TupleType);
+        return tupleType !is null && tupleType.memberTypes.equals(_memberTypes);
+    }
+}
+
+public immutable class StructureType : TupleType {
+    public static immutable StructureType EMPTY = new immutable StructureType();
+    private string[] _memberNames;
+
+    public this(immutable(Type)[] memberTypes, immutable(string)[] memberNames) {
+        assert(memberTypes.length > 0);
+        assert(memberTypes.length == memberNames.length);
+        super(memberTypes);
+        _memberNames = memberNames;
+    }
+
+    private this() {
+        super([]);
+        _memberNames = [];
+    }
+
+    @property public immutable(string)[] memberNames() {
+        return _memberNames;
+    }
+
+    public immutable(Type) getMemberType(string name) {
+        foreach (i, memberName; _memberNames) {
+            if (name == memberName) {
+                return super.getMemberType(i);
+            }
+        }
+        return null;
+    }
+
+    public override bool convertibleTo(inout Type type, ref TypeConversionChain conversions) {
+        // Allow identity convertion
+        if (opEquals(type)) {
+            conversions.thenIdentity();
+            return true;
+        }
+        // Can only convert to another structure type if its members are a subset
+        auto structureType = cast(immutable StructureType) type;
+        if (structureType is null) {
+            return false;
+        }
+        auto otherMemberNames = structureType.memberNames;
+        if (otherMemberNames.length > memberNames.length) {
+            return false;
+        }
+        foreach (otherName; otherMemberNames) {
+            if (getMemberType(otherName) is null) {
+                return false;
+            }
+        }
+        conversions.thenReferenceWidening();
+        return true;
+    }
+
+    public override string toString() {
+        return format("{%s}", stringZip!": "(_memberNames, memberTypes).join!", "());
+    }
+
+    public override bool opEquals(inout Type type) {
+        auto structureType = type.exactCastImmutable!(StructureType);
+        return structureType !is null && structureType.memberNames == _memberNames
+                && structureType.memberTypes.equals(memberTypes);
+    }
+}
+
+private bool equals(immutable(Type)[] as, immutable(Type)[] bs) {
+    if (as.length != bs.length) {
+        return false;
+    }
+    foreach (i, a; as) {
+        if (!a.opEquals(bs[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+
+public immutable class ArrayType : CompositeType {
     private Type _componentType;
     private uint _totalDepth;
 
@@ -479,6 +614,14 @@ public immutable class ArrayType : Type {
             return true;
         }
         return false;
+    }
+
+    public override bool hasMoreMembers(ulong count) {
+        return false;
+    }
+
+    public override immutable(Type) getMemberType(ulong index) {
+        return _componentType;
     }
 
     public override string toString() {
@@ -526,6 +669,10 @@ public immutable class SizedArrayType : ArrayType {
             return true;
         }
         return false;
+    }
+
+    public override bool hasMoreMembers(ulong count) {
+        return _size > count;
     }
 
     public override string toString() {
@@ -593,31 +740,8 @@ public immutable class StringLiteralType : SizedArrayType, LiteralType {
     }
 
     public override string toString() {
-        return format("string_lit(%s)", _value);
+        return format("string_lit(\"%s\")", _value);
     }
 
     mixin literalTypeOpEquals!StringLiteralType;
-}
-
-public immutable class StructureType : Type {
-    public immutable(Type) getMemberType(string name) {
-        return null;
-    }
-
-    public override bool convertibleTo(inout Type type, ref TypeConversionChain conversions) {
-        if (opEquals(type)) {
-            conversions.thenIdentity();
-            return true;
-        }
-        return false;
-    }
-
-    public override string toString() {
-        return format("{}");
-    }
-
-    public override bool opEquals(inout Type type) {
-        auto structureType = type.exactCastImmutable!(StructureType);
-        return this is structureType;
-    }
 }
