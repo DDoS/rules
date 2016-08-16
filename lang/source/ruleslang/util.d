@@ -3,7 +3,8 @@ module ruleslang.util;
 import std.conv : to;
 import std.range.primitives : isInputRange;
 import std.algorithm.searching : canFind, findAmong;
-import std.algorithm.iteration : map, reduce, uniq;
+import std.algorithm.iteration : map, reduce;
+import std.range : zip;
 import std.ascii : isDigit, isAlphaNum, toLower, toUpper;
 
 public T castOrFail(T, S)(S s) {
@@ -77,7 +78,12 @@ public V[K] inverse(K, V)(K[V] array) {
     return inv;
 }
 
-public string join(string joiner, string stringer = "a.toString()", Range)(Range things)
+public auto stringZip(string joiner, string stringer = ".to!string()", RangeA, RangeB)(RangeA a, RangeB b)
+        if (isInputRange!RangeA && isInputRange!RangeB) {
+    return zip(a, b).map!("a[0]" ~ stringer ~ " ~ \"" ~ joiner ~ "\" ~ a[1]" ~ stringer);
+}
+
+public string join(string joiner, string stringer = "a.to!string()", Range)(Range things)
         if (isInputRange!Range) {
     if (things.length <= 0) {
         return "";

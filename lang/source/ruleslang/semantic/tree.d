@@ -1,7 +1,6 @@
 module ruleslang.semantic.tree;
 
 import std.conv : to;
-import std.range : zip;
 import std.format : format;
 
 import ruleslang.semantic.type;
@@ -189,10 +188,10 @@ public immutable class StructLiteralNode : TupleLiteralNode {
     public override immutable(Type) getType() {
         // TODO
         return AtomicType.BOOL;
+    public override string toString() {
+        return format("StructLiteral({%s})", stringZip!": "(labels, values).join!", "());
     }
 
-    public override string toString() {
-        return format("StructLiteral({%s})", zip(labels, values).join!(", ", "a[0] ~ \": \" ~ a[1].toString()"));
     }
 }
 
@@ -238,7 +237,7 @@ public immutable class ArrayLiteralNode : TupleLiteralNode {
     }
 
     public override string toString() {
-        return format("ArrayLiteral({%s})", zip(labels, values).join!(", ", "a[0].toString() ~ \": \" ~ a[1].toString()"));
+        return format("ArrayLiteral({%s})", stringZip!": "(labels, values).join!", "());
     }
 }
 
