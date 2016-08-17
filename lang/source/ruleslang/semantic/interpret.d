@@ -81,7 +81,7 @@ public immutable class Interpreter {
         auto values = compositeLiteral.values;
         if (values.length == 0) {
             // This is the any type. It has no members
-            return AnyTypeLiteralNode.INSTANCE;
+            return EmptyLiteralNode.INSTANCE;
         }
         // Determine the type from the first label
         // Un-labeled is tuple, integer labeled is array and identifier labeled is struct

@@ -136,8 +136,8 @@ public immutable class FloatLiteralNode : TypedNode {
     }
 }
 
-public immutable class AnyTypeLiteralNode : TypedNode {
-    public static immutable AnyTypeLiteralNode INSTANCE = new immutable AnyTypeLiteralNode();
+public immutable class EmptyLiteralNode : TypedNode {
+    public static immutable EmptyLiteralNode INSTANCE = new immutable EmptyLiteralNode();
 
     private this() {
     }
@@ -147,11 +147,11 @@ public immutable class AnyTypeLiteralNode : TypedNode {
     }
 
     public override immutable(Type) getType() {
-        return StructureType.EMPTY;
+        return AnyType.INSTANCE;
     }
 
     public override string toString() {
-        return "AnyTypeLiteralNode({})";
+        return "EmptyLiteralNode({})";
     }
 }
 
@@ -160,6 +160,7 @@ public immutable class TupleLiteralNode : TypedNode {
     private Type type;
 
     public this(immutable(TypedNode)[] values) {
+        assert (values.length > 0);
         this(values, new immutable TupleType(values.getTypes()));
     }
 

@@ -590,6 +590,43 @@ public immutable interface CompositeType : Type {
     public immutable(Type) getMemberType(ulong index);
 }
 
+public immutable class AnyType : CompositeType {
+    public static immutable AnyType INSTANCE = new immutable AnyType();
+    private this() {
+    }
+
+    public override bool convertibleTo(immutable Type type, TypeConversionChain conversions) {
+        // Can cast any composite type or array type
+        if (cast(immutable CompositeType) type !is null
+                || cast(immutable ArrayType) type !is null) {
+            conversions.thenReferenceWidening();
+            return true;
+        }
+        return false;
+    }
+
+    public override immutable(Type) lowestUpperBound(immutable Type other) {
+        // No other type can be greater than this, so just return this
+        return this;
+    }
+
+    public override bool hasMoreMembers(ulong count) {
+        return false;
+    }
+
+    public override immutable(Type) getMemberType(ulong index) {
+        return null;
+    }
+
+    public override string toString() {
+        return format("{}");
+    }
+
+    public override bool opEquals(immutable Type type) {
+        return type.exactCastImmutable!(AnyType) !is null;
+    }
+}
+
 public immutable class TupleType : CompositeType {
     private Type[] _memberTypes;
 
@@ -682,7 +719,6 @@ public immutable class TupleType : CompositeType {
 }
 
 public immutable class StructureType : TupleType {
-    public static immutable StructureType EMPTY = new immutable StructureType();
     private string[] _memberNames;
 
     public this(immutable(Type)[] memberTypes, immutable(string)[] memberNames) {
