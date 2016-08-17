@@ -1,6 +1,7 @@
 module ruleslang.semantic.type;
 
 import std.format : format;
+import std.algorithm.comparison : min;
 import std.algorithm.searching : canFind;
 import std.exception : assumeUnique;
 import std.math: isNaN, isInfinity;
@@ -77,11 +78,23 @@ public class TypeConversionChain {
     }
 }
 
+public bool arrayEquals(immutable(Type)[] as, immutable(Type)[] bs) {
+    if (as.length != bs.length) {
+        return false;
+    }
+    foreach (i, a; as) {
+        if (!a.opEquals(bs[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+
 public immutable interface Type {
-    public bool convertibleTo(inout Type type, TypeConversionChain conversions);
+    public bool convertibleTo(immutable Type type, TypeConversionChain conversions);
     public immutable(Type) lowestUpperBound(immutable Type other);
     public string toString();
-    public bool opEquals(inout Type type);
+    public bool opEquals(immutable Type type);
 }
 
 public immutable class AtomicType : Type {
@@ -225,8 +238,8 @@ public immutable class AtomicType : Type {
         return value >= 0 && cast(ulong) value <= (cast(ulong) -1 >>> (64 - bitCount));
     }
 
-    public override bool convertibleTo(inout Type type, TypeConversionChain conversions) {
-        auto atomic = cast(immutable AtomicType) type;
+    public override bool convertibleTo(immutable Type type, TypeConversionChain conversions) {
+        auto atomic = type.exactCastImmutable!AtomicType();
         if (atomic is null) {
             return false;
         }
@@ -259,12 +272,12 @@ public immutable class AtomicType : Type {
 
     public override immutable(Type) lowestUpperBound(immutable Type other) {
         // A LUB exists with another atomic type
-        auto atomicOther = cast(immutable AtomicType) other;
+        auto atomicOther = other.exactCastImmutable!AtomicType();
         if (atomicOther !is null) {
             return lowestUpperBound!AtomicType(atomicOther);
         }
         // A LUB exists with an atomic literal type
-        auto literalOther = cast(immutable AtomicLiteralType) other;
+        auto literalOther = other.exactCastImmutable!AtomicLiteralType();
         if (literalOther !is null) {
             return lowestUpperBound!AtomicLiteralType(literalOther);
         }
@@ -275,11 +288,11 @@ public immutable class AtomicType : Type {
     private immutable(Type) lowestUpperBound(T)(immutable T other) {
         // If any type is a supe type of the other, it is the LUB
         auto ignored = new TypeConversionChain();
-        auto thisToOther = this.convertibleTo(other, ignored);
+        auto thisToOther = convertibleTo(other, ignored);
         auto otherToThis = other.convertibleTo(this, ignored);
         // This also includes the case where they are the same type
         if (thisToOther && otherToThis) {
-            assert(this.opEquals(other));
+            assert(opEquals(other));
             return this;
         }
         if (thisToOther && !otherToThis) {
@@ -334,21 +347,21 @@ public immutable class AtomicType : Type {
         return name;
     }
 
-    public override bool opEquals(inout Type type) {
+    public override bool opEquals(immutable Type type) {
         auto atomicType = type.exactCastImmutable!(AtomicType);
         return this is atomicType;
     }
 }
 
 private mixin template literalTypeOpEquals(L) {
-    public override bool opEquals(inout Type type) {
+    public override bool opEquals(immutable Type type) {
         auto literalType = type.exactCastImmutable!(L);
         return literalType !is null && _value == literalType._value;
     }
 }
 
 public immutable interface LiteralType : Type {
-    public bool specializableTo(inout Type type, TypeConversionChain conversions);
+    public bool specializableTo(immutable Type type, TypeConversionChain conversions);
 }
 
 public immutable interface AtomicLiteralType : LiteralType {
@@ -367,21 +380,21 @@ public immutable class BooleanLiteralType : AtomicLiteralType {
         return _value;
     }
 
-    public override bool convertibleTo(inout Type type, TypeConversionChain conversions) {
+    public override bool convertibleTo(immutable Type type, TypeConversionChain conversions) {
         if (opEquals(type)) {
             conversions.thenIdentity();
             return true;
         }
         // Can only cast to the atomic type bool
         auto atomic = type.exactCastImmutable!AtomicType();
-        if (atomic !is null && atomic == AtomicType.BOOL) {
+        if (atomic !is null && atomic.opEquals(AtomicType.BOOL)) {
             conversions.thenIdentity();
             return true;
         }
         return false;
     }
 
-    public override bool specializableTo(inout Type type, TypeConversionChain conversions) {
+    public override bool specializableTo(immutable Type type, TypeConversionChain conversions) {
         // No possible specializations for literal booleans
         return false;
     }
@@ -391,7 +404,7 @@ public immutable class BooleanLiteralType : AtomicLiteralType {
             return this;
         }
         // The only two boolean types are the atomic and literal. Their LUB is BOOL
-        if (other == AtomicType.BOOL || other.exactCastImmutable!BooleanLiteralType() !is null) {
+        if (other.opEquals(AtomicType.BOOL) || other.exactCastImmutable!BooleanLiteralType() !is null) {
             return AtomicType.BOOL;
         }
         return null;
@@ -433,7 +446,7 @@ private template IntegerLiteralTypeTemplate(T) {
             return _value;
         }
 
-        public override bool convertibleTo(inout Type type, TypeConversionChain conversions) {
+        public override bool convertibleTo(immutable Type type, TypeConversionChain conversions) {
             if (opEquals(type)) {
                 conversions.thenIdentity();
                 return true;
@@ -448,9 +461,9 @@ private template IntegerLiteralTypeTemplate(T) {
             return getAtomicType().convertibleTo(type, conversions);
         }
 
-        public override bool specializableTo(inout Type type, TypeConversionChain conversions) {
+        public override bool specializableTo(immutable Type type, TypeConversionChain conversions) {
             // Can convert to an atomic type if in range
-            auto atomic = cast(immutable AtomicType) type;
+            auto atomic = type.exactCastImmutable!AtomicType();
             if (atomic !is null && atomic.inRange(_value)) {
                 if (atomic.isFloat()) {
                     conversions.thenIntegerToFloat();
@@ -465,7 +478,7 @@ private template IntegerLiteralTypeTemplate(T) {
 
         public override immutable(Type) lowestUpperBound(immutable Type other) {
             if (opEquals(other)) {
-                return other;
+                return this;
             }
             auto ignored = new TypeConversionChain();
             if (convertibleTo(other, ignored)) {
@@ -524,7 +537,7 @@ public immutable class FloatLiteralType : AtomicLiteralType {
         return _value;
     }
 
-    public override bool convertibleTo(inout Type type, TypeConversionChain conversions) {
+    public override bool convertibleTo(immutable Type type, TypeConversionChain conversions) {
         if (opEquals(type)) {
             conversions.thenIdentity();
             return true;
@@ -533,9 +546,9 @@ public immutable class FloatLiteralType : AtomicLiteralType {
         return getAtomicType().convertibleTo(type, conversions);
     }
 
-    public override bool specializableTo(inout Type type, TypeConversionChain conversions) {
+    public override bool specializableTo(immutable Type type, TypeConversionChain conversions) {
         // Can cast to an atomic type if in range
-        auto atomic = cast(immutable AtomicType) type;
+        auto atomic = type.exactCastImmutable!AtomicType();
         if (atomic !is null && atomic.inRange(_value)) {
             conversions.thenFloatLiteralNarrow();
             return true;
@@ -545,7 +558,7 @@ public immutable class FloatLiteralType : AtomicLiteralType {
 
     public override immutable(Type) lowestUpperBound(immutable Type other) {
         if (opEquals(other)) {
-            return other;
+            return this;
         }
         auto ignored = new TypeConversionChain();
         if (convertibleTo(other, ignored)) {
@@ -588,7 +601,7 @@ public immutable class TupleType : CompositeType {
         return _memberTypes;
     }
 
-    public override bool convertibleTo(inout Type type, TypeConversionChain conversions) {
+    public override bool convertibleTo(immutable Type type, TypeConversionChain conversions) {
         // Allow identity conversion is allowed
         if (opEquals(type)) {
             conversions.thenIdentity();
@@ -605,7 +618,7 @@ public immutable class TupleType : CompositeType {
         // Only allow identity conversion between members
         foreach (i, memberType; _memberTypes) {
             auto otherMemberType = compositeType.getMemberType(i);
-            if (otherMemberType !is null && memberType != otherMemberType) {
+            if (otherMemberType !is null && !memberType.opEquals(otherMemberType)) {
                 return false;
             }
         }
@@ -614,7 +627,40 @@ public immutable class TupleType : CompositeType {
     }
 
     public override immutable(Type) lowestUpperBound(immutable Type other) {
-        return other;
+        if (opEquals(other)) {
+            return this;
+        }
+        auto ignored = new TypeConversionChain();
+        if (convertibleTo(other, ignored)) {
+            return other;
+        }
+        if (other.convertibleTo(this, ignored)) {
+            return this;
+        }
+        // If the other type is a tuple, use the intersection of the ordered members as the LUB
+        auto tupleType = cast(immutable TupleType) other;
+        if (tupleType !is null) {
+            immutable(Type)[] memberIntersection = [];
+            foreach (i; 0 .. min(_memberTypes.length, tupleType.memberTypes.length)) {
+                if (_memberTypes[i].opEquals(tupleType.memberTypes[i])) {
+                    memberIntersection ~= _memberTypes[i];
+                } else {
+                    break;
+                }
+            }
+            // If the other type is also a struct, copy over the labels and return a struct
+            auto structureType = cast(immutable StructureType) tupleType;
+            if (structureType !is null) {
+                return new immutable StructureType(
+                        memberIntersection,
+                        structureType.memberNames[0 .. memberIntersection.length]
+                );
+            } else {
+                return new immutable TupleType(memberIntersection);
+            }
+        }
+        // a = {1: {a: 1, b: 2}, 0: {1, 2, 3}}
+        return null;
     }
 
     public override bool hasMoreMembers(ulong count) {
@@ -629,9 +675,9 @@ public immutable class TupleType : CompositeType {
         return format("{%s}", _memberTypes.join!", ");
     }
 
-    public override bool opEquals(inout Type type) {
+    public override bool opEquals(immutable Type type) {
         auto tupleType = type.exactCastImmutable!(TupleType);
-        return tupleType !is null && tupleType.memberTypes.equals(_memberTypes);
+        return tupleType !is null && tupleType.memberTypes.arrayEquals(_memberTypes);
     }
 }
 
@@ -664,14 +710,14 @@ public immutable class StructureType : TupleType {
         return null;
     }
 
-    public override bool convertibleTo(inout Type type, TypeConversionChain conversions) {
+    public override bool convertibleTo(immutable Type type, TypeConversionChain conversions) {
         // Allow identity convertion
         if (opEquals(type)) {
             conversions.thenIdentity();
             return true;
         }
         // Can only convert to another structure type if its members are a subset
-        auto structureType = cast(immutable StructureType) type;
+        auto structureType = type.exactCastImmutable!StructureType();
         if (structureType is null) {
             return false;
         }
@@ -696,26 +742,14 @@ public immutable class StructureType : TupleType {
         return format("{%s}", stringZip!" "(memberTypes, _memberNames).join!", "());
     }
 
-    public override bool opEquals(inout Type type) {
+    public override bool opEquals(immutable Type type) {
         auto structureType = type.exactCastImmutable!(StructureType);
         return structureType !is null && structureType.memberNames == _memberNames
-                && structureType.memberTypes.equals(memberTypes);
+                && structureType.memberTypes.arrayEquals(memberTypes);
     }
 }
 
-private bool equals(immutable(Type)[] as, immutable(Type)[] bs) {
-    if (as.length != bs.length) {
-        return false;
-    }
-    foreach (i, a; as) {
-        if (!a.opEquals(bs[i])) {
-            return false;
-        }
-    }
-    return true;
-}
-
-public immutable class ArrayType : CompositeType {
+public immutable class ArrayType : Type {
     private Type _componentType;
     private uint _totalDepth;
 
@@ -738,7 +772,7 @@ public immutable class ArrayType : CompositeType {
         return _totalDepth;
     }
 
-    public override bool convertibleTo(inout Type type, TypeConversionChain conversions) {
+    public override bool convertibleTo(immutable Type type, TypeConversionChain conversions) {
         // Only identity conversion is allowed
         if (opEquals(type)) {
             conversions.thenIdentity();
@@ -751,21 +785,14 @@ public immutable class ArrayType : CompositeType {
         return other;
     }
 
-    public override bool hasMoreMembers(ulong count) {
-        return false;
-    }
-
-    public override immutable(Type) getMemberType(ulong index) {
-        return _componentType;
-    }
-
     public override string toString() {
         return format("%s[]", _componentType.toString());
     }
 
-    public override bool opEquals(inout Type type) {
+    public override bool opEquals(immutable Type type) {
         auto arrayType = type.exactCastImmutable!(ArrayType);
-        return arrayType !is null && arrayType.totalDepth == _totalDepth && arrayType.componentType == _componentType;
+        return arrayType !is null && arrayType.totalDepth == _totalDepth
+                && arrayType.componentType.opEquals(_componentType);
     }
 }
 
@@ -781,13 +808,13 @@ public immutable class SizedArrayType : ArrayType {
         return _size;
     }
 
-    public override bool convertibleTo(inout Type type, TypeConversionChain conversions) {
+    public override bool convertibleTo(immutable Type type, TypeConversionChain conversions) {
         auto arrayType = cast(immutable ArrayType) type;
         if (arrayType is null) {
             return false;
         }
         // Can cast to unsized if the component and depth match
-        if (arrayType.totalDepth != totalDepth || arrayType.componentType != componentType) {
+        if (arrayType.totalDepth != totalDepth || !arrayType.componentType.opEquals(componentType)) {
             return false;
         }
         // If the array is sized then the length must be smaller or equal
@@ -806,18 +833,14 @@ public immutable class SizedArrayType : ArrayType {
         return false;
     }
 
-    public override bool hasMoreMembers(ulong count) {
-        return _size > count;
-    }
-
     public override string toString() {
         return format("%s[%d]", componentType.toString(), _size);
     }
 
-    public override bool opEquals(inout Type type) {
+    public override bool opEquals(immutable Type type) {
         auto arrayType = type.exactCastImmutable!(SizedArrayType);
         return arrayType !is null && arrayType.totalDepth == totalDepth
-                && arrayType.componentType == componentType && arrayType.size == _size;
+                && arrayType.componentType.opEquals(componentType) && arrayType.size == _size;
     }
 }
 
@@ -837,14 +860,14 @@ public immutable class StringLiteralType : SizedArrayType, LiteralType {
         return _value;
     }
 
-    public override bool convertibleTo(inout Type type, TypeConversionChain conversions) {
+    public override bool convertibleTo(immutable Type type, TypeConversionChain conversions) {
         // Allow identity conversion
         if (opEquals(type)) {
             conversions.thenIdentity();
             return true;
         }
         // Allow conversion to shorter string literals
-        auto literalType = cast(immutable StringLiteralType) type;
+        auto literalType = type.exactCastImmutable!StringLiteralType();
         if (literalType !is null) {
             if (typeid(literalType) != typeid(StringLiteralType)) {
                 return false;
@@ -860,7 +883,7 @@ public immutable class StringLiteralType : SizedArrayType, LiteralType {
         return super.convertibleTo(type, conversions);
     }
 
-    public override bool specializableTo(inout Type type, TypeConversionChain conversions) {
+    public override bool specializableTo(immutable Type type, TypeConversionChain conversions) {
         // Can convert the string to UTF-16 or UTF-8
         auto clone = conversions.clone().thenStringLiteralToUtf16();
         if (new immutable SizedArrayType(AtomicType.UINT16, utf16Length).convertibleTo(type, clone)) {
