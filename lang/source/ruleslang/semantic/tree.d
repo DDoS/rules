@@ -233,15 +233,32 @@ public immutable struct ArrayLabel {
 
 public immutable class ArrayLiteralNode : TupleLiteralNode {
     private ArrayLabel[] labels;
+    private SizedArrayType type;
 
     public this(immutable(TypedNode)[] values, immutable(ArrayLabel)[] labels) {
+        assert(values.length > 0);
+        assert(values.length == labels.length);
         super(values);
         this.labels = labels.idup;
+        // The component type is the lowest upper bound of the components
+        auto firstType = values[0].getType();
+        immutable(Type)* componentType = &firstType;
+        foreach (value; values[1 .. $]) {
+            auto lub = (*componentType).lowestUpperBound(value.getType());
+            componentType = &lub;
+        }
+        // The array size if the max index label plus one
+        ulong maxIndex = 0;
+        foreach (label; labels) {
+            if (!label.other() && label.index > maxIndex) {
+                maxIndex = label.index;
+            }
+        }
+        type = new immutable SizedArrayType(*componentType, maxIndex + 1);
     }
 
-    public override immutable(Type) getType() {
-        // TODO
-        return AtomicType.BOOL;
+    public override immutable(SizedArrayType) getType() {
+        return type;
     }
 
     public override string toString() {
