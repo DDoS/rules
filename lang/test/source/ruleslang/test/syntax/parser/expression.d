@@ -21,6 +21,14 @@ unittest {
         parseTestExpression("(test.name)")
     );
     assertEqual(
+        "CompositeLiteral({test.name, label: other.thing})",
+        parseTestExpression("{test.name, label: other.thing}")
+    );
+    assertEqual(
+        "CompositeLiteral({SignedIntegerLiteral(1), StringLiteral(\"2\"), CompositeLiteral({hey: FloatLiteral(2.1)})})",
+        parseTestExpression("{1, \"2\", {hey: 2.1}}")
+    );
+    assertEqual(
         "Initializer(hello{test.name, label: other.thing})",
         parseTestExpression("hello{test.name, label: other.thing}")
     );

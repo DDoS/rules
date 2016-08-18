@@ -13,42 +13,6 @@ public interface Statement : SourceIndexed {
     public string toString();
 }
 
-public class InitializerAssignment : Statement {
-    private Expression _target;
-    private CompositeLiteral _literal;
-
-    public this(Expression target, CompositeLiteral literal) {
-        _target = target;
-        _literal = literal;
-    }
-
-    @property public override size_t start() {
-        return _target.start;
-    }
-
-    @property public override size_t end() {
-        return _literal.end;
-    }
-
-    @property public Expression target() {
-        return _target;
-    }
-
-    @property public CompositeLiteral literal() {
-        return _literal;
-    }
-
-    public override Statement map(StatementMapper mapper) {
-        _target = _target.map(mapper);
-        _literal = _literal.map(mapper).castOrFail!CompositeLiteral();
-        return mapper.mapInitializerAssignment(this);
-    }
-
-    public override string toString() {
-        return format("InitializerAssignment(%s = %s)", _target.toString(), _literal.toString());
-    }
-}
-
 public class Assignment : Statement {
     private Expression _target;
     private Expression _value;

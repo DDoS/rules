@@ -16,9 +16,11 @@
     # It's also possible to use labels so we can reorder (but can't partially label)
     Transform t = {scale: {1, 1, 2}, rot: {0, 0, 0, 1}, pos: {x: 1, y: 1, z: 2}};
 
-    # Initializers work basically the same for arrays, but no labeling is allowed
+    # Initializers work basically the same for arrays
     int[] a = {1, 2, 3, 5};
     int[][] b = {{1}, {}};
+    # Index labeling is allowed
+    bool[] a = {2: true, other: false};
 
     # To distinguish between array initialization and indexing operations
     # we must always include the curly braces.
@@ -34,11 +36,10 @@
 
 (* Assignment aren't expressions in this language *)
 referenceExpression = name | fieldAccess | arrayAccess ;
-assignment = referenceExpression,
-    ((assignmentOperator, expression) | ("=", compositeLiteral)) ;
+assignment = referenceExpression, assignmentOperator, expression ;
 
 indentation = indentationToken, {indentationToken} ;
 
 statement = assignment | functionCall ;
 
-statments = {indentation, (EOF | (statement, (indentation | ";" | EOF)))} ;
+statements = {indentation, (EOF | (statement, (indentation | ";" | EOF)))} ;

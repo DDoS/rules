@@ -52,9 +52,6 @@ private Statement parseAssigmnentOrFunctionCall(Tokenizer tokens) {
     }
     auto operator = tokens.head().castOrFail!AssignmentOperator();
     tokens.advance();
-    if (operator == "=" && tokens.head() == "{") {
-        return new InitializerAssignment(access, parseCompositeLiteral(tokens));
-    }
     return new Assignment(access, parseExpression(tokens), operator);
 }
 
@@ -103,7 +100,7 @@ private Statement[] parseStatements(Tokenizer tokens, IndentSpec* indentSpec) {
             continue;
         }
         if (!tokens.has()) {
-            // Nothing else to parse
+            // Nothing else to parse (EOF is a valid termination)
             break;
         }
         throw new SourceException("Expected end of statement", tokens.head());

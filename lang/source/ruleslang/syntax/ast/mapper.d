@@ -146,10 +146,6 @@ public abstract class ExpressionMapper : TypeMapper {
 }
 
 public abstract class StatementMapper : ExpressionMapper {
-    public Statement mapInitializerAssignment(InitializerAssignment statement) {
-        return statement;
-    }
-
     public Statement mapAssignment(Assignment statement) {
         return statement;
     }

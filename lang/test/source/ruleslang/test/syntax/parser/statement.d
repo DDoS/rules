@@ -22,10 +22,9 @@ unittest {
         parse("a.test().field ~= \"2\"")
     );
     assertEqual(
-        "InitializerAssignment(a = CompositeLiteral({a, b, CompositeLiteral({v})}))",
+        "Assignment(a = CompositeLiteral({a, b, CompositeLiteral({v})}))",
         parse("a = {a, b, {v}}")
     );
-
     assertEqual(
         "Assignment(a = Initializer(test[]{SignedIntegerLiteral(1), StringLiteral(\"2\"),"
                 ~ " CompositeLiteral({hey: FloatLiteral(2.1)})}))",

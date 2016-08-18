@@ -35,11 +35,6 @@ void main() {
                     functionCall.interpret(context).printSemantic();
                     continue;
                 }
-                auto initializerAssignment = cast(InitializerAssignment) statement;
-                if (initializerAssignment !is null) {
-                    initializerAssignment.literal.interpret(context).printSemantic();
-                    continue;
-                }
             }
         } catch (SourceException exception) {
             writeln(exception.getErrorInformation(source).toString());

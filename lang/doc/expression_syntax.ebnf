@@ -74,7 +74,7 @@ compositeLiteral = "{", [compositeLiteralBody], "}" ;
 initializer = namedType, compositeLiteral ;
 
 (* an atom is a literal, a name, an initializer or an expression in "()" *)
-atom = ("(", expression, ")") | literalToken | name
+atom = ("(", expression, ")") | literalToken | compositeLiteral | name
     | (".", identifierToken) | initializer ;
 
 (*

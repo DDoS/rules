@@ -26,12 +26,7 @@ private LabeledExpression parseCompositeLiteralPart(Tokenizer tokens) {
             label = null;
         }
     }
-    Expression value = void;
-    if (tokens.head() == "{") {
-        value = parseCompositeLiteral(tokens);
-    } else {
-        value = parseExpression(tokens);
-    }
+    Expression value = parseExpression(tokens);
     return new LabeledExpression(label, value);
 }
 
@@ -68,6 +63,10 @@ public CompositeLiteral parseCompositeLiteral(Tokenizer tokens) {
 }
 
 private Expression parseAtom(Tokenizer tokens) {
+    if (tokens.head() == "{") {
+        // Composite literal
+        return parseCompositeLiteral(tokens);
+    }
     if (tokens.head() == ".") {
         // Context field access
         auto start = tokens.head().start;
