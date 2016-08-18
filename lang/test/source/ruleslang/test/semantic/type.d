@@ -130,6 +130,8 @@ unittest {
     assertNotConvertible(new immutable StringLiteralType("ç"d), AtomicType.UINT8);
     assertNotConvertible(new immutable StringLiteralType("11"d), AtomicType.UINT8);
     assertNotConvertible(new immutable StringLiteralType("Ʃ"d), AtomicType.UINT8);
+    assertConvertible(new immutable StringLiteralType("Ʃ"d), AnyType.INSTANCE,
+            TypeConversion.REFERENCE_WIDENING);
     assertConvertible(new immutable StringLiteralType("1"d), new immutable SizedArrayType(AtomicType.UINT32, 1),
         TypeConversion.IDENTITY);
     assertSpecializable(new immutable StringLiteralType("1"d), new immutable SizedArrayType(AtomicType.UINT16, 1),
@@ -164,6 +166,8 @@ unittest {
     assertNotConvertible(new immutable ArrayType(new immutable ArrayType(AtomicType.UINT8)), new immutable ArrayType(AtomicType.UINT8));
     assertNotConvertible(new immutable ArrayType(AtomicType.UINT8), new immutable ArrayType(new immutable ArrayType(AtomicType.UINT8)));
     assertNotConvertible(new immutable ArrayType(AtomicType.UINT8), new immutable SizedArrayType(AtomicType.UINT8, 0));
+    assertConvertible(new immutable ArrayType(AtomicType.UINT8), AnyType.INSTANCE,
+            TypeConversion.REFERENCE_WIDENING);
     assertNotConvertible(new immutable SizedArrayType(AtomicType.UINT8, 0), new immutable SizedArrayType(AtomicType.UINT8, 1));
     assertNotConvertible(new immutable SizedArrayType(AtomicType.UINT8, 2), new immutable SizedArrayType(AtomicType.SINT8, 2));
     assertConvertible(new immutable SizedArrayType(AtomicType.UINT8, 1), new immutable SizedArrayType(AtomicType.UINT8, 1),
@@ -178,6 +182,8 @@ unittest {
     assertNotConvertible(new immutable SizedArrayType(AtomicType.UINT8, 0), AtomicType.UINT8);
     assertNotConvertible(new immutable SizedArrayType(AtomicType.UINT8, 2), AtomicType.UINT8);
     assertNotConvertible(new immutable SizedArrayType(AtomicType.UINT8, 1), AtomicType.SINT8);
+    assertConvertible(new immutable SizedArrayType(AtomicType.UINT8, 2), AnyType.INSTANCE,
+            TypeConversion.REFERENCE_WIDENING);
 }
 
 unittest {
@@ -199,6 +205,11 @@ unittest {
     assertNotConvertible(
         new immutable TupleType([new immutable TupleType([AtomicType.UINT8])]),
         new immutable TupleType([new immutable TupleType([AtomicType.UINT8, AtomicType.BOOL])]),
+    );
+    assertConvertible(
+        new immutable TupleType([new immutable TupleType([AtomicType.UINT8])]),
+        AnyType.INSTANCE,
+        TypeConversion.REFERENCE_WIDENING
     );
     assertConvertible(
         new immutable StructureType([AtomicType.UINT8], ["a"]),

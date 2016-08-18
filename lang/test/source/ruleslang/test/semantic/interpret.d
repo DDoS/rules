@@ -72,16 +72,131 @@ unittest {
     assertInterpretFails("1 << 2");
 }
 
-private string interpret(string source) {
+unittest {
+    assertInterpretFails("{0: true, 1: 0}");
+    assertEqual(
+        "bool_lit(true)[2]",
+        type("{0: true, 1: true}")
+    );
+    assertEqual(
+        "bool[2]",
+        type("{0: true, 1: false}")
+    );
+    assertEqual(
+        "fp64[2]",
+        type("{0: 1, 1: 2.0}")
+    );
+    assertEqual(
+        "fp_lit(1)[2]",
+        type("{0: 1, 1: 1.0}")
+    );
+    assertEqual(
+        "sint_lit(1)[2]",
+        type("{0: 1, 1: 1}")
+    );
+    assertEqual(
+        "sint64[2]",
+        type("{0: 1, 1: 2}")
+    );
+    assertEqual(
+        "sint64[2]",
+        type("{0: 1, 1: -1}")
+    );
+    assertEqual(
+        "{sint_lit(1), sint_lit(2)}[2]",
+        type("{1: {1, 2}, 0: {1, 2, 3}}")
+    );
+    assertEqual(
+        "{sint_lit(1), sint_lit(2)}[2]",
+        type("{1: {1, 2, true}, 0: {1, 2, 3}}")
+    );
+    assertEqual(
+        "{sint_lit(1) a, sint_lit(2) b}[2]",
+        type("{1: {1, 2}, 0: {a: 1, b: 2, c: 3}}")
+    );
+    assertEqual(
+        "sint64[0][2]",
+        type("{1: {1, 2}, 0: {0: 1, 1: 2, 2: 3}}")
+    );
+    assertEqual(
+        "sint_lit(1)[2][2]",
+        type("{1: {1, 1, 2}, 0: {0: 1, 1: 1, 2: 1}}")
+    );
+    assertInterpretFails("{0: {a: 1, b: 2}, 1: {0: 1, 1: 2}}");
+    assertEqual(
+        "{sint_lit(1) a, sint_lit(1) b}[2]",
+        type("{0: {a: 1, b: 1, c: 1}, 1: {a: 1, b: 1}}")
+    );
+    assertEqual(
+        "{sint_lit(1) a, sint_lit(1) b, sint_lit(1) c}[2]",
+        type("{0: {a: 1, b: 1, c: 1}, 1: {a: 1, b: 1, c: 1}}")
+    );
+    assertEqual(
+        "{sint_lit(1) a, sint_lit(1) b}[2]",
+        type("{0: {a: 1, b: 1, c: 2}, 1: {a: 1, b: 1, c: 1}}")
+    );
+    assertEqual(
+        "{sint_lit(1) a, sint_lit(1) c}[2]",
+        type("{0: {a: 1, b: 2, c: 1}, 1: {a: 1, b: 1, c: 1}}")
+    );
+    assertEqual(
+        "{sint_lit(1) a, sint_lit(2) b, sint_lit(3) c}[2]",
+        type("{0: {a: 1, b: 2, c: 3}, 1: {1, 2, 3}}")
+    );
+    assertEqual(
+        "{sint_lit(1) a, sint_lit(2) b}[2]",
+        type("{0: {a: 1, b: 2, c: 3}, 1: {1, 2}}")
+    );
+    assertEqual(
+        "{sint_lit(1) a, sint_lit(2) b, sint_lit(3) c}[2]",
+        type("{0: {a: 1, b: 2, c: 3}, 1: {1, 2, 3, 4}}")
+    );
+    assertEqual(
+        "{}[2]",
+        type("{0: {}, 1: {true}}")
+    );
+    assertEqual(
+        "{}[2]",
+        type("{0: {}, 1: {b: true}}")
+    );
+    assertEqual(
+        "sint64[0][2]",
+        type("{0: {0: 1, 1: 2}, 1: {1, 2}}")
+    );
+    assertEqual(
+        "sint_lit(1)[2][2]",
+        type("{0: {0: 1, 1: 1}, 1: {1, 1}}")
+    );
+    assertEqual(
+        "string_lit(\"hello\")[2]",
+        type("{0: \"hello\", 1: \"hello\"}")
+    );
+    assertEqual(
+        "string_lit(\"hell\")[2]",
+        type("{0: \"hello\", 1: \"hell\"}")
+    );
+    assertEqual(
+        "uint32[4][2]",
+        type("{0: \"hello\", 1: \"allo\"}")
+    );
+    assertEqual(
+        "uint32[4][2]",
+        type("{0: \"allo\", 1: \"hello\"}")
+    );
+    assertEqual(
+        "uint32[0][2]",
+        type("{0: \"hello\", 1: {1, 1}}")
+    );
+}
+
+private alias type = interpret!getTypeInfo;
+
+private string interpret(alias info = getAllInfo)(string source) {
     auto tokenizer = new Tokenizer(new DCharReader(source));
     if (tokenizer.head().getKind() == Kind.INDENTATION) {
         tokenizer.advance();
     }
-    return tokenizer
-            .parseExpression()
-            .expandOperators()
-            .interpret(new Context())
-            .getInfo();
+    return info(tokenizer.parseExpression().expandOperators().interpret(new Context()));
 }
 
 private void assertInterpretFails(string source) {
@@ -96,11 +211,23 @@ private void assertInterpretFails(string source) {
     }
 }
 
-private string getInfo(immutable Node node) {
-    string str = node.toString();
+private string getTreeInfo(immutable Node node) {
+    return node.toString();
+}
+
+private string getTypeInfo(immutable Node node) {
     auto typedNode = cast(immutable TypedNode) node;
     if (typedNode !is null) {
-        str = str ~ " | " ~ typedNode.getType().toString();
+        return typedNode.getType().toString();
     }
-    return str;
+    return "";
+}
+
+private string getAllInfo(immutable Node node) {
+    string nodeInfo = node.getTreeInfo();
+    string typeInfo = node.getTypeInfo();
+    if (typeInfo.length > 0) {
+        nodeInfo = nodeInfo ~ " | " ~ typeInfo;
+    }
+    return nodeInfo;
 }

@@ -138,7 +138,12 @@ public immutable class Interpreter {
             valueNodes ~= value.expression.interpret(context);
             labels ~= checkArrayLabel(value);
         }
-        return new immutable ArrayLiteralNode(valueNodes, labels);
+        string exceptionMessage;
+        auto node = collectExceptionMessage(new immutable ArrayLiteralNode(valueNodes, labels), exceptionMessage);
+        if (exceptionMessage !is null) {
+            throw new SourceException(exceptionMessage, compositeLiteral);
+        }
+        return node;
     }
 
     private static immutable(ArrayLabel) checkArrayLabel(LabeledExpression labeledExpression) {

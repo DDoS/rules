@@ -246,6 +246,10 @@ public immutable class ArrayLiteralNode : TupleLiteralNode {
         immutable(Type)* componentType = &firstType;
         foreach (value; values[1 .. $]) {
             auto lub = (*componentType).lowestUpperBound(value.getType());
+            if (lub is null) {
+                throw new Exception(format("No common supertype for %s and %s",
+                        (*componentType).toString(), value.getType().toString()));
+            }
             componentType = &lub;
         }
         // The array size if the max index label plus one
