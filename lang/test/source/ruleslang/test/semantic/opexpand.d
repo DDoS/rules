@@ -14,7 +14,7 @@ unittest {
         parseAndExpand("a = +b")
     );
     assertEqual(
-        "Assignment(a = FunctionCall(opReaffirm(UnsignedIntegerLiteral(1))))",
+        "Assignment(a = FunctionCall(opReaffirm(UnsignedIntegerLiteral(1u))))",
         parseAndExpand("a = +1u")
     );
     assertEqual(
@@ -26,7 +26,7 @@ unittest {
         parseAndExpand("a = -b")
     );
     assertEqual(
-        "Assignment(a = FunctionCall(opNegate(UnsignedIntegerLiteral(1))))",
+        "Assignment(a = FunctionCall(opNegate(UnsignedIntegerLiteral(1u))))",
         parseAndExpand("a = -1u")
     );
     assertEqual(

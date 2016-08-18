@@ -25,6 +25,10 @@ unittest {
         parseTestExpression("{test.name, label: other.thing}")
     );
     assertEqual(
+        "CompositeLiteral({2u: test, 0xf1a: other, 0b00100: more})",
+        parseTestExpression("{2u: test, 0xf1a: other, 0b00100: more}")
+    );
+    assertEqual(
         "CompositeLiteral({SignedIntegerLiteral(1), StringLiteral(\"2\"), CompositeLiteral({hey: FloatLiteral(2.1)})})",
         parseTestExpression("{1, \"2\", {hey: 2.1}}")
     );

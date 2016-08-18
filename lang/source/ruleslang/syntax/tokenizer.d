@@ -301,25 +301,23 @@ private Token collectNumberLiteral(DCharReader chars) {
             // Binary integer
             chars.collect();
             chars.collectDigitSequence!isBinaryDigit();
-            auto digits = chars.popCollected();
             // Check if unsigned
             if (chars.head().isUnsignedSuffix()) {
-                chars.advance();
-                return new UnsignedIntegerLiteral(digits, position);
+                chars.collect();
+                return new UnsignedIntegerLiteral(chars.popCollected(), position);
             }
-            return new SignedIntegerLiteral(digits, position);
+            return new SignedIntegerLiteral(chars.popCollected(), position);
         }
         if (chars.head() == 'x' || chars.head() == 'X') {
             // Hexadecimal integer
             chars.collect();
             chars.collectDigitSequence!isHexDigit();
-            auto digits = chars.popCollected();
             // Check if unsigned
             if (chars.head().isUnsignedSuffix()) {
-                chars.advance();
-                return new UnsignedIntegerLiteral(digits, position);
+                chars.collect();
+                return new UnsignedIntegerLiteral(chars.popCollected(), position);
             }
-            return new SignedIntegerLiteral(digits, position);
+            return new SignedIntegerLiteral(chars.popCollected(), position);
         }
         if (chars.head().isDecimalDigit()) {
             // Not just a zero, collect more digits
@@ -345,12 +343,11 @@ private Token collectNumberLiteral(DCharReader chars) {
         return new FloatLiteral(chars.popCollected(), position);
     }
     // Else it's a decimal integer and there's nothing more to do, just check if unsigned
-    auto digits = chars.popCollected();
     if (chars.head().isUnsignedSuffix()) {
-        chars.advance();
-        return new UnsignedIntegerLiteral(digits, position);
+        chars.collect();
+        return new UnsignedIntegerLiteral(chars.popCollected(), position);
     }
-    return new SignedIntegerLiteral(digits, position);
+    return new SignedIntegerLiteral(chars.popCollected(), position);
 }
 
 private Token completeFloatLiteralStartingWithDecimalSeparator(DCharReader chars, size_t position) {

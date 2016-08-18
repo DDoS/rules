@@ -467,6 +467,10 @@ public class UnsignedIntegerLiteral : SourceToken!(Kind.UNSIGNED_INTEGER_LITERAL
         if (radix != 10) {
             source = source[2 .. $];
         }
+        auto lastChar = source[$ - 1];
+        if (lastChar == 'u' || lastChar == 'U') {
+            source = source[0 .. $ - 1];
+        }
         try {
             overflow = false;
             return source.to!ulong(_radix);
@@ -482,7 +486,7 @@ public class UnsignedIntegerLiteral : SourceToken!(Kind.UNSIGNED_INTEGER_LITERAL
 
     unittest {
         bool overflow;
-        auto d = new UnsignedIntegerLiteral("9223372036854775808", 0);
+        auto d = new UnsignedIntegerLiteral("9223372036854775808u", 0);
         assert(d.getValue(overflow) == 9223372036854775808uL);
         assert(!overflow);
     }
