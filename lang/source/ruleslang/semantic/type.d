@@ -316,6 +316,9 @@ public immutable class AtomicType : Type {
         foreach (thisParent; thisParents) {
             foreach (otherParent; otherParents) {
                 auto lub = thisParent.lowestUpperBound(otherParent);
+                if (lub is null) {
+                    continue;
+                }
                 if (candidate == null || lub.convertibleTo(*candidate, ignored)) {
                     candidate = &lub;
                 }
@@ -993,7 +996,7 @@ public immutable class ArrayType : CompositeType {
         }
         // There is also with a string, but we need to convert to the array type first
         auto stringLiteralType = cast(immutable StringLiteralType) other;
-        if (other !is null) {
+        if (stringLiteralType !is null) {
             return lowestUpperBound(stringLiteralType.getArrayType());
         }
         return null;

@@ -281,6 +281,41 @@ unittest {
     );
 }
 
+unittest {
+    assertLUB(AtomicType.BOOL, AtomicType.BOOL, AtomicType.BOOL);
+    assertLUB(AtomicType.UINT8, AtomicType.SINT8, AtomicType.SINT16);
+    assertLUB(AtomicType.UINT64, AtomicType.SINT64, AtomicType.FP64);
+    assertLUB(AtomicType.SINT16, AtomicType.SINT64, AtomicType.SINT64);
+    assertNoLUB(AtomicType.SINT16, AtomicType.BOOL);
+    assertLUB(AtomicType.BOOL, new immutable BooleanLiteralType(true), AtomicType.BOOL);
+    assertLUB(new immutable BooleanLiteralType(true), new immutable BooleanLiteralType(true),
+            new immutable BooleanLiteralType(true));
+    assertLUB(new immutable BooleanLiteralType(false), new immutable BooleanLiteralType(true), AtomicType.BOOL);
+    assertLUB(new immutable SignedIntegerLiteralType(1), new immutable SignedIntegerLiteralType(1),
+            new immutable SignedIntegerLiteralType(1));
+    assertLUB(new immutable SignedIntegerLiteralType(1), new immutable SignedIntegerLiteralType(2), AtomicType.SINT64);
+    assertLUB(new immutable SignedIntegerLiteralType(1), AtomicType.FP64, AtomicType.FP64);
+    assertLUB(new immutable SignedIntegerLiteralType(1), AtomicType.UINT8, AtomicType.SINT64);
+    assertLUB(new immutable SignedIntegerLiteralType(1), new immutable UnsignedIntegerLiteralType(1), AtomicType.FP64);
+    assertNoLUB(new immutable SignedIntegerLiteralType(1), AtomicType.BOOL);
+    assertLUB(new immutable SignedIntegerLiteralType(1), new immutable FloatLiteralType(1),
+            new immutable FloatLiteralType(1));
+    assertLUB(new immutable FloatLiteralType(1), new immutable FloatLiteralType(1), new immutable FloatLiteralType(1));
+    assertLUB(new immutable FloatLiteralType(1), new immutable FloatLiteralType(2), AtomicType.FP64);
+    assertLUB(new immutable StringLiteralType("he"), new immutable StringLiteralType("he"),
+            new immutable StringLiteralType("he"));
+    assertLUB(new immutable StringLiteralType("hello"), new immutable StringLiteralType("hell"),
+            new immutable StringLiteralType("hell"));
+    assertLUB(new immutable StringLiteralType("hello"), new immutable StringLiteralType("allo"),
+            new immutable SizedArrayType(AtomicType.UINT32, 4));
+    assertLUB(new immutable ArrayType(AtomicType.SINT16), new immutable SizedArrayType(AtomicType.SINT16, 3),
+            new immutable ArrayType(AtomicType.SINT16));
+    assertNoLUB(new immutable ArrayType(AtomicType.SINT16), new immutable SizedArrayType(AtomicType.SINT8, 3));
+    assertLUB(new immutable SizedArrayType(AtomicType.SINT16, 1), new immutable SizedArrayType(AtomicType.SINT16, 3),
+            new immutable SizedArrayType(AtomicType.SINT16, 1));
+    assertNoLUB(new immutable SizedArrayType(AtomicType.SINT16, 1), new immutable SizedArrayType(AtomicType.SINT8, 3));
+}
+
 private void assertConvertible(immutable Type from, immutable Type to, TypeConversionChain by...) {
     auto chain = new TypeConversionChain();
     auto convertible = from.convertibleTo(to, chain);
@@ -303,4 +338,16 @@ private void assertSpecializable(immutable LiteralType from, immutable Type to, 
 private void assertNotSpecializable(immutable LiteralType from, immutable Type to) {
     auto chain = new TypeConversionChain();
     assert(!from.specializableTo(to, chain));
+}
+
+private void assertLUB(immutable Type a, immutable Type b, immutable Type c) {
+    assert (c !is null);
+    auto lub = a.lowestUpperBound(b);
+    assert (lub !is null);
+    assertEqual(lub, c);
+}
+
+private void assertNoLUB(immutable Type a, immutable Type b) {
+    auto lub = a.lowestUpperBound(b);
+    assert (lub is null);
 }
