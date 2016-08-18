@@ -785,7 +785,7 @@ public immutable class StructureType : TupleType {
     }
 }
 
-public immutable class ArrayType : Type {
+public immutable class ArrayType : CompositeType {
     private Type _componentType;
     private uint _totalDepth;
 
@@ -819,6 +819,14 @@ public immutable class ArrayType : Type {
 
     public override immutable(Type) lowestUpperBound(immutable Type other) {
         return other;
+    }
+
+    public override bool hasMoreMembers(ulong count) {
+        return false;
+    }
+
+    public override immutable(Type) getMemberType(ulong index) {
+        return _componentType;
     }
 
     public override string toString() {
@@ -867,6 +875,10 @@ public immutable class SizedArrayType : ArrayType {
             return true;
         }
         return false;
+    }
+
+    public override bool hasMoreMembers(ulong count) {
+        return _size > count;
     }
 
     public override string toString() {

@@ -236,21 +236,25 @@ unittest {
         new immutable TupleType([AtomicType.UINT8, AtomicType.BOOL]),
         new immutable ArrayType(AtomicType.UINT8),
     );
-    assertNotConvertible(
+    assertConvertible(
         new immutable TupleType([AtomicType.UINT8]),
         new immutable ArrayType(AtomicType.UINT8),
+        TypeConversion.REFERENCE_WIDENING
     );
-    assertNotConvertible(
+    assertConvertible(
         new immutable TupleType([AtomicType.UINT8, AtomicType.UINT8]),
         new immutable ArrayType(AtomicType.UINT8),
+        TypeConversion.REFERENCE_WIDENING
     );
-    assertNotConvertible(
+    assertConvertible(
         new immutable TupleType([AtomicType.UINT8, AtomicType.UINT8]),
         new immutable SizedArrayType(AtomicType.UINT8, 1),
+        TypeConversion.REFERENCE_WIDENING
     );
-    assertNotConvertible(
+    assertConvertible(
         new immutable TupleType([AtomicType.UINT8, AtomicType.UINT8]),
         new immutable SizedArrayType(AtomicType.UINT8, 2),
+        TypeConversion.REFERENCE_WIDENING
     );
     assertNotConvertible(
         new immutable TupleType([AtomicType.UINT8, AtomicType.UINT8]),
