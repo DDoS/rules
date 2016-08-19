@@ -42,25 +42,16 @@ public class Context {
     public immutable(Function) resolveFunction(string name, immutable(Type)[] argumentTypes) {
         // Search the name spaces in order of priority, but without shadowing. Start with convertible functions
         auto convertibleFunction = resolveFunction!true(name, argumentTypes);
+        if (convertibleFunction !is null) {
+            return convertibleFunction;
+        }
         // Then, if the agument types are literals, try specializable functions
         foreach (type; argumentTypes) {
             if (cast(LiteralType) type is null) {
                 return convertibleFunction;
             }
         }
-        auto specializableFunction = resolveFunction!false(name, cast(immutable(LiteralType)[]) argumentTypes);
-        // If any of the two functions are null, pick the other
-        if (convertibleFunction is null) {
-            return specializableFunction;
-        }
-        if (specializableFunction is null) {
-            return convertibleFunction;
-        }
-        // Otherwise, pick the specializable one if it is more specific, else use the convertible one
-        if (specializableFunction.isMoreSpecific(convertibleFunction)) {
-            return specializableFunction;
-        }
-        return convertibleFunction;
+        return resolveFunction!false(name, cast(immutable(LiteralType)[]) argumentTypes);
     }
 
     private immutable(Function) resolveFunction(bool convertible, T : Type)(string name, immutable(T)[] argumentTypes) {
