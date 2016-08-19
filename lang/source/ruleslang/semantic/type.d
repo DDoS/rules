@@ -10,18 +10,23 @@ import std.utf : codeLength;
 import ruleslang.evaluation.value;
 import ruleslang.util;
 
-public enum TypeConversion {
-    IDENTITY,
-    INTEGER_WIDEN,
-    INTEGER_TO_FLOAT,
-    FLOAT_WIDEN,
-    INTEGER_LITERAL_NARROW,
-    FLOAT_LITERAL_NARROW,
-    SIZED_ARRAY_SHORTEN,
-    SIZED_ARRAY_TO_UNSIZED,
-    STRING_LITERAL_TO_UTF8,
-    STRING_LITERAL_TO_UTF16,
-    REFERENCE_WIDENING
+public enum ConversionKind : bool {
+    WIDENING = false,
+    NARROWING = true
+}
+
+public enum TypeConversion : ConversionKind {
+    IDENTITY = ConversionKind.WIDENING,
+    INTEGER_WIDEN = ConversionKind.WIDENING,
+    INTEGER_TO_FLOAT = ConversionKind.WIDENING,
+    FLOAT_WIDEN = ConversionKind.WIDENING,
+    INTEGER_LITERAL_NARROW = ConversionKind.NARROWING,
+    FLOAT_LITERAL_NARROW = ConversionKind.NARROWING,
+    SIZED_ARRAY_SHORTEN = ConversionKind.WIDENING,
+    SIZED_ARRAY_TO_UNSIZED = ConversionKind.WIDENING,
+    STRING_LITERAL_TO_UTF8 = ConversionKind.NARROWING,
+    STRING_LITERAL_TO_UTF16 = ConversionKind.NARROWING,
+    REFERENCE_WIDENING = ConversionKind.WIDENING
 }
 
 public class TypeConversionChain {
@@ -54,6 +59,15 @@ public class TypeConversionChain {
     public TypeConversionChain reset() {
         chain.length = 0;
         return this;
+    }
+
+    public ConversionKind conversionKind() {
+        foreach (conversion; chain) {
+            if (conversion is ConversionKind.NARROWING) {
+                return ConversionKind.NARROWING;
+            }
+        }
+        return ConversionKind.WIDENING;
     }
 
     public override string toString() {
@@ -454,6 +468,10 @@ private template IntegerLiteralTypeTemplate(T) {
                 conversions.thenIdentity();
                 return true;
             }
+            // Can cast the atomic type
+            if (getAtomicType().convertibleTo(type, conversions)) {
+                return true;
+            }
             // Can cast to a float literal type if converting the value to floating point gives the same value
             auto floatLiteral = type.exactCastImmutable!FloatLiteralType();
             if (floatLiteral !is null && floatLiteral.value == _value) {
@@ -461,22 +479,25 @@ private template IntegerLiteralTypeTemplate(T) {
                 return true;
             }
             // Can cast the atomic type
-            return getAtomicType().convertibleTo(type, conversions);
+            return false;
         }
 
         public override bool specializableTo(immutable Type type, TypeConversionChain conversions) {
+            if (convertibleTo(type, conversions)) {
+                return true;
+            }
             // Can convert to an atomic type if in range
             auto atomic = type.exactCastImmutable!AtomicType();
             if (atomic !is null && atomic.inRange(_value)) {
                 if (atomic.isFloat()) {
+                    conversions.thenIntegerLiteralNarrow();
                     conversions.thenIntegerToFloat();
-                    conversions.thenFloatLiteralNarrow();
                 } else {
                     conversions.thenIntegerLiteralNarrow();
                 }
                 return true;
             }
-            return convertibleTo(type, conversions);
+            return false;
         }
 
         public override immutable(Type) lowestUpperBound(immutable Type other) {
@@ -550,13 +571,16 @@ public immutable class FloatLiteralType : AtomicLiteralType {
     }
 
     public override bool specializableTo(immutable Type type, TypeConversionChain conversions) {
+        if (convertibleTo(type, conversions)) {
+            return true;
+        }
         // Can cast to an atomic type if in range
         auto atomic = type.exactCastImmutable!AtomicType();
         if (atomic !is null && atomic.inRange(_value)) {
             conversions.thenFloatLiteralNarrow();
             return true;
         }
-        return convertibleTo(type, conversions);
+        return false;
     }
 
     public override immutable(Type) lowestUpperBound(immutable Type other) {
@@ -638,6 +662,9 @@ public immutable class StringLiteralType : LiteralType, CompositeType {
     }
 
     public override bool specializableTo(immutable Type type, TypeConversionChain conversions) {
+        if (convertibleTo(type, conversions)) {
+            return true;
+        }
         // Can convert the string to UTF-16 or UTF-8
         auto clone = conversions.clone().thenStringLiteralToUtf16();
         if (new immutable SizedArrayType(AtomicType.UINT16, utf16Length).convertibleTo(type, clone)) {
@@ -649,7 +676,7 @@ public immutable class StringLiteralType : LiteralType, CompositeType {
             conversions.copy(clone);
             return true;
         }
-        return convertibleTo(type, conversions);
+        return false;
     }
 
     public override immutable(Type) lowestUpperBound(immutable Type other) {
@@ -688,6 +715,10 @@ public immutable class AnyType : CompositeType {
     }
 
     public override bool convertibleTo(immutable Type type, TypeConversionChain conversions) {
+        if (opEquals(type)) {
+            conversions.thenIdentity();
+            return true;
+        }
         // Can cast any composite type or array type
         if (cast(immutable CompositeType) type !is null
                 || cast(immutable ArrayType) type !is null) {

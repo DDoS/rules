@@ -55,6 +55,10 @@ public immutable class Function : Symbol {
         return _parameterTypes;
     }
 
+    @property ulong parameterCount() {
+        return _parameterTypes.length;
+    }
+
     @property public immutable(Type) returnType() {
         return _returnType;
     }
@@ -63,52 +67,27 @@ public immutable class Function : Symbol {
         return _name == other.name && _parameterTypes != other.parameterTypes;
     }
 
-    public alias areConvertible = areApplicable!("convertibleTo", Type);
-    public alias areSpecializable = areApplicable!("specializableTo", LiteralType);
-
-    private bool areApplicable(string test, T : Type)(immutable(T)[] argumentTypes) {
+    public bool areApplicable(immutable(Type)[] argumentTypes, out ConversionKind[] argumentConversions) {
         if (_parameterTypes.length != argumentTypes.length) {
             return false;
         }
-        foreach (i, arg; _parameterTypes) {
+        argumentConversions = new ConversionKind[argumentTypes.length];
+        foreach (i, argType; argumentTypes) {
+            auto paramType = _parameterTypes[i];
+            bool applicable;
             auto chain = new TypeConversionChain();
-            if (!mixin("argumentTypes[i]." ~ test ~ "(arg, chain)")) {
+            auto literalArgType = cast(immutable LiteralType) argType;
+            if (literalArgType !is null) {
+                applicable = literalArgType.specializableTo(paramType, chain);
+            } else {
+                applicable = argType.convertibleTo(paramType, chain);
+            }
+            if (!applicable) {
                 return false;
             }
+            argumentConversions[i] = chain.conversionKind();
         }
         return true;
-    }
-
-    public alias isMoreSpecific = testSpecificity!true;
-    public alias isLessSpecific = testSpecificity!false;
-
-    public bool testSpecificity(bool more)(immutable Function other) {
-        if (_parameterTypes.length != other.parameterTypes.length) {
-            throw new Error("Expected " ~ _parameterTypes.length.to!string ~ " argument types");
-        }
-        // Compare argument types pairwise
-        // No type can be worst than in other
-        // At least one type must be better than in other
-        auto oneBetter = false;
-        foreach (i, thisType; _parameterTypes) {
-            auto otherType = other.parameterTypes[i];
-            auto thisChain = new TypeConversionChain();
-            auto otherChain = new TypeConversionChain();
-            static if (more) {
-                auto thisBetter = thisType.convertibleTo(otherType, thisChain);
-                auto otherBetter = otherType.convertibleTo(thisType, otherChain);
-            } else {
-                auto thisBetter = otherType.convertibleTo(thisType, thisChain);
-                auto otherBetter = thisType.convertibleTo(otherType, otherChain);
-            }
-            if (otherBetter && !thisBetter) {
-                return false;
-            }
-            if (thisBetter && !otherBetter) {
-                oneBetter = true;
-            }
-        }
-        return oneBetter;
     }
 
     public string toString() {
@@ -118,4 +97,43 @@ public immutable class Function : Symbol {
     public bool opEquals(immutable Function other) {
         return _name == other.name && _parameterTypes == other.parameterTypes;
     }
+}
+
+public immutable string[string] UNARY_OPERATOR_TO_FUNCTION;
+public immutable string[string] BINARY_OPERATOR_TO_FUNCTION;
+
+public static this() {
+    string[string] unaryOperatorsToFunction = [
+        "-": "opNegate",
+        "+": "opReaffirm",
+        "!": "opLogicalNot",
+        "~": "opBitwiseNot",
+    ];
+    UNARY_OPERATOR_TO_FUNCTION = unaryOperatorsToFunction.assumeUnique();
+    string[string] binaryOperatorToFunction = [
+        "**": "opExponent",
+        "*": "opMultiply",
+        "/": "opDivide",
+        "%": "opRemainder",
+        "+": "opAdd",
+        "-": "opSubtract",
+        "<<": "opLeftShift",
+        ">>": "opArithmeticRightShift",
+        ">>>": "opLogicalRightShift",
+        "==": "opEquals",
+        "!=": "opNotEquals",
+        "<": "opLesserThan",
+        ">": "opGreaterThan",
+        "<=": "opLesserOrEqualTo",
+        ">=": "opGreaterOrEqualTo",
+        "&": "opBitwiseAnd",
+        "^": "opBitwiseXor",
+        "|": "opBitwiseOr",
+        "&&": "opLogicalAnd",
+        "^^": "opLogicalXor",
+        "||": "opLogicalOr",
+        "~": "opConcatenate",
+        "..": "opRange"
+    ];
+    BINARY_OPERATOR_TO_FUNCTION = binaryOperatorToFunction.assumeUnique();
 }

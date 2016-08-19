@@ -7,7 +7,7 @@ import ruleslang.syntax.ast.type;
 import ruleslang.syntax.ast.expression;
 import ruleslang.syntax.ast.statement;
 import ruleslang.syntax.ast.mapper;
-import ruleslang.semantic.context;
+import ruleslang.semantic.symbol;
 
 public Expression expandOperators(Expression target) {
     return target.map(new OperatorExpander()).map(new OperatorConverter());

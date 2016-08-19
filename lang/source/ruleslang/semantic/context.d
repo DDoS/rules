@@ -40,60 +40,86 @@ public class Context {
     }
 
     public immutable(Function) resolveFunction(string name, immutable(Type)[] argumentTypes) {
-        // Search the name spaces in order of priority, but without shadowing. Start with convertible functions
-        auto convertibleFunction = resolveFunction!true(name, argumentTypes);
-        if (convertibleFunction !is null) {
-            return convertibleFunction;
-        }
-        // Then, if the agument types are literals, try specializable functions
-        foreach (type; argumentTypes) {
-            if (cast(LiteralType) type is null) {
-                return convertibleFunction;
-            }
-        }
-        return resolveFunction!false(name, cast(immutable(LiteralType)[]) argumentTypes);
-    }
-
-    private immutable(Function) resolveFunction(bool convertible, T : Type)(string name, immutable(T)[] argumentTypes) {
-        immutable(Function)[] functions;
+        // Search the name spaces in order of priority, but without shadowing
+        immutable(ApplicableFunction)[] functions;
         foreach (names; priority) {
-            functions ~= mixin("names." ~ (convertible ? "convertible" : "specializable") ~ "Functions(name, argumentTypes)");
+            functions ~= names.getFunctions(name, argumentTypes);
         }
         if (functions.length > 0) {
-            return functions.resolveOverloads!convertible();
+            return functions.resolveOverloads();
         }
         return null;
     }
 }
 
-private immutable(Function) resolveOverloads(bool more)(immutable(Function)[] functions) {
-    for (size_t a = 0; a < functions.length; a++) {
-        auto funcA = functions[a];
-        for (size_t b = 0; b < functions.length; b++) {
-            auto funcB = functions[b];
-            // Don't compare the function with itself
-            if (funcA is funcB) {
-                continue;
-            }
-            // Remove the least specific functions
-            if (funcA.testSpecificity!more(funcB)) {
-                functions = functions[0 .. b] ~ functions[b + 1 .. $];
-                b -= 1;
+public immutable(Function) resolveOverloads(immutable(ApplicableFunction)[] applicables) {
+    void removeB(ref immutable(ApplicableFunction)[] applicables, ref size_t a, ref size_t b) {
+        applicables = applicables[0 .. b] ~ applicables[b + 1 .. $];
+        if (a >= b) {
+            a -= 1;
+        }
+        b -= 1;
+    }
+    // Compare each function against each other for each parameter
+    assert (applicables.length > 0);
+    auto parameterCount = applicables[0].func.parameterCount;
+    foreach (p; 0 .. parameterCount) {
+        for (size_t a = 0; a < applicables.length; a++) {
+            auto applicableA = applicables[a];
+            auto funcA = applicableA.func;
+            for (size_t b = 0; b < applicables.length; b++) {
+                auto applicableB = applicables[b];
+                auto funcB = applicableB.func;
+                // Don't compare the function with itself
+                if (applicableA.func is applicableB.func) {
+                    continue;
+                }
+                // Function B is less applicable than A for an argument:
+                // If B requires narrowing and A does not
+                bool narrowingA = applicableA.argumentConversions[p] is ConversionKind.NARROWING;
+                bool narrowingB = applicableB.argumentConversions[p] is ConversionKind.NARROWING;
+                if (!narrowingA && narrowingB) {
+                    removeB(applicables, a, b);
+                    continue;
+                }
+                // If A and B require narrowing and B is more specific
+                auto ignored = new TypeConversionChain();
+                auto argSmallerA = funcA.parameterTypes[p].convertibleTo(funcB.parameterTypes[p], ignored);
+                auto argSmallerB = funcB.parameterTypes[p].convertibleTo(funcA.parameterTypes[p], ignored);
+                if (narrowingA && narrowingB && !argSmallerA && argSmallerB) {
+                    removeB(applicables, a, b);
+                    continue;
+                }
+                // If A and B require widening and A is more specific
+                if (!narrowingA && !narrowingB && argSmallerA && !argSmallerB) {
+                    removeB(applicables, a, b);
+                    continue;
+                }
             }
         }
     }
     // Only one function should remain
-    if (functions.length == 1) {
-        return functions[0];
+    if (applicables.length == 1) {
+        return applicables[0].func;
     }
     // Otherwise the overloads cannot be resolved
-    return null;
+    throw new Exception(format("Cannot resolve overloads, any of the following functions are applicable:\n    %s\n",
+            applicables.join!("\n    ", "a.func.toString()")));
+}
+
+public immutable struct ApplicableFunction {
+    public Function func;
+    public ConversionKind[] argumentConversions;
+
+    public this(immutable(Function) func, immutable(ConversionKind)[] argumentConversions) {
+        this.func = func;
+        this.argumentConversions = argumentConversions;
+    }
 }
 
 public interface NameSpace {
     public immutable(Field) getField(string name);
-    public immutable(Function)[] convertibleFunctions(string name, immutable(Type)[] argumentTypes);
-    public immutable(Function)[] specializableFunctions(string name, immutable(LiteralType)[] argumentTypes);
+    public immutable(ApplicableFunction)[] getFunctions(string name, immutable(Type)[] argumentTypes);
 }
 
 public class ForeignNameSpace : NameSpace {
@@ -101,11 +127,7 @@ public class ForeignNameSpace : NameSpace {
         return null;
     }
 
-    public override immutable(Function)[] convertibleFunctions(string name, immutable(Type)[] argumentTypes) {
-        return [];
-    }
-
-    public override immutable(Function)[] specializableFunctions(string name, immutable(LiteralType)[] argumentTypes) {
+    public override immutable(ApplicableFunction)[] getFunctions(string name, immutable(Type)[] argumentTypes) {
         return [];
     }
 }
@@ -115,11 +137,7 @@ public class ImportedNameSpace : NameSpace {
         return null;
     }
 
-    public override immutable(Function)[] convertibleFunctions(string name, immutable(Type)[] argumentTypes) {
-        return [];
-    }
-
-    public override immutable(Function)[] specializableFunctions(string name, immutable(LiteralType)[] argumentTypes) {
+    public override immutable(ApplicableFunction)[] getFunctions(string name, immutable(Type)[] argumentTypes) {
         return [];
     }
 }
@@ -131,11 +149,7 @@ public class ScopeNameSpace : NameSpace {
         return null;
     }
 
-    public override immutable(Function)[] convertibleFunctions(string name, immutable(Type)[] argumentTypes) {
-        return [];
-    }
-
-    public override immutable(Function)[] specializableFunctions(string name, immutable(LiteralType)[] argumentTypes) {
+    public override immutable(ApplicableFunction)[] getFunctions(string name, immutable(Type)[] argumentTypes) {
         return [];
     }
 }
@@ -169,45 +183,6 @@ public enum OperatorFunction : string {
     CONCATENATE_FUNCTION = "opConcatenate",
     RANGE_FUNCTION = "opRange",
     CONDITIONAL_FUNCTION = "opConditional"
-}
-
-public immutable string[string] UNARY_OPERATOR_TO_FUNCTION;
-public immutable string[string] BINARY_OPERATOR_TO_FUNCTION;
-
-public static this() {
-    string[string] unaryOperatorsToFunction = [
-        "-": "opNegate",
-        "+": "opReaffirm",
-        "!": "opLogicalNot",
-        "~": "opBitwiseNot",
-    ];
-    UNARY_OPERATOR_TO_FUNCTION = unaryOperatorsToFunction.assumeUnique();
-    string[string] binaryOperatorToFunction = [
-        "**": "opExponent",
-        "*": "opMultiply",
-        "/": "opDivide",
-        "%": "opRemainder",
-        "+": "opAdd",
-        "-": "opSubtract",
-        "<<": "opLeftShift",
-        ">>": "opArithmeticRightShift",
-        ">>>": "opLogicalRightShift",
-        "==": "opEquals",
-        "!=": "opNotEquals",
-        "<": "opLesserThan",
-        ">": "opGreaterThan",
-        "<=": "opLesserOrEqualTo",
-        ">=": "opGreaterOrEqualTo",
-        "&": "opBitwiseAnd",
-        "^": "opBitwiseXor",
-        "|": "opBitwiseOr",
-        "&&": "opLogicalAnd",
-        "^^": "opLogicalXor",
-        "||": "opLogicalOr",
-        "~": "opConcatenate",
-        "..": "opRange"
-    ];
-    BINARY_OPERATOR_TO_FUNCTION = binaryOperatorToFunction.assumeUnique();
 }
 
 public class IntrinsicNameSpace : NameSpace {
@@ -269,15 +244,7 @@ public class IntrinsicNameSpace : NameSpace {
         return null;
     }
 
-    public override immutable(Function)[] convertibleFunctions(string name, immutable(Type)[] argumentTypes) {
-        return applicableFunctions!"areConvertible"(name, argumentTypes);
-    }
-
-    public override immutable(Function)[] specializableFunctions(string name, immutable(LiteralType)[] argumentTypes) {
-        return applicableFunctions!"areSpecializable"(name, argumentTypes);
-    }
-
-    private immutable(Function)[] applicableFunctions(string test, T : Type)(string name, immutable(T)[] argumentTypes) {
+    public override immutable(ApplicableFunction)[] getFunctions(string name, immutable(Type)[] argumentTypes) {
         if (argumentTypes.length <= 0 || argumentTypes.length > 3) {
             return [];
         }
@@ -294,10 +261,11 @@ public class IntrinsicNameSpace : NameSpace {
                 searchFunctions = ternaryOperators;
                 break;
         }
-        immutable(Function)[] functions = [];
+        immutable(ApplicableFunction)[] functions = [];
         foreach (func; searchFunctions) {
-            if (name == func.name && mixin("func." ~ test ~ "(argumentTypes)")) {
-                functions ~= func;
+            ConversionKind[] argumentConversions;
+            if (name == func.name && func.areApplicable(argumentTypes, argumentConversions)) {
+                functions ~= immutable ApplicableFunction(func, argumentConversions.assumeUnique());
             }
         }
         return functions;

@@ -185,10 +185,10 @@ public immutable class TupleLiteralNode : TypedNode {
 public immutable class StructLiteralNode : TupleLiteralNode {
     private string[] labels;
 
-    public this(immutable(TypedNode)[] values, string[] labels) {
+    public this(immutable(TypedNode)[] values, immutable(string)[] labels) {
         assert(values.length > 0);
-        this.labels = labels.idup;
-        super(values, new immutable StructureType(values.getTypes(), this.labels));
+        super(values, new immutable StructureType(values.getTypes(), labels));
+        this.labels = labels;
     }
 
     public override string toString() {
