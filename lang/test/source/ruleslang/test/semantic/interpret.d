@@ -111,18 +111,21 @@ unittest {
         type("{1: {1, 2, true}, 0: {1, 2, 3}}")
     );
     assertEqual(
-        "{sint_lit(1) a, sint_lit(2) b}[2]",
+        "{sint_lit(1), sint_lit(2)}[2]",
         type("{1: {1, 2}, 0: {a: 1, b: 2, c: 3}}")
     );
     assertEqual(
-        "sint64[0][2]",
+        "{}[2]",
         type("{1: {1, 2}, 0: {0: 1, 1: 2, 2: 3}}")
     );
     assertEqual(
-        "sint_lit(1)[2][2]",
+        "{sint_lit(1), sint_lit(1)}[2]",
         type("{1: {1, 1, 2}, 0: {0: 1, 1: 1, 2: 1}}")
     );
-    assertInterpretFails("{0: {a: 1, b: 2}, 1: {0: 1, 1: 2}}");
+    assertEqual(
+        "{}[2]",
+        type("{0: {a: 1, b: 2}, 1: {0: 1, 1: 2}}")
+    );
     assertEqual(
         "{sint_lit(1) a, sint_lit(1) b}[2]",
         type("{0: {a: 1, b: 1, c: 1}, 1: {a: 1, b: 1}}")
@@ -140,11 +143,11 @@ unittest {
         type("{0: {a: 1, b: 2, c: 1}, 1: {a: 1, b: 1, c: 1}}")
     );
     assertEqual(
-        "{sint_lit(1) a, sint_lit(2) b, sint_lit(3) c}[2]",
+        "{sint_lit(1), sint_lit(2), sint_lit(3)}[2]",
         type("{0: {a: 1, b: 2, c: 3}, 1: {1, 2, 3}}")
     );
     assertEqual(
-        "{sint_lit(1) a, sint_lit(2) b}[2]",
+        "{sint_lit(1), sint_lit(2)}[2]",
         type("{0: {a: 1, b: 2, c: 3}, 1: {1, 2}}")
     );
     assertEqual(
@@ -160,7 +163,7 @@ unittest {
         type("{0: {}, 1: {b: true}}")
     );
     assertEqual(
-        "sint64[0][2]",
+        "{}[2]",
         type("{0: {0: 1, 1: 2}, 1: {1, 2}}")
     );
     assertEqual(
@@ -184,7 +187,7 @@ unittest {
         type("{0: \"allo\", 1: \"hello\"}")
     );
     assertEqual(
-        "uint32[0][2]",
+        "{}[2]",
         type("{0: \"hello\", 1: {1, 1}}")
     );
 }

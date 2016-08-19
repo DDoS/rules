@@ -782,34 +782,27 @@ public immutable class TupleType : CompositeType {
                     break;
                 }
             }
-            // If the other type is also a struct, copy over the labels and return a struct
-            auto structureType = cast(immutable StructureType) tupleType;
-            if (structureType !is null) {
-                return new immutable StructureType(
-                        memberIntersection,
-                        structureType.memberNames[0 .. memberIntersection.length]
-                );
-            }
             return new immutable TupleType(memberIntersection);
         }
         // If the other is an array type, the LUB is always the array type
         auto arrayType = cast(immutable ArrayType) other;
         if (arrayType !is null) {
-            // If the array is sized, use the shortest of the two
+            // If the array is sized, intersect by ordered members
             auto sizedArrayType = cast(immutable SizedArrayType) arrayType;
             if (sizedArrayType is null) {
                 return other;
             }
-            ulong tupleArraySize = 0;
+            ulong arraySize = sizedArrayType.size;
+            ulong tupleSize = 0;
             foreach (memberType; _memberTypes) {
                 if (memberType.opEquals(sizedArrayType.componentType)) {
-                    tupleArraySize += 1;
+                    tupleSize += 1;
                 } else {
                     break;
                 }
             }
-            auto arraySize = min(tupleArraySize, sizedArrayType.size);
-            return new immutable SizedArrayType(sizedArrayType.componentType, arraySize);
+            auto size = min(tupleSize, arraySize);
+            return new immutable TupleType(_memberTypes[0 .. size]);
         }
         return null;
     }
@@ -865,17 +858,11 @@ public immutable class StructureType : TupleType {
     }
 
     public override bool convertibleTo(immutable Type type, TypeConversionChain conversions) {
-        // Allow identity convertion
-        if (opEquals(type)) {
-            conversions.thenIdentity();
+        // Try the tuple conversions
+        if (super.convertibleTo(type, conversions)) {
             return true;
         }
-        // Can convert to the any type
-        if (type.opEquals(AnyType.INSTANCE)) {
-            conversions.thenReferenceWidening();
-            return true;
-        }
-        // Can only convert to another structure type if its members are a subset
+        // Otherwise try to convert to a structure type by member names
         auto structureType = type.exactCastImmutable!StructureType();
         if (structureType is null) {
             return false;
@@ -897,25 +884,11 @@ public immutable class StructureType : TupleType {
     }
 
     public override immutable(Type) lowestUpperBound(immutable Type other) {
-        if (opEquals(other)) {
-            return this;
-        }
-        auto ignored = new TypeConversionChain();
-        if (convertibleTo(other, ignored)) {
-            return other;
-        }
-        if (other.convertibleTo(this, ignored)) {
-            return this;
-        }
-        // A lowest upper bound exists with a tuple or structure type
-        auto tupleType = cast(immutable TupleType) other;
-        if (tupleType is null) {
-            return null;
-        }
-        // If it is only a tuple type, defer to the tuple type
-        auto structureType = cast(immutable StructureType) tupleType;
+        // Try to convert to a structure type by member names
+        auto structureType = other.exactCastImmutable!StructureType();
         if (structureType is null) {
-            return tupleType.lowestUpperBound(this);
+            // Otherwise try the tuple LUB
+            return super.lowestUpperBound(other);
         }
         // The LUB is the intersection of the member types, by name
         immutable(string)[] memberNameIntersection = [];
