@@ -40,19 +40,42 @@ public class Context {
     }
 
     public immutable(Function) resolveFunction(string name, immutable(Type)[] argumentTypes) {
-        // Search the name spaces in order of priority, but without shadowing
+        // Search the name spaces in order of priority, but without shadowing. Start with convertible functions
+        auto convertibleFunction = resolveFunction!true(name, argumentTypes);
+        // Then, if the agument types are literals, try specializable functions
+        foreach (type; argumentTypes) {
+            if (cast(LiteralType) type is null) {
+                return convertibleFunction;
+            }
+        }
+        auto specializableFunction = resolveFunction!false(name, cast(immutable(LiteralType)[]) argumentTypes);
+        // If any of the two functions are null, pick the other
+        if (convertibleFunction is null) {
+            return specializableFunction;
+        }
+        if (specializableFunction is null) {
+            return convertibleFunction;
+        }
+        // Otherwise, pick the specializable one if it is more specific, else use the convertible one
+        if (specializableFunction.isMoreSpecific(convertibleFunction)) {
+            return specializableFunction;
+        }
+        return convertibleFunction;
+    }
+
+    private immutable(Function) resolveFunction(bool convertible, T : Type)(string name, immutable(T)[] argumentTypes) {
         immutable(Function)[] functions;
         foreach (names; priority) {
-            functions ~= names.getFunctions(name, argumentTypes);
+            functions ~= mixin("names." ~ (convertible ? "convertible" : "specializable") ~ "Functions(name, argumentTypes)");
         }
         if (functions.length > 0) {
-            return functions.resolveOverloads();
+            return functions.resolveOverloads!convertible();
         }
         return null;
     }
 }
 
-private immutable(Function) resolveOverloads(immutable(Function)[] functions) {
+private immutable(Function) resolveOverloads(bool more)(immutable(Function)[] functions) {
     for (size_t a = 0; a < functions.length; a++) {
         auto funcA = functions[a];
         for (size_t b = 0; b < functions.length; b++) {
@@ -62,24 +85,24 @@ private immutable(Function) resolveOverloads(immutable(Function)[] functions) {
                 continue;
             }
             // Remove the least specific functions
-            if (funcA.isMoreSpecific(funcB)) {
+            if (funcA.testSpecificity!more(funcB)) {
                 functions = functions[0 .. b] ~ functions[b + 1 .. $];
                 b -= 1;
             }
         }
     }
     // Only one function should remain
-    assert (functions.length > 0);
-    if (functions.length > 1) {
-        throw new Exception(format("Cannot resolve overloads, any of the following functions are applicable:\n    %s\n",
-                functions.join!"\n    "()));
+    if (functions.length == 1) {
+        return functions[0];
     }
-    return functions[0];
+    // Otherwise the overloads cannot be resolved
+    return null;
 }
 
 public interface NameSpace {
     public immutable(Field) getField(string name);
-    public immutable(Function)[] getFunctions(string name, immutable(Type)[] argumentTypes);
+    public immutable(Function)[] convertibleFunctions(string name, immutable(Type)[] argumentTypes);
+    public immutable(Function)[] specializableFunctions(string name, immutable(LiteralType)[] argumentTypes);
 }
 
 public class ForeignNameSpace : NameSpace {
@@ -87,27 +110,26 @@ public class ForeignNameSpace : NameSpace {
         return null;
     }
 
-    public override immutable(Function)[] getFunctions(string name, immutable(Type)[] argumentTypes) {
+    public override immutable(Function)[] convertibleFunctions(string name, immutable(Type)[] argumentTypes) {
+        return [];
+    }
+
+    public override immutable(Function)[] specializableFunctions(string name, immutable(LiteralType)[] argumentTypes) {
         return [];
     }
 }
 
 public class ImportedNameSpace : NameSpace {
     public override immutable(Field) getField(string name) {
-        // TODO: used for testing, remove me when done
-        if (name != "test") {
-            return null;
-        }
-        return new immutable Field("test", AtomicType.UINT32);
+        return null;
     }
 
-    public override immutable(Function)[] getFunctions(string name, immutable(Type)[] argumentTypes) {
-        // TODO: used for testing, remove me when done
-        if (name != "opReaffirm") {
-            return null;
-        }
-        return [new immutable Function("opReaffirm", [AtomicType.UINT32], AtomicType.UINT32,
-                genUnaryOperatorImpl!(OperatorFunction.REAFFIRM_FUNCTION, uint, uint))];
+    public override immutable(Function)[] convertibleFunctions(string name, immutable(Type)[] argumentTypes) {
+        return [];
+    }
+
+    public override immutable(Function)[] specializableFunctions(string name, immutable(LiteralType)[] argumentTypes) {
+        return [];
     }
 }
 
@@ -118,7 +140,11 @@ public class ScopeNameSpace : NameSpace {
         return null;
     }
 
-    public override immutable(Function)[] getFunctions(string name, immutable(Type)[] argumentTypes) {
+    public override immutable(Function)[] convertibleFunctions(string name, immutable(Type)[] argumentTypes) {
+        return [];
+    }
+
+    public override immutable(Function)[] specializableFunctions(string name, immutable(LiteralType)[] argumentTypes) {
         return [];
     }
 }
@@ -252,23 +278,21 @@ public class IntrinsicNameSpace : NameSpace {
         return null;
     }
 
-    public override immutable(Function)[] getFunctions(string name, immutable(Type)[] argumentTypes) {
+    public override immutable(Function)[] convertibleFunctions(string name, immutable(Type)[] argumentTypes) {
+        return applicableFunctions!"areConvertible"(name, argumentTypes);
+    }
+
+    public override immutable(Function)[] specializableFunctions(string name, immutable(LiteralType)[] argumentTypes) {
+        return applicableFunctions!"areSpecializable"(name, argumentTypes);
+    }
+
+    private immutable(Function)[] applicableFunctions(string test, T : Type)(string name, immutable(T)[] argumentTypes) {
         if (argumentTypes.length <= 0 || argumentTypes.length > 3) {
             return [];
         }
-        // If the argument are atomic literals, use their atomic equivalent
-        immutable(Type)[] literalArguments = [];
-        foreach (arg; argumentTypes) {
-            auto literal = cast(immutable AtomicLiteralType) arg;
-            if (literal !is null) {
-                literalArguments ~= literal.getAtomicType();
-            }
-        }
-        auto hasLiteralArguments = literalArguments.length == argumentTypes.length;
-        immutable(Type)[] searchArgumentTypes = hasLiteralArguments ? literalArguments : argumentTypes;
         // Search for functions that can be applied to the argument types
         immutable(Function)[] searchFunctions;
-        final switch (searchArgumentTypes.length) {
+        final switch (argumentTypes.length) {
             case 1:
                 searchFunctions = unaryOperators;
                 break;
@@ -281,70 +305,11 @@ public class IntrinsicNameSpace : NameSpace {
         }
         immutable(Function)[] functions = [];
         foreach (func; searchFunctions) {
-            if (name == func.name && func.isApplicable(searchArgumentTypes)) {
+            if (name == func.name && mixin("func." ~ test ~ "(argumentTypes)")) {
                 functions ~= func;
             }
         }
-        if (!hasLiteralArguments) {
-            return functions;
-        }
-        // Modify function signature if arguments are literals to also be literal
-        immutable(Function)[] literalFunctions = [];
-        foreach (func; functions) {
-            literalFunctions ~= toLiteral(func, argumentTypes);
-        }
-        return literalFunctions;
-    }
-
-    private immutable(Function) toLiteral(immutable Function func, immutable(Type)[] argumentTypes) {
-        // Generate the parameter types by converting the argument type to the equivalent literal type
-        immutable(AtomicLiteralType)[] literalParameters = [];
-        foreach (i, paramType; func.parameterTypes) {
-            // Only convert functions with 64 bit numeric parameter types
-            if (paramType == AtomicType.BOOL) {
-                literalParameters ~= argumentTypes[i].castOrFail!(immutable BooleanLiteralType);
-            } else if (paramType == AtomicType.FP64) {
-                auto floatLiteral = cast(immutable FloatLiteralType) argumentTypes[i];
-                if (floatLiteral !is null) {
-                    literalParameters ~= floatLiteral;
-                } else {
-                    literalParameters ~= argumentTypes[i].castOrFail!(immutable IntegerLiteralType).toFloatLiteral();
-                }
-            } else if (paramType == AtomicType.SINT64) {
-                literalParameters ~= argumentTypes[i].castOrFail!(immutable SignedIntegerLiteralType);
-            } else if (paramType == AtomicType.UINT64) {
-                literalParameters ~= argumentTypes[i].castOrFail!(immutable UnsignedIntegerLiteralType);
-            } else {
-                assert (0);
-            }
-        }
-        // Call the function on the literal values to get the value of the return type literal
-        immutable(Value)[] arguments = [];
-        foreach (param; literalParameters) {
-            arguments ~= param.asValue();
-        }
-        immutable Value result = func.impl()(arguments);
-        // Create the return type literal corresponding to the return type
-        auto returnType = cast(immutable AtomicType) func.returnType;
-        assert (returnType !is null);
-        // Using a pointer here because you can't assign an immutable value even if uninitialized
-        immutable(AtomicLiteralType)* literalReturn;
-        if (returnType == AtomicType.BOOL) {
-            immutable(AtomicLiteralType) literal = new immutable BooleanLiteralType(result.as!bool);
-            literalReturn = &literal;
-        } else if (returnType == AtomicType.FP64) {
-            immutable(AtomicLiteralType) literal = new immutable FloatLiteralType(result.as!double);
-            literalReturn = &literal;
-        } else if (returnType == AtomicType.SINT64) {
-            immutable(AtomicLiteralType) literal = new immutable SignedIntegerLiteralType(result.as!long);
-            literalReturn = &literal;
-        } else if (returnType == AtomicType.UINT64) {
-            immutable(AtomicLiteralType) literal = new immutable UnsignedIntegerLiteralType(result.as!ulong);
-            literalReturn = &literal;
-        } else {
-            assert (0);
-        }
-        return new immutable Function(func.name, literalParameters, *literalReturn, func.impl);
+        return functions;
     }
 }
 
@@ -377,8 +342,7 @@ private immutable(Function)[] genUnaryFunctions(OperatorFunction func,
     alias Return = ReturnFromInner!Inner;
     auto innerType = atomicTypeFor!Inner();
     auto returnType = atomicTypeFor!Return();
-    auto impl = genUnaryOperatorImpl!(func, Inner, Return)();
-    auto funcs = [new immutable Function(func, [innerType], returnType, impl)];
+    auto funcs = [new immutable Function(func, [innerType], returnType)];
     static if (Inners.length > 0) {
         funcs ~= genUnaryFunctions!(func, ReturnFromInner, Inners)();
     }
@@ -392,8 +356,7 @@ private immutable(Function)[] genBinaryFunctions(OperatorFunction func,
     auto leftType = atomicTypeFor!Left();
     auto rightType = atomicTypeFor!Right();
     auto returnType = atomicTypeFor!Return();
-    auto impl = genBinaryOperatorImpl!(func, Left, Right, Return)();
-    auto funcs = [new immutable Function(func, [leftType, rightType], returnType, impl)];
+    auto funcs = [new immutable Function(func, [leftType, rightType], returnType)];
     static if (Lefts.length > 0) {
         funcs ~= genBinaryFunctions!(func, RightFromLeft, ReturnFromLeft, Lefts)();
     }
@@ -409,8 +372,7 @@ private immutable(Function)[] genTernaryFunctions(OperatorFunction func,
     auto middleType = atomicTypeFor!Middle();
     auto rightType = atomicTypeFor!Right();
     auto returnType = atomicTypeFor!Return();
-    auto impl = genTernaryOperatorImpl!(func, Left, Middle, Right, Return)();
-    auto funcs = [new immutable Function(func, [leftType, middleType, rightType], returnType, impl)];
+    auto funcs = [new immutable Function(func, [leftType, middleType, rightType], returnType)];
     static if (Middles.length > 0) {
         funcs ~= genTernaryFunctions!(func, LeftFromMiddle, RightFromMiddle, ReturnFromMiddle, Middles)();
     }
@@ -475,6 +437,8 @@ private enum string[string] FUNCTION_TO_DLANG_OPERATOR = [
     "opRange": "$0.p_range($1)",
     "opConditional": "$0 ? $1 : $2"
 ];
+
+public alias FunctionImpl = immutable(Value) function(immutable(Value)[]);
 
 private FunctionImpl genUnaryOperatorImpl(OperatorFunction func, Inner, Return)() {
     FunctionImpl implementation = (arguments) {

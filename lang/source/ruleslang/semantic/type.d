@@ -193,6 +193,10 @@ public immutable class AtomicType : Type {
     }
 
     public bool inRange(T)(T value) if (__traits(isIntegral, T) || __traits(isFloating, T)) {
+        if (isBoolean()) {
+            // No non-boolean value is in range of a boolean
+            return false;
+        }
         if (fp) {
             // Check if the value fits in this float type range
             static if (__traits(isFloating, T)) {

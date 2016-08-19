@@ -287,7 +287,7 @@ public immutable class Interpreter {
         auto name = nameReference.name[0];
         auto nameSource = name.getSource();
         auto field = context.resolveField(nameSource);
-        auto func = resolveFunction(context, name, argumentTypes, end);
+        auto func = context.resolveFunction(nameSource, argumentTypes);
         // It should not resolve to both a field and a function
         if (field !is null && func !is null) {
             throw new SourceException(format("Found a field and a function for the name %s", nameSource), nameReference);
@@ -309,10 +309,10 @@ public immutable class Interpreter {
         // If the value is a multi-part name, then all but the last part should
         // resolve to some value. The last name is either a structure member or
         // the name of a function (when using UFCS). The member has priority
+        auto nameSource = name.getSource();
         auto structureType = cast(immutable StructureType) valueNode.getType();
         if (structureType !is null) {
             // If the name points to a structure, check if the last part is a member
-            auto nameSource = name.getSource();
             auto memberType = structureType.getMemberType(nameSource);
             if (memberType !is null) {
                 auto valueCallNode = new immutable MemberAccessNode(valueNode, nameSource);
@@ -324,21 +324,11 @@ public immutable class Interpreter {
         // Example: a.b.c(d, e) -> c(a.b, d, e)
         argumentNodes = valueNode ~ argumentNodes;
         argumentTypes = valueNode.getType() ~ argumentTypes;
-        auto func = resolveFunction(context, name, argumentTypes, end);
+        auto func = context.resolveFunction(nameSource, argumentTypes);
         if (func is null) {
             functionNotFound(name, argumentTypes, end);
         }
         return new immutable FunctionCallNode(func, argumentNodes);
-    }
-
-    private static immutable(Function) resolveFunction(Context context, Identifier name, immutable(Type)[] argumentTypes,
-            size_t end) {
-        string exceptionMessage;
-        auto func = collectExceptionMessage(context.resolveFunction(name.getSource(), argumentTypes), exceptionMessage);
-        if (exceptionMessage !is null) {
-            throw new SourceException(exceptionMessage, name.start, end);
-        }
-        return func;
     }
 
     private static immutable(TypedNode) interpretValueCall(Expression value, immutable(TypedNode) valueNode,

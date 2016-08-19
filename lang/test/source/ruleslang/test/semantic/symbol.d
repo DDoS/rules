@@ -5,19 +5,19 @@ import ruleslang.semantic.symbol;
 import ruleslang.evaluation.value;
 
 unittest {
-    assertIsApplicable([], []);
-    assertNotApplicable([AtomicType.UINT8], []);
-    assertNotApplicable([], [AtomicType.UINT8]);
-    assertIsApplicable([AtomicType.UINT8], [AtomicType.UINT8]);
-    assertIsApplicable([AtomicType.UINT16], [AtomicType.UINT8]);
-    assertNotApplicable([AtomicType.UINT8], [AtomicType.UINT16]);
+    assertAreConvertible([], []);
+    assertNotConvertible([AtomicType.UINT8], []);
+    assertNotConvertible([], [AtomicType.UINT8]);
+    assertAreConvertible([AtomicType.UINT8], [AtomicType.UINT8]);
+    assertAreConvertible([AtomicType.UINT16], [AtomicType.UINT8]);
+    assertNotConvertible([AtomicType.UINT8], [AtomicType.UINT16]);
 
-    assertIsApplicable([AtomicType.UINT8, AtomicType.UINT8], [AtomicType.UINT8, AtomicType.UINT8]);
-    assertIsApplicable([AtomicType.UINT16, AtomicType.UINT8], [AtomicType.UINT8, AtomicType.UINT8]);
-    assertIsApplicable([AtomicType.UINT8, AtomicType.UINT16], [AtomicType.UINT8, AtomicType.UINT8]);
-    assertIsApplicable([AtomicType.UINT16, AtomicType.UINT16], [AtomicType.UINT8, AtomicType.UINT8]);
-    assertNotApplicable([AtomicType.UINT8, AtomicType.UINT8], [AtomicType.UINT16, AtomicType.UINT8]);
-    assertNotApplicable([AtomicType.UINT8, AtomicType.UINT8], [AtomicType.UINT8, AtomicType.UINT16]);
+    assertAreConvertible([AtomicType.UINT8, AtomicType.UINT8], [AtomicType.UINT8, AtomicType.UINT8]);
+    assertAreConvertible([AtomicType.UINT16, AtomicType.UINT8], [AtomicType.UINT8, AtomicType.UINT8]);
+    assertAreConvertible([AtomicType.UINT8, AtomicType.UINT16], [AtomicType.UINT8, AtomicType.UINT8]);
+    assertAreConvertible([AtomicType.UINT16, AtomicType.UINT16], [AtomicType.UINT8, AtomicType.UINT8]);
+    assertNotConvertible([AtomicType.UINT8, AtomicType.UINT8], [AtomicType.UINT16, AtomicType.UINT8]);
+    assertNotConvertible([AtomicType.UINT8, AtomicType.UINT8], [AtomicType.UINT8, AtomicType.UINT16]);
 }
 
 unittest {
@@ -54,22 +54,18 @@ private void assertLessSpecific(immutable Type[] parameterTypesA, immutable Type
 }
 
 private bool isMoreSpecific(immutable Type[] parameterTypesA, immutable Type[] parameterTypesB) {
-    return new immutable Function("f", parameterTypesA, AtomicType.UINT8, &noop)
-            .isMoreSpecific(new immutable Function("f", parameterTypesB, AtomicType.UINT8, &noop));
+    return new immutable Function("f", parameterTypesA, AtomicType.UINT8)
+            .isMoreSpecific(new immutable Function("f", parameterTypesB, AtomicType.UINT8));
 }
 
-private void assertIsApplicable(immutable Type[] parameterTypes, immutable Type[] argumentTypes) {
-    assert(isApplicable(parameterTypes, argumentTypes));
+private void assertAreConvertible(immutable Type[] parameterTypes, immutable Type[] argumentTypes) {
+    assert(areConvertible(parameterTypes, argumentTypes));
 }
 
-private void assertNotApplicable(immutable Type[] parameterTypes, immutable Type[] argumentTypes) {
-    assert(!isApplicable(parameterTypes, argumentTypes));
+private void assertNotConvertible(immutable Type[] parameterTypes, immutable Type[] argumentTypes) {
+    assert(!areConvertible(parameterTypes, argumentTypes));
 }
 
-private bool isApplicable(immutable Type[] parameterTypes, immutable Type[] argumentTypes) {
-    return new immutable Function("f", parameterTypes, AtomicType.UINT8, &noop).isApplicable(argumentTypes);
-}
-
-private immutable(Value) noop(immutable(Value)[] arguments) {
-    return valueOf(0);
+private bool areConvertible(immutable Type[] parameterTypes, immutable Type[] argumentTypes) {
+    return new immutable Function("f", parameterTypes, AtomicType.UINT8).areConvertible(argumentTypes);
 }

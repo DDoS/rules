@@ -17,48 +17,48 @@ unittest {
         interpret("+1")
     );
     assertEqual(
-        "FunctionCall(opNegate(FloatLiteral(1))) | fp_lit(-1)",
+        "FunctionCall(opNegate(FloatLiteral(1))) | fp64",
         interpret("-1.0")
     );
     assertEqual(
-        "FunctionCall(opBitwiseNot(SignedIntegerLiteral(4294967295))) | sint_lit(-4294967296)",
+        "FunctionCall(opBitwiseNot(SignedIntegerLiteral(4294967295))) | sint64",
         interpret("0xFFFFFFFF.opBitwiseNot()")
     );
     assertEqual(
-        "FunctionCall(opLogicalNot(BooleanLiteral(true))) | bool_lit(false)",
+        "FunctionCall(opLogicalNot(BooleanLiteral(true))) | bool",
         interpret("!true")
     );
     assertEqual(
-        "FunctionCall(opAdd(SignedIntegerLiteral(1), SignedIntegerLiteral(-3))) | sint_lit(-2)",
+        "FunctionCall(opAdd(SignedIntegerLiteral(1), SignedIntegerLiteral(-3))) | sint64",
         interpret("1 + -3")
     );
     assertEqual(
-        "FunctionCall(opAdd(SignedIntegerLiteral(1), SignedIntegerLiteral(2))) | sint_lit(3)",
+        "FunctionCall(opAdd(SignedIntegerLiteral(1), SignedIntegerLiteral(2))) | sint64",
         interpret("opAdd(1, 2)")
     );
     assertEqual(
-        "FunctionCall(opAdd(SignedIntegerLiteral(1), SignedIntegerLiteral(2))) | sint_lit(3)",
+        "FunctionCall(opAdd(SignedIntegerLiteral(1), SignedIntegerLiteral(2))) | sint64",
         interpret("1.opAdd(2)")
     );
     assertEqual(
-        "FunctionCall(opAdd(UnsignedIntegerLiteral(1), UnsignedIntegerLiteral(2))) | uint_lit(3)",
+        "FunctionCall(opAdd(UnsignedIntegerLiteral(1), UnsignedIntegerLiteral(2))) | uint64",
         interpret("1u opAdd 2u")
     );
     assertEqual(
-        "FunctionCall(opAdd(UnsignedIntegerLiteral(1), SignedIntegerLiteral(2))) | fp_lit(3)",
+        "FunctionCall(opAdd(UnsignedIntegerLiteral(1), SignedIntegerLiteral(2))) | fp64",
         interpret("1u opAdd 2")
     );
     assertEqual(
         "FunctionCall(opEquals(FunctionCall(opAdd(SignedIntegerLiteral(1), SignedIntegerLiteral(1))), SignedIntegerLiteral(2)))"
-            ~ " | bool_lit(true)",
+            ~ " | bool",
         interpret("1 + 1 == 2")
     );
     assertEqual(
-        "FunctionCall(opLeftShift(SignedIntegerLiteral(1), UnsignedIntegerLiteral(2))) | sint_lit(4)",
+        "FunctionCall(opLeftShift(SignedIntegerLiteral(1), UnsignedIntegerLiteral(2))) | sint64",
         interpret("1 << 2u")
     );
     assertEqual(
-        "FunctionCall(opLeftShift(UnsignedIntegerLiteral(1), UnsignedIntegerLiteral(2))) | uint_lit(4)",
+        "FunctionCall(opLeftShift(UnsignedIntegerLiteral(1), UnsignedIntegerLiteral(2))) | uint64",
         interpret("1u << '\\u2'")
     );
     assertInterpretFails("!1");

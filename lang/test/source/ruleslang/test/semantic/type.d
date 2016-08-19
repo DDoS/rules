@@ -17,6 +17,9 @@ unittest {
 }
 
 unittest {
+    assert(!AtomicType.BOOL.inRange(0));
+    assert(!AtomicType.BOOL.inRange(1));
+
     assert(AtomicType.SINT8.inRange(-128));
     assert(!AtomicType.SINT8.inRange(-128 - 1));
     assert(AtomicType.SINT8.inRange(127));
