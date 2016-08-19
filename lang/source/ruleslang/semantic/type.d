@@ -107,7 +107,6 @@ public immutable class AtomicType : Type {
     public static immutable AtomicType UINT32 = new immutable AtomicType("uint32", 32, false, false);
     public static immutable AtomicType SINT64 = new immutable AtomicType("sint64", 64, true, false);
     public static immutable AtomicType UINT64 = new immutable AtomicType("uint64", 64, false, false);
-    public static immutable AtomicType FP16 = new immutable AtomicType("fp16", 16, true, true);
     public static immutable AtomicType FP32 = new immutable AtomicType("fp32", 32, true, true);
     public static immutable AtomicType FP64 = new immutable AtomicType("fp64", 64, true, true);
     public static immutable immutable(AtomicType)[] ALL_TYPES = BOOL ~ NUMERIC_TYPES;
@@ -120,7 +119,7 @@ public immutable class AtomicType : Type {
         UINT8, UINT16, UINT32, UINT64
     ];
     public static immutable immutable(AtomicType)[] FLOATING_POINT_TYPES = [
-        FP16, FP32, FP64
+        FP32, FP64
     ];
     private static immutable immutable(AtomicType)[][immutable(AtomicType)] SUPERTYPES;
     private static immutable immutable(AtomicType)[][immutable(AtomicType)] CONVERSIONS;
@@ -137,13 +136,12 @@ public immutable class AtomicType : Type {
             BOOL: [],
             SINT8: [SINT16],
             UINT8: [UINT16, SINT16],
-            SINT16: [SINT32, FP16],
-            UINT16: [UINT32, SINT32, FP16],
+            SINT16: [SINT32],
+            UINT16: [UINT32, SINT32],
             SINT32: [SINT64, FP32],
             UINT32: [UINT64, SINT64, FP32],
             SINT64: [FP64],
             UINT64: [FP64],
-            FP16: [FP32],
             FP32: [FP64],
             FP64: []
         ];
@@ -165,7 +163,7 @@ public immutable class AtomicType : Type {
         SIGNED_TO_UNSIGNED = signedToUnsigned.assumeUnique();
 
         immutable(AtomicType)[immutable(AtomicType)] integerToFloat = [
-           UINT8: FP16, SINT8: FP16, UINT16: FP16, SINT16: FP16,
+           UINT8: FP32, SINT8: FP32, UINT16: FP32, SINT16: FP32,
            UINT32: FP32, SINT32: FP32, UINT64: FP32, SINT64: FP32,
         ];
         INTEGER_TO_FLOAT = integerToFloat.assumeUnique();
@@ -204,8 +202,6 @@ public immutable class AtomicType : Type {
                 }
             }
             final switch (bitCount) {
-                case 16:
-                    return value >= -65504.0f && value <= 65504.0f;
                 case 32:
                     return value >= -0x1.fffffeP+127f && value <= 0x1.fffffeP+127f;
                 case 64:

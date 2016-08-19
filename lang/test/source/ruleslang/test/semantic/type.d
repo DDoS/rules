@@ -51,11 +51,6 @@ unittest {
     assert(!AtomicType.UINT64.inRange(-1));
     assert(AtomicType.UINT64.inRange(18446744073709551615uL));
 
-    assert(AtomicType.FP16.inRange(-65504.0));
-    assert(!AtomicType.FP16.inRange(-65504.0 - 1));
-    assert(AtomicType.FP16.inRange(65504.0));
-    assert(!AtomicType.FP16.inRange(65504.0 + 1));
-
     assert(AtomicType.FP32.inRange(-0x1.fffffeP+127f));
     assert(!AtomicType.FP32.inRange(cast(double) -0x1.fffffeP+127f - cast(double) 0x1.0eP+127f));
     assert(AtomicType.FP32.inRange(0x1.fffffeP+127f));
@@ -82,9 +77,6 @@ unittest {
     assertNotConvertible(new immutable SignedIntegerLiteralType(323L), new immutable SignedIntegerLiteralType(322L));
     assertSpecializable(new immutable SignedIntegerLiteralType(323L), AtomicType.UINT16,
         TypeConversion.INTEGER_LITERAL_NARROW);
-    assertSpecializable(new immutable SignedIntegerLiteralType(65504L), AtomicType.FP16,
-        TypeConversion.INTEGER_TO_FLOAT, TypeConversion.FLOAT_LITERAL_NARROW);
-    assertNotSpecializable(new immutable SignedIntegerLiteralType(65505L), AtomicType.FP16);
     assertSpecializable(new immutable SignedIntegerLiteralType(65505L), AtomicType.FP32,
         TypeConversion.INTEGER_TO_FLOAT, TypeConversion.FLOAT_LITERAL_NARROW);
     assertNotSpecializable(new immutable SignedIntegerLiteralType(323L), AtomicType.UINT8);
@@ -110,10 +102,10 @@ unittest {
     assertNotConvertible(new immutable FloatLiteralType(10.0e10), new immutable FloatLiteralType(11.0e10));
     assertSpecializable(new immutable FloatLiteralType(10.0e10), AtomicType.FP32,
         TypeConversion.FLOAT_LITERAL_NARROW);
-    assertNotSpecializable(new immutable FloatLiteralType(10.0e10), AtomicType.FP16);
-    assertSpecializable(new immutable FloatLiteralType(0.0 / 0.0), AtomicType.FP16,
+    assertNotSpecializable(new immutable FloatLiteralType(10.0e40), AtomicType.FP32);
+    assertSpecializable(new immutable FloatLiteralType(0.0 / 0.0), AtomicType.FP32,
         TypeConversion.FLOAT_LITERAL_NARROW);
-    assertSpecializable(new immutable FloatLiteralType(-1.0 / 0.0), AtomicType.FP16,
+    assertSpecializable(new immutable FloatLiteralType(-1.0 / 0.0), AtomicType.FP32,
         TypeConversion.FLOAT_LITERAL_NARROW);
 }
 
