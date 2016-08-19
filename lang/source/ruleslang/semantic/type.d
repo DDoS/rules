@@ -399,7 +399,7 @@ public immutable class BooleanLiteralType : AtomicLiteralType {
 
     public override bool specializableTo(immutable Type type, TypeConversionChain conversions) {
         // No possible specializations for literal booleans
-        return false;
+        return convertibleTo(type, conversions);
     }
 
     public override immutable(Type) lowestUpperBound(immutable Type other) {
@@ -476,7 +476,7 @@ private template IntegerLiteralTypeTemplate(T) {
                 }
                 return true;
             }
-            return false;
+            return convertibleTo(type, conversions);
         }
 
         public override immutable(Type) lowestUpperBound(immutable Type other) {
@@ -556,7 +556,7 @@ public immutable class FloatLiteralType : AtomicLiteralType {
             conversions.thenFloatLiteralNarrow();
             return true;
         }
-        return false;
+        return convertibleTo(type, conversions);
     }
 
     public override immutable(Type) lowestUpperBound(immutable Type other) {
@@ -649,7 +649,7 @@ public immutable class StringLiteralType : LiteralType, CompositeType {
             conversions.copy(clone);
             return true;
         }
-        return false;
+        return convertibleTo(type, conversions);
     }
 
     public override immutable(Type) lowestUpperBound(immutable Type other) {
