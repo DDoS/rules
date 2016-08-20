@@ -190,10 +190,6 @@ public immutable class AtomicType : Type {
         this.fp = fp;
     }
 
-    public string getName() {
-        return name;
-    }
-
     public bool isBoolean() {
         return bitCount == 1;
     }

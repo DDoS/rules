@@ -348,22 +348,26 @@ private immutable(Function)[] genUnaryFunctions(OperatorFunction func,
     return funcs;
 }
 
-private immutable(Function)[] genCastFunctions(Type, Types...)() {
+private immutable(Function)[] genCastFunctions(Types...)() {
     immutable(Function)[] genCasts(To, From, Froms...)() {
         auto fromType = atomicTypeFor!From();
         auto toType = atomicTypeFor!To();
-        auto funcs = [new immutable Function(toType.getName(), [fromType], toType)];
+        auto funcs = [new immutable Function(toType.toString(), [fromType], toType)];
         static if (Froms.length > 0) {
             funcs ~= genCasts!(To, Froms);
         }
         return funcs;
     }
 
-    auto funcs = genCasts!(Type, Type, Types);
-    static if (Types.length > 0) {
-        funcs ~= genCastFunctions!Types();
+    immutable(Function)[] genCastsToTypes(To, Tos...)() {
+        auto funcs = genCasts!(To, Types);
+        static if (Tos.length > 0) {
+            funcs ~= genCastsToTypes!Tos();
+        }
+        return funcs;
     }
-    return funcs;
+
+    return genCastsToTypes!Types;
 }
 
 private immutable(Function)[] genBinaryFunctions(OperatorFunction func,
