@@ -236,6 +236,8 @@ public class IntrinsicNameSpace : NameSpace {
         functions ~= genUnaryFunctions!(OperatorFunction.LOGICAL_NOT_FUNCTION, Same, bool);
         // Operator unary ~
         functions ~= genUnaryFunctions!(OperatorFunction.BITWISE_NOT_FUNCTION, Same, IntegerTypes);
+        // Numeric cast functions
+        functions ~= genCastFunctions!NumericTypes();
         auto assocUnaryFunctions = functions.associateArrays!getName();
         unaryOperators = assocUnaryFunctions.assumeUnique();
         functions.length = 0;
@@ -342,6 +344,24 @@ private immutable(Function)[] genUnaryFunctions(OperatorFunction func,
     auto funcs = [new immutable Function(func, [innerType], returnType)];
     static if (Inners.length > 0) {
         funcs ~= genUnaryFunctions!(func, ReturnFromInner, Inners)();
+    }
+    return funcs;
+}
+
+private immutable(Function)[] genCastFunctions(Type, Types...)() {
+    immutable(Function)[] genCasts(To, From, Froms...)() {
+        auto fromType = atomicTypeFor!From();
+        auto toType = atomicTypeFor!To();
+        auto funcs = [new immutable Function(toType.getName(), [fromType], toType)];
+        static if (Froms.length > 0) {
+            funcs ~= genCasts!(To, Froms);
+        }
+        return funcs;
+    }
+
+    auto funcs = genCasts!(Type, Type, Types);
+    static if (Types.length > 0) {
+        funcs ~= genCastFunctions!Types();
     }
     return funcs;
 }

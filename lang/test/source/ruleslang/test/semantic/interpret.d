@@ -69,6 +69,22 @@ unittest {
         "FunctionCall(opLeftShift(UnsignedIntegerLiteral(1), UnsignedIntegerLiteral(2))) | uint64",
         interpret("1u << '\\u2'")
     );
+    assertEqual(
+        "FunctionCall(sint8(SignedIntegerLiteral(257))) | sint8",
+        interpret("sint8(257)")
+    );
+    assertEqual(
+        "FunctionCall(uint8(FloatLiteral(1.2))) | uint8",
+        interpret("uint8(1.2)")
+    );
+    assertEqual(
+        "FunctionCall(fp32(FunctionCall(opNegate(FloatLiteral(2.6))))) | fp32",
+        interpret("fp32(-2.6)")
+    );
+    assertEqual(
+        "FunctionCall(fp32(SignedIntegerLiteral(-2))) | fp32",
+        interpret("fp32(-2)")
+    );
     assertInterpretFails("!1");
     assertInterpretFails("~true");
     assertInterpretFails("~1.");
