@@ -5,6 +5,7 @@ import std.format : format;
 
 import ruleslang.semantic.type;
 import ruleslang.semantic.symbol;
+import ruleslang.semantic.context;
 import ruleslang.util;
 
 public immutable interface Node {
@@ -360,8 +361,14 @@ public immutable class FunctionCallNode : TypedNode {
     private TypedNode[] arguments;
 
     public this(immutable Function func, immutable(TypedNode)[] arguments) {
+        assert (func.parameterCount == arguments.length);
         this.func = func;
-        this.arguments = arguments;
+        // Wrap the argument nodes in casts to make the conversions explicits
+        immutable(TypedNode)[] castArguments = [];
+        foreach (i, arg; arguments) {
+            castArguments ~= addCastNode(arg, func.parameterTypes[i]);
+        }
+        this.arguments = castArguments;
     }
 
     public override immutable(TypedNode)[] getChildren() {
@@ -375,4 +382,33 @@ public immutable class FunctionCallNode : TypedNode {
     public override string toString() {
         return format("FunctionCall(%s(%s))", func.name(), arguments.join!", "());
     }
+}
+
+private immutable(TypedNode) addCastNode(immutable TypedNode fromNode, immutable Type toType) {
+    auto fromType = fromNode.getType();
+    // Get the conversion chain from the node type to the parameter type
+    auto fromLiteralType = cast(immutable LiteralType) fromType;
+    auto conversions = new TypeConversionChain();
+    if (fromLiteralType !is null) {
+        bool convertible = fromLiteralType.specializableTo(toType, conversions);
+        assert (convertible);
+    } else {
+        bool convertible = fromType.convertibleTo(toType, conversions);
+        assert (convertible);
+    }
+    // Wrap the node in casts based on the chain conversion type
+    if (conversions.isIdentity() || conversions.isReferenceWidening()) {
+        // Nothing to cast
+        return fromNode;
+    }
+    if (conversions.isNumeric()) {
+        // Add a call the appropriate cast function
+        auto argType = fromLiteralType !is null ? fromLiteralType.getBackingType() : fromType;
+        auto castFunc = IntrinsicNameSpace.INSTANCE.getExactFunction(toType.toString(), [argType]);
+        assert (castFunc !is null);
+        return new immutable FunctionCallNode(castFunc, [fromNode]);
+    }
+    // TODO: other cast types
+    throw new Exception(format("Unknown conversion chain from type %s to %s: %s",
+            fromType.toString(), toType.toString(), conversions.toString()));
 }

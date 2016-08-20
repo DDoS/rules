@@ -45,11 +45,13 @@ unittest {
         interpret("1u opAdd 2u")
     );
     assertEqual(
-        "FunctionCall(opAdd(UnsignedIntegerLiteral(1), SignedIntegerLiteral(2))) | fp64",
+        "FunctionCall(opAdd(FunctionCall(fp64(UnsignedIntegerLiteral(1))), FunctionCall(fp64(SignedIntegerLiteral(2))))) "
+            ~ "| fp64",
         interpret("1u opAdd 2")
     );
     assertEqual(
-        "FunctionCall(opAdd(SignedIntegerLiteral(1), UnsignedIntegerLiteral(2))) | fp64",
+        "FunctionCall(opAdd(FunctionCall(fp64(SignedIntegerLiteral(1))), FunctionCall(fp64(UnsignedIntegerLiteral(2))))) "
+            ~ "| fp64",
         interpret("1 opAdd 2u")
     );
     assertEqual(
@@ -62,7 +64,7 @@ unittest {
         interpret("1 << 2u")
     );
     assertEqual(
-        "FunctionCall(opLeftShift(SignedIntegerLiteral(1), SignedIntegerLiteral(2))) | sint64",
+        "FunctionCall(opLeftShift(SignedIntegerLiteral(1), FunctionCall(uint64(SignedIntegerLiteral(2))))) | sint64",
         interpret("1 << 2")
     );
     assertEqual(

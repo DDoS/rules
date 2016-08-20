@@ -10,23 +10,42 @@ import std.utf : codeLength;
 import ruleslang.evaluation.value;
 import ruleslang.util;
 
-public enum ConversionKind : bool {
+public enum ConversionKind {
     WIDENING = false,
     NARROWING = true
 }
 
-public enum TypeConversion : ConversionKind {
-    IDENTITY = ConversionKind.WIDENING,
-    INTEGER_WIDEN = ConversionKind.WIDENING,
-    INTEGER_TO_FLOAT = ConversionKind.WIDENING,
-    FLOAT_WIDEN = ConversionKind.WIDENING,
-    INTEGER_LITERAL_NARROW = ConversionKind.NARROWING,
-    FLOAT_LITERAL_NARROW = ConversionKind.NARROWING,
-    SIZED_ARRAY_SHORTEN = ConversionKind.WIDENING,
-    SIZED_ARRAY_TO_UNSIZED = ConversionKind.WIDENING,
-    STRING_LITERAL_TO_UTF8 = ConversionKind.NARROWING,
-    STRING_LITERAL_TO_UTF16 = ConversionKind.NARROWING,
-    REFERENCE_WIDENING = ConversionKind.WIDENING
+public enum TypeConversion {
+    IDENTITY,
+    INTEGER_WIDEN,
+    INTEGER_TO_FLOAT,
+    FLOAT_WIDEN,
+    INTEGER_LITERAL_NARROW,
+    FLOAT_LITERAL_NARROW,
+    SIZED_ARRAY_SHORTEN,
+    SIZED_ARRAY_TO_UNSIZED,
+    STRING_LITERAL_TO_UTF8,
+    STRING_LITERAL_TO_UTF16,
+    REFERENCE_WIDENING
+}
+
+public ConversionKind getKind(TypeConversion conversion) {
+    final switch (conversion) with (TypeConversion) {
+        case IDENTITY:
+        case INTEGER_WIDEN:
+        case INTEGER_TO_FLOAT:
+        case FLOAT_WIDEN:
+        case SIZED_ARRAY_SHORTEN:
+        case SIZED_ARRAY_TO_UNSIZED:
+        case REFERENCE_WIDENING:
+            return ConversionKind.WIDENING;
+        case INTEGER_LITERAL_NARROW:
+        case FLOAT_LITERAL_NARROW:
+        case STRING_LITERAL_TO_UTF8:
+        case STRING_LITERAL_TO_UTF16:
+            return ConversionKind.NARROWING;
+    }
+    assert (0);
 }
 
 public class TypeConversionChain {
@@ -63,11 +82,51 @@ public class TypeConversionChain {
 
     public ConversionKind conversionKind() {
         foreach (conversion; chain) {
-            if (conversion is ConversionKind.NARROWING) {
+            if (conversion.getKind() is ConversionKind.NARROWING) {
                 return ConversionKind.NARROWING;
             }
         }
         return ConversionKind.WIDENING;
+    }
+
+    public bool isIdentity() {
+        return chain.length == 1 && chain[0] == TypeConversion.IDENTITY;
+    }
+
+    public bool isReferenceWidening() {
+        if (chain.length <= 0 || isIdentity()) {
+            return false;
+        }
+        foreach (conversion; chain) {
+            switch (conversion) with (TypeConversion) {
+                case IDENTITY:
+                case REFERENCE_WIDENING:
+                    continue;
+                default:
+                    return false;
+            }
+        }
+        return true;
+    }
+
+    public bool isNumeric() {
+        if (chain.length <= 0 || isIdentity()) {
+            return false;
+        }
+        foreach (conversion; chain) {
+            switch (conversion) with (TypeConversion) {
+                case IDENTITY:
+                case INTEGER_WIDEN:
+                case INTEGER_TO_FLOAT:
+                case FLOAT_WIDEN:
+                case INTEGER_LITERAL_NARROW:
+                case FLOAT_LITERAL_NARROW:
+                    continue;
+                default:
+                    return false;
+            }
+        }
+        return true;
     }
 
     public override string toString() {
@@ -92,7 +151,7 @@ public class TypeConversionChain {
     }
 }
 
-public bool arrayEquals(immutable(Type)[] as, immutable(Type)[] bs) {
+public bool typesEqual(immutable(Type)[] as, immutable(Type)[] bs) {
     if (as.length != bs.length) {
         return false;
     }
@@ -321,7 +380,7 @@ public immutable class AtomicType : Type {
             auto otherParents = other.getSupertypes();
         } else static if (is(T : AtomicLiteralType)) {
             // For a literal type, that is the equivalent atomic type
-            auto otherParents = [other.getAtomicType()];
+            auto otherParents = [other.getBackingType()];
         } else {
             static assert (0);
         }
@@ -379,11 +438,12 @@ private mixin template literalTypeOpEquals(L) {
 
 public immutable interface LiteralType : Type {
     public bool specializableTo(immutable Type type, TypeConversionChain conversions);
+    public immutable(Type) getBackingType();
 }
 
 public immutable interface AtomicLiteralType : LiteralType {
     public immutable(Value) asValue();
-    public immutable(AtomicType) getAtomicType();
+    public immutable(AtomicType) getBackingType();
 }
 
 public immutable class BooleanLiteralType : AtomicLiteralType {
@@ -431,7 +491,7 @@ public immutable class BooleanLiteralType : AtomicLiteralType {
         return valueOf(_value);
     }
 
-    public override immutable(AtomicType) getAtomicType() {
+    public override immutable(AtomicType) getBackingType() {
         return AtomicType.BOOL;
     }
 
@@ -469,7 +529,7 @@ private template IntegerLiteralTypeTemplate(T) {
                 return true;
             }
             // Can cast the atomic type
-            if (getAtomicType().convertibleTo(type, conversions)) {
+            if (getBackingType().convertibleTo(type, conversions)) {
                 return true;
             }
             // Can cast to a float literal type if converting the value to floating point gives the same value
@@ -511,14 +571,14 @@ private template IntegerLiteralTypeTemplate(T) {
             if (other.convertibleTo(this, ignored)) {
                 return this;
             }
-            return getAtomicType().lowestUpperBound(other);
+            return getBackingType().lowestUpperBound(other);
         }
 
         public override immutable(Value) asValue() {
             return valueOf(_value);
         }
 
-        public override immutable(AtomicType) getAtomicType() {
+        public override immutable(AtomicType) getBackingType() {
             static if (__traits(isUnsigned, T)) {
                 return AtomicType.UINT64;
             } else {
@@ -567,7 +627,7 @@ public immutable class FloatLiteralType : AtomicLiteralType {
             return true;
         }
         // Can cast the atomic type
-        return getAtomicType().convertibleTo(type, conversions);
+        return getBackingType().convertibleTo(type, conversions);
     }
 
     public override bool specializableTo(immutable Type type, TypeConversionChain conversions) {
@@ -594,14 +654,14 @@ public immutable class FloatLiteralType : AtomicLiteralType {
         if (other.convertibleTo(this, ignored)) {
             return this;
         }
-        return getAtomicType().lowestUpperBound(other);
+        return getBackingType().lowestUpperBound(other);
     }
 
     public override immutable(Value) asValue() {
         return valueOf(_value);
     }
 
-    public override immutable(AtomicType) getAtomicType() {
+    public override immutable(AtomicType) getBackingType() {
         return AtomicType.FP64;
     }
 
@@ -700,6 +760,10 @@ public immutable class StringLiteralType : LiteralType, CompositeType {
 
     public override immutable(Type) getMemberType(ulong index) {
         return index >= _value.length ? null : new immutable UnsignedIntegerLiteralType(_value[index]);
+    }
+
+    public override immutable(Type) getBackingType() {
+        return arrayType;
     }
 
     public override string toString() {
@@ -852,7 +916,7 @@ public immutable class TupleType : CompositeType {
 
     public override bool opEquals(immutable Type type) {
         auto tupleType = type.exactCastImmutable!TupleType();
-        return tupleType !is null && tupleType.memberTypes.arrayEquals(_memberTypes);
+        return tupleType !is null && tupleType.memberTypes.typesEqual(_memberTypes);
     }
 }
 
@@ -941,7 +1005,7 @@ public immutable class StructureType : TupleType {
     public override bool opEquals(immutable Type type) {
         auto structureType = type.exactCastImmutable!StructureType();
         return structureType !is null && structureType.memberNames == _memberNames
-                && structureType.memberTypes.arrayEquals(memberTypes);
+                && structureType.memberTypes.typesEqual(memberTypes);
     }
 }
 

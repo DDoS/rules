@@ -20,7 +20,7 @@ public class Context {
         foreignNames = new ForeignNameSpace();
         importedNames = new ImportedNameSpace();
         scopeNames = new ScopeNameSpace();
-        intrisicNames = new IntrinsicNameSpace();
+        intrisicNames = cast(IntrinsicNameSpace) IntrinsicNameSpace.INSTANCE;
         priority = [
             cast(NameSpace) intrisicNames, cast(NameSpace) scopeNames, cast(NameSpace) importedNames
         ];
@@ -213,6 +213,7 @@ public enum OperatorFunction : string {
 }
 
 public class IntrinsicNameSpace : NameSpace {
+    public static const IntrinsicNameSpace INSTANCE = new IntrinsicNameSpace();
     private alias Functions = immutable Function[];
     private static immutable Functions[string] unaryOperators;
     private static immutable Functions[string] binaryOperators;
@@ -277,17 +278,42 @@ public class IntrinsicNameSpace : NameSpace {
         ternaryOperators = assocTernaryFunctions.assumeUnique();
     }
 
-    public override immutable(Field) getField(string name) {
+    private this() {
+    }
+
+    public override immutable(Field) getField(string name) const {
         return null;
     }
 
-    public override immutable(ApplicableFunction)[] getFunctions(string name, immutable(Type)[] argumentTypes) {
+    public override immutable(ApplicableFunction)[] getFunctions(string name, immutable(Type)[] argumentTypes) const {
         if (argumentTypes.length <= 0 || argumentTypes.length > 3) {
             return [];
         }
         // Search for functions that can be applied to the argument types
+        Functions searchFunctions = getFunctions(name, argumentTypes.length);
+        immutable(ApplicableFunction)[] functions = [];
+        foreach (func; searchFunctions) {
+            ConversionKind[] argumentConversions;
+            if (func.areApplicable(argumentTypes, argumentConversions)) {
+                functions ~= immutable ApplicableFunction(func, argumentConversions.assumeUnique());
+            }
+        }
+        return functions;
+    }
+
+    public immutable(Function) getExactFunction(string name, immutable(Type)[] parameterTypes) const {
+        Functions searchFunctions = getFunctions(name, parameterTypes.length);
+        foreach (func; searchFunctions) {
+            if (func.isExactly(name, parameterTypes)) {
+                return func;
+            }
+        }
+        return null;
+    }
+
+    private Functions getFunctions(string name, size_t argumentCount) const {
         Functions* searchFunctions;
-        final switch (argumentTypes.length) {
+        switch (argumentCount) {
             case 1:
                 searchFunctions = name in unaryOperators;
                 break;
@@ -297,18 +323,13 @@ public class IntrinsicNameSpace : NameSpace {
             case 3:
                 searchFunctions = name in ternaryOperators;
                 break;
+            default:
+                searchFunctions = null;
         }
-        immutable(ApplicableFunction)[] functions = [];
         if (searchFunctions == null) {
-            return functions;
+            return [];
         }
-        foreach (func; *searchFunctions) {
-            ConversionKind[] argumentConversions;
-            if (func.areApplicable(argumentTypes, argumentConversions)) {
-                functions ~= immutable ApplicableFunction(func, argumentConversions.assumeUnique());
-            }
-        }
-        return functions;
+        return *searchFunctions;
     }
 }
 

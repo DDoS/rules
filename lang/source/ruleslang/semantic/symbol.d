@@ -90,12 +90,16 @@ public immutable class Function : Symbol {
         return true;
     }
 
+    public bool isExactly(string name, immutable(Type)[] parameterTypes) {
+        return _name == name && _parameterTypes.typesEqual(parameterTypes);
+    }
+
     public string toString() {
         return _name ~ "(" ~ _parameterTypes.join!", "() ~ ") " ~ _returnType.toString();
     }
 
     public bool opEquals(immutable Function other) {
-        return _name == other.name && _parameterTypes == other.parameterTypes;
+        return isExactly(other.name, other.parameterTypes);
     }
 }
 
