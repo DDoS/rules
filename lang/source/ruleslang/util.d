@@ -6,6 +6,7 @@ import std.algorithm.searching : canFind, findAmong;
 import std.algorithm.iteration : map, reduce;
 import std.range : zip;
 import std.ascii : isDigit, isAlphaNum, toLower, toUpper;
+import std.traits : ReturnType;
 
 public T castOrFail(T, S)(S s) {
     T t = cast(T) s;
@@ -70,12 +71,21 @@ public void addMissing(T)(ref T[] to, T[] elements) {
     }
 }
 
-public V[K] inverse(K, V)(K[V] array) {
-    V[K] inv;
+public K[V] inverse(K, V)(V[K] array) {
+    K[V] inv;
     foreach (k, v; array) {
         inv[v] = k;
     }
     return inv;
+}
+
+public V[][K] associateArrays(alias makeKey, K = ReturnType!makeKey, V)(V[] array) {
+    V[][K] assoc;
+    foreach (v; array) {
+        K k = makeKey(v);
+        assoc[k] ~= v;
+    }
+    return assoc;
 }
 
 public auto stringZip(string joiner, string stringer = ".to!string()", RangeA, RangeB)(RangeA a, RangeB b)

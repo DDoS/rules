@@ -213,11 +213,16 @@ public enum OperatorFunction : string {
 }
 
 public class IntrinsicNameSpace : NameSpace {
-    private static immutable immutable(Function)[] unaryOperators;
-    private static immutable immutable(Function)[] binaryOperators;
-    private static immutable immutable(Function)[] ternaryOperators;
+    private alias Functions = immutable Function[];
+    private static immutable Functions[string] unaryOperators;
+    private static immutable Functions[string] binaryOperators;
+    private static immutable Functions[string] ternaryOperators;
 
     public static this() {
+        string getName(immutable Function func) {
+            return func.name;
+        }
+        // The list of dlang types equivalent to the plang ones
         alias IntegerTypes = AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong);
         alias NumericTypes = AliasSeq!(IntegerTypes, float, double);
         alias AllTypes = AliasSeq!(bool, NumericTypes);
@@ -231,7 +236,8 @@ public class IntrinsicNameSpace : NameSpace {
         functions ~= genUnaryFunctions!(OperatorFunction.LOGICAL_NOT_FUNCTION, Same, bool);
         // Operator unary ~
         functions ~= genUnaryFunctions!(OperatorFunction.BITWISE_NOT_FUNCTION, Same, IntegerTypes);
-        unaryOperators = functions.idup;
+        auto assocUnaryFunctions = functions.associateArrays!getName();
+        unaryOperators = assocUnaryFunctions.assumeUnique();
         functions.length = 0;
         // Operators binary **, *, /, %, +, -
         functions ~= genBinaryFunctions!(OperatorFunction.EXPONENT_FUNCTION, Same, Same, NumericTypes)();
@@ -260,11 +266,13 @@ public class IntrinsicNameSpace : NameSpace {
         functions ~= genBinaryFunctions!(OperatorFunction.LOGICAL_XOR_FUNCTION, Same, Same, bool)();
         functions ~= genBinaryFunctions!(OperatorFunction.LOGICAL_OR_FUNCTION, Same, Same, bool)();
         // TODO: operators ~, ..
-        binaryOperators = functions.idup;
+        auto assocBinaryFunctions = functions.associateArrays!getName();
+        binaryOperators = assocBinaryFunctions.assumeUnique();
         functions.length = 0;
         // Operators ternary ... if ... else ...
         functions ~= genTernaryFunctions!(OperatorFunction.CONDITIONAL_FUNCTION, Constant!bool, Same, Same, AllTypes)();
-        ternaryOperators = functions.idup;
+        auto assocTernaryFunctions = functions.associateArrays!getName();
+        ternaryOperators = assocTernaryFunctions.assumeUnique();
     }
 
     public override immutable(Field) getField(string name) {
@@ -276,22 +284,25 @@ public class IntrinsicNameSpace : NameSpace {
             return [];
         }
         // Search for functions that can be applied to the argument types
-        immutable(Function)[] searchFunctions;
+        Functions* searchFunctions;
         final switch (argumentTypes.length) {
             case 1:
-                searchFunctions = unaryOperators;
+                searchFunctions = name in unaryOperators;
                 break;
             case 2:
-                searchFunctions = binaryOperators;
+                searchFunctions = name in binaryOperators;
                 break;
             case 3:
-                searchFunctions = ternaryOperators;
+                searchFunctions = name in ternaryOperators;
                 break;
         }
         immutable(ApplicableFunction)[] functions = [];
-        foreach (func; searchFunctions) {
+        if (searchFunctions == null) {
+            return functions;
+        }
+        foreach (func; *searchFunctions) {
             ConversionKind[] argumentConversions;
-            if (name == func.name && func.areApplicable(argumentTypes, argumentConversions)) {
+            if (func.areApplicable(argumentTypes, argumentConversions)) {
                 functions ~= immutable ApplicableFunction(func, argumentConversions.assumeUnique());
             }
         }
