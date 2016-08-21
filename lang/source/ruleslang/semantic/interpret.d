@@ -213,28 +213,35 @@ public immutable class Interpreter {
         return new immutable MemberAccessNode(valueNode, memberName);
     }
 
-    public immutable(TypedNode) interpretArrayAccess(Context context, ArrayAccess arrayAccess) {
+    public immutable(TypedNode) interpretIndexAccess(Context context, IndexAccess indexAccess) {
         // Interpret both the value and the index
-        auto valueNode = arrayAccess.value.interpret(context);
-        auto indexNode = arrayAccess.index.interpret(context);
+        auto valueNode = indexAccess.value.interpret(context);
+        auto indexNode = indexAccess.index.interpret(context);
         // Check if the value type is an array
         auto valueType = valueNode.getType();
-        auto arrayType = cast(immutable ArrayType) valueType;
-        if (arrayType is null) {
-            throw new SourceException(format("Not an array type %s", valueType.toString()), arrayAccess.value);
+        auto compositeType = cast(immutable CompositeType) valueType;
+        if (compositeType is null) {
+            throw new SourceException(format("Not a composite type %s", valueType.toString()), indexAccess.value);
         }
         // Check if the index type is a uint64
         auto indexType = indexNode.getType();
         auto conversions = new TypeConversionChain();
-        if (!indexType.convertibleTo(AtomicType.UINT64, conversions)) {
+        bool indexConvertible;
+        auto literalIndex = cast(immutable IntegerLiteralType) indexType;
+        if (literalIndex !is null) {
+            indexConvertible = literalIndex.specializableTo(AtomicType.UINT64, conversions);
+        } else {
+            indexConvertible = indexType.convertibleTo(AtomicType.UINT64, conversions);
+        }
+        if (!indexConvertible) {
             throw new SourceException(format("Index type %s is not convertible to uint64", indexType.toString()),
-                    arrayAccess.index);
+                    indexAccess.index);
         }
         // Attempt to create the node. This can fail if the index is out of range (determined through literal types)
         string exceptionMessage;
-        auto node = collectExceptionMessage(new immutable ArrayIndexNode(valueNode, indexNode), exceptionMessage);
+        auto node = collectExceptionMessage(new immutable IndexAccessNode(valueNode, indexNode), exceptionMessage);
         if (exceptionMessage !is null) {
-            throw new SourceException(exceptionMessage, arrayAccess);
+            throw new SourceException(exceptionMessage, indexAccess);
         }
         return node;
     }

@@ -35,7 +35,7 @@
 *)
 
 (* Assignment aren't expressions in this language *)
-referenceExpression = name | fieldAccess | arrayAccess ;
+referenceExpression = name | fieldAccess | indexAccess ;
 assignment = referenceExpression, assignmentOperator, expression ;
 
 indentation = indentationToken, {indentationToken} ;

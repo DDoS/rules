@@ -54,7 +54,7 @@ assignmentOperator = "**=" | "*=" | "/=" | "%=" | "+=" | "-=" | "<<=" | ">>="
 (* Field access is like: anObject.aField *)
 fieldAccess = access, ".", identifierToken ;
 (* Array access is like: anArray[anIndex] *)
-arrayAccess = access, "[", expression, "]" ;
+indexAccess = access, "[", expression, "]" ;
 
 (* Supports C style calls, but also infix *)
 expressionList = expression, {",", expression} ;
@@ -100,7 +100,7 @@ atom = ("(", expression, ")") | literalToken | compositeLiteral | name
 *)
 
 (* ".", "[]", "()" *)
-access = fieldAccess | arrayAccess | functionCall | atom ;
+access = fieldAccess | indexAccess | functionCall | atom ;
 
 (* "+", "-", "!", "~" *)
 unary = (unaryOperator, unary) | access ;

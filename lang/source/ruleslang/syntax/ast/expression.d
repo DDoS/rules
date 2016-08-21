@@ -225,7 +225,7 @@ public class MemberAccess : Reference {
     }
 }
 
-public class ArrayAccess : Reference {
+public class IndexAccess : Reference {
     private Expression _value;
     private Expression _index;
     private size_t _end;
@@ -255,15 +255,15 @@ public class ArrayAccess : Reference {
     public override Expression map(ExpressionMapper mapper) {
         _value = _value.map(mapper);
         _index = _index.map(mapper);
-        return mapper.mapArrayAccess(this);
+        return mapper.mapIndexAccess(this);
     }
 
     public override immutable(TypedNode) interpret(Context context) {
-        return Interpreter.INSTANCE.interpretArrayAccess(context, this);
+        return Interpreter.INSTANCE.interpretIndexAccess(context, this);
     }
 
     public override string toString() {
-        return format("ArrayAccess(%s[%s])", _value.toString(), _index.toString());
+        return format("IndexAccess(%s[%s])", _value.toString(), _index.toString());
     }
 }
 

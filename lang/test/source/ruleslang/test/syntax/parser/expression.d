@@ -68,7 +68,7 @@ unittest {
         parseTestExpression("5..ucc.test")
     );
     assertEqual(
-        "ArrayAccess(StringLiteral(\"test\")[SignedIntegerLiteral(2)])",
+        "IndexAccess(StringLiteral(\"test\")[SignedIntegerLiteral(2)])",
         parseTestExpression("\"test\"[2]")
     );
     assertEqual(

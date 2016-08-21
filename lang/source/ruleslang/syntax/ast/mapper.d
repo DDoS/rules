@@ -56,7 +56,7 @@ public abstract class ExpressionMapper : TypeMapper {
         return expression;
     }
 
-    public Expression mapArrayAccess(ArrayAccess expression) {
+    public Expression mapIndexAccess(IndexAccess expression) {
         return expression;
     }
 

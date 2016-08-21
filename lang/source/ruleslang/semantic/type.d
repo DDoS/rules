@@ -673,13 +673,13 @@ public immutable class FloatLiteralType : AtomicLiteralType {
 }
 
 public immutable interface CompositeType : Type {
-    public bool hasMoreMembers(ulong count);
+    public bool moreMembersThan(ulong count);
     public immutable(Type) getMemberType(ulong index);
 }
 
 public immutable class StringLiteralType : LiteralType, CompositeType {
     private dstring _value;
-    private Type arrayType;
+    private SizedArrayType arrayType;
     private ulong utf8Length;
     private ulong utf16Length;
 
@@ -754,7 +754,7 @@ public immutable class StringLiteralType : LiteralType, CompositeType {
         return arrayType.lowestUpperBound(other);
     }
 
-    public override bool hasMoreMembers(ulong count) {
+    public override bool moreMembersThan(ulong count) {
         return _value.length > count;
     }
 
@@ -762,7 +762,7 @@ public immutable class StringLiteralType : LiteralType, CompositeType {
         return index >= _value.length ? null : new immutable UnsignedIntegerLiteralType(_value[index]);
     }
 
-    public override immutable(Type) getBackingType() {
+    public override immutable(SizedArrayType) getBackingType() {
         return arrayType;
     }
 
@@ -797,7 +797,7 @@ public immutable class AnyType : CompositeType {
         return this;
     }
 
-    public override bool hasMoreMembers(ulong count) {
+    public override bool moreMembersThan(ulong count) {
         return false;
     }
 
@@ -841,7 +841,7 @@ public immutable class TupleType : CompositeType {
         if (compositeType is null) {
             return false;
         }
-        if (compositeType.hasMoreMembers(_memberTypes.length)) {
+        if (compositeType.moreMembersThan(_memberTypes.length)) {
             return false;
         }
         // Only allow identity conversion between members
@@ -902,7 +902,7 @@ public immutable class TupleType : CompositeType {
         return null;
     }
 
-    public override bool hasMoreMembers(ulong count) {
+    public override bool moreMembersThan(ulong count) {
         return  _memberTypes.length > count;
     }
 
@@ -1070,7 +1070,7 @@ public immutable class ArrayType : CompositeType {
         return null;
     }
 
-    public override bool hasMoreMembers(ulong count) {
+    public override bool moreMembersThan(ulong count) {
         return false;
     }
 
@@ -1132,7 +1132,7 @@ public immutable class SizedArrayType : ArrayType {
         return false;
     }
 
-    public override bool hasMoreMembers(ulong count) {
+    public override bool moreMembersThan(ulong count) {
         return _size > count;
     }
 

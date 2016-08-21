@@ -133,7 +133,7 @@ private Expression parseAccess(Tokenizer tokens, Expression value) {
         }
         auto end = tokens.head().end;
         tokens.advance();
-        return parseAccess(tokens, new ArrayAccess(value, index, end));
+        return parseAccess(tokens, new IndexAccess(value, index, end));
     }
     if (tokens.head() == "(") {
         tokens.advance();
