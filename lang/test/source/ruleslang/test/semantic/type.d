@@ -365,6 +365,15 @@ unittest {
     );
     assertSpecializable(
         new immutable StructureLiteralType([AtomicType.UINT8], ["a"]),
+        new immutable StructureType([AtomicType.UINT16], ["a"]),
+        TypeConversion.REFERENCE_NARROWING
+    );
+    assertNotSpecializable(
+        new immutable StructureLiteralType([AtomicType.UINT8], ["a"]),
+        new immutable TupleType([AtomicType.UINT16])
+    );
+    assertSpecializable(
+        new immutable StructureLiteralType([AtomicType.UINT8], ["a"]),
         new immutable StructureType([AtomicType.UINT8, AtomicType.UINT8], ["a", "b"]),
         TypeConversion.REFERENCE_NARROWING
     );

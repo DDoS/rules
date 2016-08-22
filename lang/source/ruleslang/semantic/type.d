@@ -1214,7 +1214,7 @@ public immutable class StructureLiteralType : StructureType, LiteralType {
         auto structureType = cast(immutable StructureType) type;
         if (structureType is null) {
             // Otherwise try the tuple specialization
-            return new immutable TupleLiteralType(memberTypes).specializableTo(type, conversions);
+            return false;
         }
         // Each member must be specializable to that of the other struct
         foreach (i, otherName; structureType.memberNames) {
