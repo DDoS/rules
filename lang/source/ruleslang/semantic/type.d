@@ -824,7 +824,7 @@ public immutable class TupleType : CompositeType {
     }
 
     public override bool convertibleTo(immutable Type type, TypeConversionChain conversions) {
-        // Allow identity conversion is allowed
+        // Allow identity conversion
         if (opEquals(type)) {
             conversions.thenIdentity();
             return true;
@@ -956,14 +956,16 @@ public immutable class StructureType : TupleType {
     }
 
     public override bool convertibleTo(immutable Type type, TypeConversionChain conversions) {
-        // Try the tuple conversions
-        if (super.convertibleTo(type, conversions)) {
+        // Allow identity conversion
+        if (opEquals(type)) {
+            conversions.thenIdentity();
             return true;
         }
-        // Otherwise try to convert to a structure type by member names
+        // Try to convert to a structure type by member names
         auto structureType = cast(immutable StructureType) type;
         if (structureType is null) {
-            return false;
+            // Otherwise try the tuple conversions
+            return super.convertibleTo(type, conversions);
         }
         auto otherMemberNames = structureType.memberNames;
         if (otherMemberNames.length > memberNames.length) {
@@ -1208,10 +1210,11 @@ public immutable class StructureLiteralType : StructureType, LiteralType {
         if (super.convertibleTo(type, conversions)) {
             return true;
         }
-        // Otherwise try to specialize to a structure type by member names
+        // Try to specialize to a structure type by member names
         auto structureType = cast(immutable StructureType) type;
         if (structureType is null) {
-            return false;
+            // Otherwise try the tuple specialization
+            return new immutable TupleLiteralType(memberTypes).specializableTo(type, conversions);
         }
         // Each member must be specializable to that of the other struct
         foreach (i, otherName; structureType.memberNames) {
