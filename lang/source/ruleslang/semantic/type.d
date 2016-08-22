@@ -433,7 +433,7 @@ public immutable class AtomicType : Type {
 
 private mixin template literalTypeOpEquals(L) {
     public override bool opEquals(immutable Type type) {
-        auto literalType = type.exactCastImmutable!(L);
+        auto literalType = type.exactCastImmutable!L();
         return literalType !is null && _value == literalType._value;
     }
 }
@@ -807,7 +807,7 @@ public immutable class AnyType : CompositeType {
     }
 
     public override bool opEquals(immutable Type type) {
-        return type.exactCastImmutable!(AnyType) !is null;
+        return type.exactCastImmutable!AnyType() !is null;
     }
 }
 
@@ -961,7 +961,7 @@ public immutable class StructureType : TupleType {
             return true;
         }
         // Otherwise try to convert to a structure type by member names
-        auto structureType = type.exactCastImmutable!StructureType();
+        auto structureType = cast(immutable StructureType) type;
         if (structureType is null) {
             return false;
         }
@@ -983,7 +983,7 @@ public immutable class StructureType : TupleType {
 
     public override immutable(Type) lowestUpperBound(immutable Type other) {
         // Try to convert to a structure type by member names
-        auto structureType = other.exactCastImmutable!StructureType();
+        auto structureType = cast (immutable StructureType) other;
         if (structureType is null) {
             // Otherwise try the tuple LUB
             return super.lowestUpperBound(other);
@@ -1167,13 +1167,11 @@ public immutable class TupleLiteralType : TupleType, LiteralType {
         if (compositeType is null) {
             return false;
         }
-        // The other type members must be an ordered superset
-        // The members must be convertible to or specializable
+        // The members must be convertible to or specializable to that of the other
         foreach (i, memberType; _memberTypes) {
             auto otherMemberType = compositeType.getMemberType(i);
             if (otherMemberType is null) {
-                // The other type can't have fewer members
-                return false;
+                continue;
             }
             auto literalMemberType = cast(immutable LiteralType) memberType;
             bool convertible;
@@ -1193,5 +1191,58 @@ public immutable class TupleLiteralType : TupleType, LiteralType {
 
     public override immutable(TupleType) getBackingType() {
         return this;
+    }
+
+    public override bool opEquals(immutable Type type) {
+        auto tupleType = type.exactCastImmutable!TupleLiteralType();
+        return tupleType !is null && tupleType.memberTypes.typesEqual(_memberTypes);
+    }
+}
+
+public immutable class StructureLiteralType : StructureType, LiteralType {
+    public this(immutable(Type)[] memberTypes, immutable(string)[] memberNames) {
+        super(memberTypes, memberNames);
+    }
+
+    public override bool specializableTo(immutable Type type, TypeConversionChain conversions) {
+        if (super.convertibleTo(type, conversions)) {
+            return true;
+        }
+        // Otherwise try to specialize to a structure type by member names
+        auto structureType = cast(immutable StructureType) type;
+        if (structureType is null) {
+            return false;
+        }
+        // Each member must be specializable to that of the other struct
+        foreach (i, otherName; structureType.memberNames) {
+            auto otherMemberType = structureType.getMemberType(i);
+            auto memberType = getMemberType(otherName);
+            if (memberType is null) {
+                continue;
+            }
+            auto literalMemberType = cast(immutable LiteralType) memberType;
+            bool convertible;
+            auto ignored = new TypeConversionChain();
+            if (literalMemberType !is null) {
+                convertible = literalMemberType.specializableTo(otherMemberType, ignored);
+            } else {
+                convertible = memberType.convertibleTo(otherMemberType, ignored);
+            }
+            if (!convertible) {
+                return false;
+            }
+        }
+        conversions.thenReferenceNarrowing();
+        return true;
+    }
+
+    public override immutable(TupleType) getBackingType() {
+        return this;
+    }
+
+    public override bool opEquals(immutable Type type) {
+        auto structureType = type.exactCastImmutable!StructureLiteralType();
+        return structureType !is null && structureType.memberNames == _memberNames
+                && structureType.memberTypes.typesEqual(memberTypes);
     }
 }

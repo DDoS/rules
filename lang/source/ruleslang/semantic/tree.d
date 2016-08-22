@@ -188,7 +188,7 @@ public immutable class StructLiteralNode : TypedNode {
         assert(values.length == labels.length);
         this.values = values;
         this.labels = labels;
-        type = new immutable StructureType(values.getTypes(), labels);
+        type = new immutable StructureLiteralType(values.getTypes(), labels);
     }
 
     public override immutable(TypedNode)[] getChildren() {

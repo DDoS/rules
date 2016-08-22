@@ -313,6 +313,11 @@ unittest {
         new immutable TupleType([AtomicType.UINT8, AtomicType.UINT8])
     );
     assertSpecializable(
+        new immutable TupleLiteralType([new immutable SignedIntegerLiteralType(0), new immutable SignedIntegerLiteralType(1)]),
+        new immutable TupleType([AtomicType.UINT8]),
+        TypeConversion.REFERENCE_NARROWING
+    );
+    assertSpecializable(
         new immutable TupleLiteralType([AtomicType.UINT8]),
         new immutable StructureType([AtomicType.UINT16, AtomicType.UINT8], ["a", "b"]),
         TypeConversion.REFERENCE_NARROWING
@@ -334,6 +339,57 @@ unittest {
     assertNotSpecializable(
         new immutable TupleLiteralType([new immutable SignedIntegerLiteralType(-1), new immutable SignedIntegerLiteralType(1)]),
         new immutable ArrayType(AtomicType.UINT16)
+    );
+    assertSpecializable(
+        new immutable StructureLiteralType([AtomicType.UINT8, AtomicType.UINT8], ["a", "b"]),
+        new immutable StructureType([AtomicType.UINT8], ["a"]),
+        TypeConversion.REFERENCE_WIDENING
+    );
+    assertSpecializable(
+        new immutable StructureLiteralType([AtomicType.UINT8], ["a"]),
+        new immutable StructureType([AtomicType.UINT8, AtomicType.UINT8], ["a", "b"]),
+        TypeConversion.REFERENCE_NARROWING
+    );
+    assertSpecializable(
+        new immutable StructureLiteralType([AtomicType.UINT8], ["a"]),
+        new immutable StructureType([AtomicType.UINT8, AtomicType.UINT16], ["b", "a"]),
+        TypeConversion.REFERENCE_NARROWING
+    );
+    assertNotSpecializable(
+        new immutable StructureLiteralType([AtomicType.UINT16], ["a"]),
+        new immutable StructureType([AtomicType.UINT16, AtomicType.UINT8], ["b", "a"])
+    );
+    assertSpecializable(
+        new immutable StructureLiteralType([new immutable SignedIntegerLiteralType(3)], ["b"]),
+        new immutable StructureType([AtomicType.UINT8, AtomicType.UINT8], ["b", "a"]),
+        TypeConversion.REFERENCE_NARROWING
+    );
+    assertNotSpecializable(
+        new immutable StructureLiteralType([new immutable SignedIntegerLiteralType(-3)], ["b"]),
+        new immutable StructureType([AtomicType.UINT8, AtomicType.UINT8], ["b", "a"])
+    );
+    assertSpecializable(
+        new immutable StructureLiteralType(
+            [new immutable SignedIntegerLiteralType(0), new immutable SignedIntegerLiteralType(1)],
+            ["b", "a"]
+        ),
+        new immutable StructureType([AtomicType.UINT8], ["b"]),
+        TypeConversion.REFERENCE_NARROWING
+    );
+    assertSpecializable(
+        new immutable StructureLiteralType(
+            [new immutable SignedIntegerLiteralType(-1), new immutable SignedIntegerLiteralType(1)],
+            ["a", "b"]
+        ),
+        new immutable StructureType([AtomicType.SINT8, AtomicType.UINT8], ["a", "b"]),
+        TypeConversion.REFERENCE_NARROWING
+    );
+    assertNotSpecializable(
+        new immutable StructureLiteralType(
+            [new immutable SignedIntegerLiteralType(-1), new immutable SignedIntegerLiteralType(1)],
+            ["a", "b"]
+        ),
+        new immutable StructureType([AtomicType.SINT8, AtomicType.UINT8], ["b", "a"])
     );
 }
 
