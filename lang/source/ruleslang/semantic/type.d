@@ -26,7 +26,8 @@ public enum TypeConversion {
     SIZED_ARRAY_TO_UNSIZED,
     STRING_LITERAL_TO_UTF8,
     STRING_LITERAL_TO_UTF16,
-    REFERENCE_WIDENING
+    REFERENCE_WIDENING,
+    REFERENCE_NARROWING
 }
 
 public ConversionKind getKind(TypeConversion conversion) {
@@ -43,6 +44,7 @@ public ConversionKind getKind(TypeConversion conversion) {
         case FLOAT_LITERAL_NARROW:
         case STRING_LITERAL_TO_UTF8:
         case STRING_LITERAL_TO_UTF16:
+        case REFERENCE_NARROWING:
             return ConversionKind.NARROWING;
     }
     assert (0);
@@ -779,14 +781,9 @@ public immutable class AnyType : CompositeType {
     }
 
     public override bool convertibleTo(immutable Type type, TypeConversionChain conversions) {
+        // Can only perform an identity conversion
         if (opEquals(type)) {
             conversions.thenIdentity();
-            return true;
-        }
-        // Can cast any composite type or array type
-        if (cast(immutable CompositeType) type !is null
-                || cast(immutable ArrayType) type !is null) {
-            conversions.thenReferenceWidening();
             return true;
         }
         return false;
@@ -818,6 +815,7 @@ public immutable class TupleType : CompositeType {
     private Type[] _memberTypes;
 
     public this(immutable(Type)[] memberTypes) {
+        assert(memberTypes.length > 0);
         _memberTypes = memberTypes;
     }
 
@@ -877,6 +875,9 @@ public immutable class TupleType : CompositeType {
                     break;
                 }
             }
+            if (memberIntersection.length <= 0) {
+                return AnyType.INSTANCE;
+            }
             return new immutable TupleType(memberIntersection);
         }
         // If the other is an array type, the LUB is always the array type
@@ -897,6 +898,9 @@ public immutable class TupleType : CompositeType {
                 }
             }
             auto size = min(tupleSize, arraySize);
+            if (size <= 0) {
+                return AnyType.INSTANCE;
+            }
             return new immutable TupleType(_memberTypes[0 .. size]);
         }
         return null;
@@ -924,9 +928,8 @@ public immutable class StructureType : TupleType {
     private string[] _memberNames;
 
     public this(immutable(Type)[] memberTypes, immutable(string)[] memberNames) {
-        assert(memberTypes.length > 0);
-        assert(memberTypes.length == memberNames.length);
         super(memberTypes);
+        assert(memberTypes.length == memberNames.length);
         _memberNames = memberNames;
     }
 
@@ -994,6 +997,9 @@ public immutable class StructureType : TupleType {
                 memberNameIntersection ~= memberName;
                 memberTypeIntersection ~= _memberTypes[i];
             }
+        }
+        if (memberTypeIntersection.length <= 0) {
+            return AnyType.INSTANCE;
         }
         return new immutable StructureType(memberTypeIntersection, memberNameIntersection);
     }
@@ -1144,5 +1150,48 @@ public immutable class SizedArrayType : ArrayType {
         auto arrayType = type.exactCastImmutable!SizedArrayType();
         return arrayType !is null && arrayType.totalDepth == totalDepth
                 && arrayType.componentType.opEquals(componentType) && arrayType.size == _size;
+    }
+}
+
+public immutable class TupleLiteralType : TupleType, LiteralType {
+    public this(immutable(Type)[] memberTypes) {
+        super(memberTypes);
+    }
+
+    public override bool specializableTo(immutable Type type, TypeConversionChain conversions) {
+        if (super.convertibleTo(type, conversions)) {
+            return true;
+        }
+        // Can specialize to another composite
+        auto compositeType = cast(immutable CompositeType) type;
+        if (compositeType is null) {
+            return false;
+        }
+        // The other type members must be an ordered superset
+        // The members must be convertible to or specializable
+        foreach (i, memberType; _memberTypes) {
+            auto otherMemberType = compositeType.getMemberType(i);
+            if (otherMemberType is null) {
+                // The other type can't have fewer members
+                return false;
+            }
+            auto literalMemberType = cast(immutable LiteralType) memberType;
+            bool convertible;
+            auto ignored = new TypeConversionChain();
+            if (literalMemberType !is null) {
+                convertible = literalMemberType.specializableTo(otherMemberType, ignored);
+            } else {
+                convertible = memberType.convertibleTo(otherMemberType, ignored);
+            }
+            if (!convertible) {
+                return false;
+            }
+        }
+        conversions.thenReferenceNarrowing();
+        return true;
+    }
+
+    public override immutable(TupleType) getBackingType() {
+        return this;
     }
 }

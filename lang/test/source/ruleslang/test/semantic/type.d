@@ -190,11 +190,7 @@ unittest {
 }
 
 unittest {
-    assertConvertible(new immutable TupleType([]), new immutable TupleType([]),
-        TypeConversion.IDENTITY);
-    assertConvertible(new immutable TupleType([AtomicType.UINT8]), new immutable TupleType([]),
-        TypeConversion.REFERENCE_WIDENING);
-    assertNotConvertible(new immutable TupleType([]), new immutable TupleType([AtomicType.UINT8]));
+    assertNotConvertible(AnyType.INSTANCE, new immutable TupleType([AtomicType.UINT8]));
     assertConvertible(new immutable TupleType([AtomicType.UINT8]), new immutable TupleType([AtomicType.UINT8]),
         TypeConversion.IDENTITY);
     assertConvertible(new immutable TupleType([AtomicType.UINT8, AtomicType.BOOL]), new immutable TupleType([AtomicType.UINT8]),
@@ -284,6 +280,60 @@ unittest {
         new immutable StructureType([AtomicType.UINT8], ["a"]),
         new immutable SizedArrayType(AtomicType.UINT8, 1),
         TypeConversion.REFERENCE_WIDENING
+    );
+}
+
+unittest {
+    assertSpecializable(
+        new immutable TupleLiteralType([AtomicType.UINT8, AtomicType.UINT8]),
+        new immutable TupleType([AtomicType.UINT8]),
+        TypeConversion.REFERENCE_WIDENING
+    );
+    assertSpecializable(
+        new immutable TupleLiteralType([AtomicType.UINT8]),
+        new immutable TupleType([AtomicType.UINT8, AtomicType.UINT8]),
+        TypeConversion.REFERENCE_NARROWING
+    );
+    assertSpecializable(
+        new immutable TupleLiteralType([AtomicType.UINT8]),
+        new immutable TupleType([AtomicType.UINT16, AtomicType.UINT8]),
+        TypeConversion.REFERENCE_NARROWING
+    );
+    assertNotSpecializable(
+        new immutable TupleLiteralType([AtomicType.UINT16]),
+        new immutable TupleType([AtomicType.UINT8, AtomicType.UINT8])
+    );
+    assertSpecializable(
+        new immutable TupleLiteralType([new immutable SignedIntegerLiteralType(3)]),
+        new immutable TupleType([AtomicType.UINT8, AtomicType.UINT8]),
+        TypeConversion.REFERENCE_NARROWING
+    );
+    assertNotSpecializable(
+        new immutable TupleLiteralType([new immutable SignedIntegerLiteralType(-3)]),
+        new immutable TupleType([AtomicType.UINT8, AtomicType.UINT8])
+    );
+    assertSpecializable(
+        new immutable TupleLiteralType([AtomicType.UINT8]),
+        new immutable StructureType([AtomicType.UINT16, AtomicType.UINT8], ["a", "b"]),
+        TypeConversion.REFERENCE_NARROWING
+    );
+    assertSpecializable(
+        new immutable TupleLiteralType([AtomicType.UINT8]),
+        new immutable ArrayType(AtomicType.UINT16),
+        TypeConversion.REFERENCE_NARROWING
+    );
+    assertNotSpecializable(
+        new immutable TupleLiteralType([AtomicType.UINT16]),
+        new immutable ArrayType(AtomicType.UINT8)
+    );
+    assertSpecializable(
+        new immutable TupleLiteralType([new immutable SignedIntegerLiteralType(0), new immutable SignedIntegerLiteralType(1)]),
+        new immutable ArrayType(AtomicType.UINT16),
+        TypeConversion.REFERENCE_NARROWING
+    );
+    assertNotSpecializable(
+        new immutable TupleLiteralType([new immutable SignedIntegerLiteralType(-1), new immutable SignedIntegerLiteralType(1)]),
+        new immutable ArrayType(AtomicType.UINT16)
     );
 }
 

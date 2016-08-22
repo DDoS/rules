@@ -161,13 +161,8 @@ public immutable class TupleLiteralNode : TypedNode {
     private Type type;
 
     public this(immutable(TypedNode)[] values) {
-        assert (values.length > 0);
-        this(values, new immutable TupleType(values.getTypes()));
-    }
-
-    private this(immutable(TypedNode)[] values, immutable Type type) {
         this.values = values;
-        this.type = type;
+        this.type = new immutable TupleLiteralType(values.getTypes());
     }
 
     public override immutable(TypedNode)[] getChildren() {
@@ -183,13 +178,25 @@ public immutable class TupleLiteralNode : TypedNode {
     }
 }
 
-public immutable class StructLiteralNode : TupleLiteralNode {
+public immutable class StructLiteralNode : TypedNode {
+    private TypedNode[] values;
     private string[] labels;
+    private Type type;
 
     public this(immutable(TypedNode)[] values, immutable(string)[] labels) {
         assert(values.length > 0);
-        super(values, new immutable StructureType(values.getTypes(), labels));
+        assert(values.length == labels.length);
+        this.values = values;
         this.labels = labels;
+        type = new immutable StructureType(values.getTypes(), labels);
+    }
+
+    public override immutable(TypedNode)[] getChildren() {
+        return values;
+    }
+
+    public override immutable(Type) getType() {
+        return type;
     }
 
     public override string toString() {
