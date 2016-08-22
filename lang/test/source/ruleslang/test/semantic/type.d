@@ -409,6 +409,57 @@ unittest {
         ),
         new immutable StructureType([AtomicType.SINT8, AtomicType.UINT8], ["b", "a"])
     );
+    assertSpecializable(
+        new immutable SizedArrayLiteralType([AtomicType.UINT8, AtomicType.UINT8], 2),
+        new immutable SizedArrayType(AtomicType.UINT8, 2),
+        TypeConversion.IDENTITY
+    );
+    assertSpecializable(
+        new immutable SizedArrayLiteralType([AtomicType.UINT8], 1),
+        new immutable SizedArrayType(AtomicType.UINT16, 1),
+        TypeConversion.REFERENCE_NARROWING
+    );
+    assertSpecializable(
+        new immutable SizedArrayLiteralType([AtomicType.UINT8], 1),
+        new immutable ArrayType(AtomicType.UINT16),
+        TypeConversion.REFERENCE_NARROWING
+    );
+    assertSpecializable(
+        new immutable SizedArrayLiteralType([AtomicType.UINT8], 2),
+        new immutable SizedArrayType(AtomicType.UINT16, 1),
+        TypeConversion.REFERENCE_NARROWING
+    );
+    assertSpecializable(
+        new immutable SizedArrayLiteralType([AtomicType.UINT8], 2),
+        new immutable ArrayType(AtomicType.UINT16),
+        TypeConversion.REFERENCE_NARROWING
+    );
+    assertSpecializable(
+        new immutable SizedArrayLiteralType([new immutable SignedIntegerLiteralType(3)], 1),
+        new immutable SizedArrayType(AtomicType.UINT8, 1),
+        TypeConversion.REFERENCE_NARROWING
+    );
+    assertNotSpecializable(
+        new immutable SizedArrayLiteralType([new immutable SignedIntegerLiteralType(-3)], 1),
+        new immutable SizedArrayType(AtomicType.UINT8, 1)
+    );
+    assertNotSpecializable(
+        new immutable SizedArrayLiteralType([new immutable SignedIntegerLiteralType(-3)], 1),
+        new immutable ArrayType(AtomicType.UINT8)
+    );
+    assertSpecializable(
+        new immutable SizedArrayLiteralType(
+            [new immutable SignedIntegerLiteralType(0), new immutable SignedIntegerLiteralType(1)], 2
+        ),
+        new immutable SizedArrayType(AtomicType.UINT8, 3),
+        TypeConversion.REFERENCE_NARROWING
+    );
+    assertNotSpecializable(
+        new immutable SizedArrayLiteralType(
+            [new immutable SignedIntegerLiteralType(-1), new immutable SignedIntegerLiteralType(1)], 2
+        ),
+        new immutable SizedArrayType(AtomicType.UINT8, 2)
+    );
 }
 
 unittest {

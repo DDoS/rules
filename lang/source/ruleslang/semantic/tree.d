@@ -158,7 +158,7 @@ public immutable class EmptyLiteralNode : TypedNode {
 
 public immutable class TupleLiteralNode : TypedNode {
     private TypedNode[] values;
-    private Type type;
+    private TupleLiteralType type;
 
     public this(immutable(TypedNode)[] values) {
         this.values = values;
@@ -169,7 +169,7 @@ public immutable class TupleLiteralNode : TypedNode {
         return values;
     }
 
-    public override immutable(Type) getType() {
+    public override immutable(TupleLiteralType) getType() {
         return type;
     }
 
@@ -181,7 +181,7 @@ public immutable class TupleLiteralNode : TypedNode {
 public immutable class StructLiteralNode : TypedNode {
     private TypedNode[] values;
     private string[] labels;
-    private Type type;
+    private StructureLiteralType type;
 
     public this(immutable(TypedNode)[] values, immutable(string)[] labels) {
         assert(values.length > 0);
@@ -195,21 +195,13 @@ public immutable class StructLiteralNode : TypedNode {
         return values;
     }
 
-    public override immutable(Type) getType() {
+    public override immutable(StructureLiteralType) getType() {
         return type;
     }
 
     public override string toString() {
         return format("StructLiteral({%s})", stringZip!": "(labels, values).join!", "());
     }
-}
-
-private immutable(Type)[] getTypes(immutable(TypedNode)[] values) {
-    immutable(Type)[] valueTypes = [];
-    foreach (value; values) {
-        valueTypes ~= value.getType();
-    }
-    return valueTypes;
 }
 
 public immutable struct ArrayLabel {
@@ -240,26 +232,16 @@ public immutable struct ArrayLabel {
     }
 }
 
-public immutable class ArrayLiteralNode : TupleLiteralNode {
+public immutable class ArrayLiteralNode : TypedNode {
+    private TypedNode[] values;
     private ArrayLabel[] labels;
-    private SizedArrayType type;
+    private SizedArrayLiteralType type;
 
     public this(immutable(TypedNode)[] values, immutable(ArrayLabel)[] labels) {
         assert(values.length > 0);
         assert(values.length == labels.length);
-        super(values);
-        this.labels = labels.idup;
-        // The component type is the lowest upper bound of the components
-        auto firstType = values[0].getType();
-        immutable(Type)* componentType = &firstType;
-        foreach (value; values[1 .. $]) {
-            auto lub = (*componentType).lowestUpperBound(value.getType());
-            if (lub is null) {
-                throw new Exception(format("No common supertype for %s and %s",
-                        (*componentType).toString(), value.getType().toString()));
-            }
-            componentType = &lub;
-        }
+        this.values = values;
+        this.labels = labels;
         // The array size if the max index label plus one
         ulong maxIndex = 0;
         foreach (label; labels) {
@@ -267,16 +249,28 @@ public immutable class ArrayLiteralNode : TupleLiteralNode {
                 maxIndex = label.index;
             }
         }
-        type = new immutable SizedArrayType(*componentType, maxIndex + 1);
+        type = new immutable SizedArrayLiteralType(values.getTypes(), maxIndex + 1);
     }
 
-    public override immutable(SizedArrayType) getType() {
+    public override immutable(TypedNode)[] getChildren() {
+        return values;
+    }
+
+    public override immutable(SizedArrayLiteralType) getType() {
         return type;
     }
 
     public override string toString() {
         return format("ArrayLiteral({%s})", stringZip!": "(labels, values).join!", "());
     }
+}
+
+private immutable(Type)[] getTypes(immutable(TypedNode)[] values) {
+    immutable(Type)[] valueTypes = [];
+    foreach (value; values) {
+        valueTypes ~= value.getType();
+    }
+    return valueTypes;
 }
 
 public immutable class FieldAccessNode : TypedNode {

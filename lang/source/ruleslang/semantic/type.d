@@ -1197,7 +1197,7 @@ public immutable class TupleLiteralType : TupleType, LiteralType {
 
     public override bool opEquals(immutable Type type) {
         auto tupleType = type.exactCastImmutable!TupleLiteralType();
-        return tupleType !is null && tupleType.memberTypes.typesEqual(_memberTypes);
+        return tupleType !is null && tupleType.memberTypes.typesEqual(memberTypes);
     }
 }
 
@@ -1239,13 +1239,73 @@ public immutable class StructureLiteralType : StructureType, LiteralType {
         return true;
     }
 
-    public override immutable(TupleType) getBackingType() {
+    public override immutable(StructureType) getBackingType() {
         return this;
     }
 
     public override bool opEquals(immutable Type type) {
         auto structureType = type.exactCastImmutable!StructureLiteralType();
-        return structureType !is null && structureType.memberNames == _memberNames
+        return structureType !is null && structureType.memberNames == memberNames
                 && structureType.memberTypes.typesEqual(memberTypes);
+    }
+}
+
+public immutable class SizedArrayLiteralType : SizedArrayType, LiteralType {
+    private Type[] _memberTypes;
+
+    public this(immutable(Type)[] memberTypes, ulong size) {
+        assert (memberTypes.length > 0);
+        assert (size > 0 && memberTypes.length <= size);
+        _memberTypes = memberTypes;
+        // The component type is the lowest upper bound of the components
+        auto firstType = memberTypes[0];
+        immutable(Type)* componentType = &firstType;
+        foreach (memberType; memberTypes[1 .. $]) {
+            auto lub = (*componentType).lowestUpperBound(memberType);
+            if (lub is null) {
+                throw new Exception(format("No common supertype for %s and %s",
+                        (*componentType).toString(), memberType.toString()));
+            }
+            componentType = &lub;
+        }
+        super(*componentType, size);
+    }
+
+    public override bool specializableTo(immutable Type type, TypeConversionChain conversions) {
+        if (super.convertibleTo(type, conversions)) {
+            return true;
+        }
+        // Only allow specialization to array types
+        auto arrayType = cast(immutable ArrayType) type;
+        if (arrayType is null) {
+            return false;
+        }
+        // Each member must be specializable to the component type
+        auto componentType = arrayType.componentType;
+        foreach (memberType; _memberTypes) {
+            auto literalMemberType = cast(immutable LiteralType) memberType;
+            bool convertible;
+            auto ignored = new TypeConversionChain();
+            if (literalMemberType !is null) {
+                convertible = literalMemberType.specializableTo(componentType, ignored);
+            } else {
+                convertible = memberType.convertibleTo(componentType, ignored);
+            }
+            if (!convertible) {
+                return false;
+            }
+        }
+        conversions.thenReferenceNarrowing();
+        return true;
+    }
+
+    public override immutable(SizedArrayType) getBackingType() {
+        return this;
+    }
+
+    public override bool opEquals(immutable Type type) {
+        auto sizedArrayType = type.exactCastImmutable!SizedArrayLiteralType();
+        return sizedArrayType !is null && sizedArrayType.componentType.opEquals(componentType);
+
     }
 }
