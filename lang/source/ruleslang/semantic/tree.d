@@ -6,10 +6,13 @@ import std.format : format;
 import ruleslang.semantic.type;
 import ruleslang.semantic.symbol;
 import ruleslang.semantic.context;
+import ruleslang.evaluation.evaluate;
+import ruleslang.evaluation.runtime;
 import ruleslang.util;
 
 public immutable interface Node {
     public immutable(Node)[] getChildren();
+    public void evaluate(Runtime runtime);
     public string toString();
 }
 
@@ -32,6 +35,10 @@ public immutable class NullNode : TypedNode {
         return AtomicType.BOOL;
     }
 
+    public override void evaluate(Runtime runtime) {
+        assert (0);
+    }
+
     public override string toString() {
         return "Null()";
     }
@@ -50,6 +57,10 @@ public immutable class BooleanLiteralNode : TypedNode {
 
     public override immutable(BooleanLiteralType) getType() {
         return type;
+    }
+
+    public override void evaluate(Runtime runtime) {
+        Evaluator.INSTANCE.evaluateBooleanLiteral(runtime, this);
     }
 
     public override string toString() {
@@ -72,6 +83,10 @@ public immutable class StringLiteralNode : TypedNode {
         return type;
     }
 
+    public override void evaluate(Runtime runtime) {
+        Evaluator.INSTANCE.evaluateStringLiteral(runtime, this);
+    }
+
     public override string toString() {
         return format("StringLiteral(\"%s\")", type.value);
     }
@@ -90,6 +105,10 @@ public immutable class SignedIntegerLiteralNode : TypedNode {
 
     public override immutable(SignedIntegerLiteralType) getType() {
         return type;
+    }
+
+    public override void evaluate(Runtime runtime) {
+        Evaluator.INSTANCE.evaluateSignedIntegerLiteral(runtime, this);
     }
 
     public override string toString() {
@@ -112,6 +131,10 @@ public immutable class UnsignedIntegerLiteralNode : TypedNode {
         return type;
     }
 
+    public override void evaluate(Runtime runtime) {
+        Evaluator.INSTANCE.evaluateUnsignedIntegerLiteral(runtime, this);
+    }
+
     public override string toString() {
         return format("UnsignedIntegerLiteral(%d)", type.value);
     }
@@ -132,6 +155,10 @@ public immutable class FloatLiteralNode : TypedNode {
         return type;
     }
 
+    public override void evaluate(Runtime runtime) {
+        Evaluator.INSTANCE.evaluateFloatLiteral(runtime, this);
+    }
+
     public override string toString() {
         return format("FloatLiteral(%g)", type.value);
     }
@@ -149,6 +176,10 @@ public immutable class EmptyLiteralNode : TypedNode {
 
     public override immutable(Type) getType() {
         return AnyType.INSTANCE;
+    }
+
+    public override void evaluate(Runtime runtime) {
+        Evaluator.INSTANCE.evaluateEmptyLiteral(runtime, this);
     }
 
     public override string toString() {
@@ -171,6 +202,10 @@ public immutable class TupleLiteralNode : TypedNode {
 
     public override immutable(TupleLiteralType) getType() {
         return type;
+    }
+
+    public override void evaluate(Runtime runtime) {
+        Evaluator.INSTANCE.evaluateTupleLiteral(runtime, this);
     }
 
     public override string toString() {
@@ -197,6 +232,10 @@ public immutable class StructLiteralNode : TypedNode {
 
     public override immutable(StructureLiteralType) getType() {
         return type;
+    }
+
+    public override void evaluate(Runtime runtime) {
+        Evaluator.INSTANCE.evaluateStructLiteral(runtime, this);
     }
 
     public override string toString() {
@@ -260,6 +299,10 @@ public immutable class ArrayLiteralNode : TypedNode {
         return type;
     }
 
+    public override void evaluate(Runtime runtime) {
+        Evaluator.INSTANCE.evaluateArrayLiteral(runtime, this);
+    }
+
     public override string toString() {
         return format("ArrayLiteral({%s})", stringZip!": "(labels, values).join!", "());
     }
@@ -288,6 +331,10 @@ public immutable class FieldAccessNode : TypedNode {
         return field.type();
     }
 
+    public override void evaluate(Runtime runtime) {
+        Evaluator.INSTANCE.evaluateFieldAccess(runtime, this);
+    }
+
     public override string toString() {
         return format("FieldAccess(%s)", field.name);
     }
@@ -311,6 +358,10 @@ public immutable class MemberAccessNode : TypedNode {
 
     public override immutable(Type) getType() {
         return type;
+    }
+
+    public override void evaluate(Runtime runtime) {
+        Evaluator.INSTANCE.evaluateMemberAccess(runtime, this);
     }
 
     public override string toString() {
@@ -382,6 +433,10 @@ public immutable class IndexAccessNode : TypedNode {
         return type;
     }
 
+    public override void evaluate(Runtime runtime) {
+        Evaluator.INSTANCE.evaluateIndexAccess(runtime, this);
+    }
+
     public override string toString() {
         return format("IndexAccess(%s[%s]))", valueNode.toString(), indexNode.toString());
     }
@@ -408,6 +463,10 @@ public immutable class FunctionCallNode : TypedNode {
 
     public override immutable(Type) getType() {
         return func.returnType();
+    }
+
+    public override void evaluate(Runtime runtime) {
+        Evaluator.INSTANCE.evaluateFunctionCall(runtime, this);
     }
 
     public override string toString() {
