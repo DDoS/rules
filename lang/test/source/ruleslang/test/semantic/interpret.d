@@ -45,12 +45,12 @@ unittest {
         interpret("1u opAdd 2u")
     );
     assertEqual(
-        "FunctionCall(opAdd(FunctionCall(fp64(UnsignedIntegerLiteral(1))), FunctionCall(fp64(SignedIntegerLiteral(2))))) "
+        "FunctionCall(opAdd(FloatLiteral(1), FloatLiteral(2))) "
             ~ "| fp64",
         interpret("1u opAdd 2")
     );
     assertEqual(
-        "FunctionCall(opAdd(FunctionCall(fp64(SignedIntegerLiteral(1))), FunctionCall(fp64(UnsignedIntegerLiteral(2))))) "
+        "FunctionCall(opAdd(FloatLiteral(1), FloatLiteral(2))) "
             ~ "| fp64",
         interpret("1 opAdd 2u")
     );
@@ -64,7 +64,7 @@ unittest {
         interpret("1 << 2u")
     );
     assertEqual(
-        "FunctionCall(opLeftShift(SignedIntegerLiteral(1), FunctionCall(uint64(SignedIntegerLiteral(2))))) | sint64",
+        "FunctionCall(opLeftShift(SignedIntegerLiteral(1), SignedIntegerLiteral(2))) | sint64",
         interpret("1 << 2")
     );
     assertEqual(
@@ -100,7 +100,7 @@ unittest {
 unittest {
     assertInterpretFails("1[0]");
     assertEqual(
-        "IndexAccess(StringLiteral(\"1\")[FunctionCall(uint64(SignedIntegerLiteral(0)))])) | uint_lit(49)",
+        "IndexAccess(StringLiteral(\"1\")[SignedIntegerLiteral(0)])) | uint_lit(49)",
         interpret("\"1\"[0]")
     );
     assertInterpretFails("\"1\"[-1]");
@@ -112,7 +112,7 @@ unittest {
         interpret("\"1\"[0u + 0u]")
     );
     assertEqual(
-        "IndexAccess(TupleLiteral({SignedIntegerLiteral(0), FloatLiteral(1)})[FunctionCall(uint64(SignedIntegerLiteral(0)))]))"
+        "IndexAccess(TupleLiteral({SignedIntegerLiteral(0), FloatLiteral(1)})[SignedIntegerLiteral(0)]))"
             ~ " | sint_lit(0)",
         interpret("{0, 1.}[0]")
     );

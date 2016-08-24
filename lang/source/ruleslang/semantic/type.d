@@ -1,6 +1,7 @@
 module ruleslang.semantic.type;
 
 import std.format : format;
+import std.array : split;
 import std.algorithm.comparison : min;
 import std.algorithm.searching : canFind;
 import std.exception : assumeUnique;
@@ -95,34 +96,17 @@ public class TypeConversionChain {
         return chain.length == 1 && chain[0] == TypeConversion.IDENTITY;
     }
 
-    public bool isReferenceWidening() {
-        if (chain.length <= 0 || isIdentity()) {
-            return false;
-        }
-        foreach (conversion; chain) {
-            switch (conversion) with (TypeConversion) {
-                case IDENTITY:
-                case REFERENCE_WIDENING:
-                    continue;
-                default:
-                    return false;
-            }
-        }
-        return true;
-    }
+    public alias isReferenceWidening = checkConversions!"IDENTITY REFERENCE_WIDENING";
+    public alias isNumericWidening = checkConversions!"IDENTITY INTEGER_WIDEN INTEGER_TO_FLOAT FLOAT_WIDEN";
+    public alias isNumericNarrowing = checkConversions!"IDENTITY INTEGER_LITERAL_NARROW FLOAT_LITERAL_NARROW";
 
-    public bool isNumeric() {
+    private bool checkConversions(string cases)() {
         if (chain.length <= 0 || isIdentity()) {
             return false;
         }
         foreach (conversion; chain) {
             switch (conversion) with (TypeConversion) {
-                case IDENTITY:
-                case INTEGER_WIDEN:
-                case INTEGER_TO_FLOAT:
-                case FLOAT_WIDEN:
-                case INTEGER_LITERAL_NARROW:
-                case FLOAT_LITERAL_NARROW:
+                mixin ("case " ~ cases.split().join!":\ncase "() ~ ":\n");
                     continue;
                 default:
                     return false;
@@ -1152,6 +1136,30 @@ public immutable class SizedArrayType : ArrayType {
         auto arrayType = type.exactCastImmutable!SizedArrayType();
         return arrayType !is null && arrayType.totalDepth == totalDepth
                 && arrayType.componentType.opEquals(componentType) && arrayType.size == _size;
+    }
+}
+
+public immutable class AnyTypeLiteral : AnyType, LiteralType {
+    public static immutable AnyTypeLiteral INSTANCE = new immutable AnyTypeLiteral();
+
+    public override immutable(AnyType) getBackingType() {
+        return this;
+    }
+
+    public override bool specializableTo(immutable Type type, TypeConversionChain conversions) {
+        if (super.convertibleTo(type, conversions)) {
+            return true;
+        }
+        // Can specialize to any another composite
+        if (cast(immutable CompositeType) type !is null) {
+            conversions.thenReferenceNarrowing();
+            return true;
+        }
+        return false;
+    }
+
+    public override bool opEquals(immutable Type type) {
+        return type.exactCastImmutable!AnyTypeLiteral() !is null;
     }
 }
 
