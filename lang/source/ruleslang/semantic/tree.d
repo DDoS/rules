@@ -110,7 +110,7 @@ public immutable class StringLiteralNode : LiteralNode {
 
 public immutable class SignedIntegerLiteralNode : LiteralNode {
     private SignedIntegerLiteralType type;
-    private AtomicType specialType;
+    public AtomicType specialType;
 
     public this(long value) {
         auto type = new immutable SignedIntegerLiteralType(value);
@@ -158,7 +158,7 @@ public immutable class SignedIntegerLiteralNode : LiteralNode {
 
 public immutable class UnsignedIntegerLiteralNode : LiteralNode {
     private UnsignedIntegerLiteralType type;
-    private AtomicType specialType;
+    public AtomicType specialType;
 
     public this(ulong value) {
         auto type = new immutable UnsignedIntegerLiteralType(value);
@@ -206,7 +206,7 @@ public immutable class UnsignedIntegerLiteralNode : LiteralNode {
 
 public immutable class FloatLiteralNode : LiteralNode {
     private FloatLiteralType type;
-    private AtomicType specialType;
+    public AtomicType specialType;
 
     public this(double value) {
         auto type = new immutable FloatLiteralType(value);

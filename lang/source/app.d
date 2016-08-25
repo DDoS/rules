@@ -68,40 +68,11 @@ private string getTop(Stack stack, immutable Type type) {
     if (literalType !is null) {
         return getTop(stack, literalType.getBackingType());
     }
-    if (type == AtomicType.BOOL) {
-        return stack.pop!bool().to!string;
+    auto atomicType = cast(immutable AtomicType) type;
+    if (atomicType !is null) {
+        return stack.pop(atomicType).toString();
     }
-    if (type == AtomicType.SINT8) {
-        return stack.pop!byte().to!string;
-    }
-    if (type == AtomicType.UINT8) {
-        return stack.pop!ubyte().to!string;
-    }
-    if (type == AtomicType.SINT16) {
-        return stack.pop!short().to!string;
-    }
-    if (type == AtomicType.UINT16) {
-        return stack.pop!ushort().to!string;
-    }
-    if (type == AtomicType.SINT32) {
-        return stack.pop!int().to!string;
-    }
-    if (type == AtomicType.UINT32) {
-        return stack.pop!uint().to!string;
-    }
-    if (type == AtomicType.SINT64) {
-        return stack.pop!long().to!string;
-    }
-    if (type == AtomicType.UINT64) {
-        return stack.pop!ulong().to!string;
-    }
-    if (type == AtomicType.FP32) {
-        return stack.pop!float().to!string;
-    }
-    if (type == AtomicType.FP64) {
-        return stack.pop!double().to!string;
-    }
-    auto compositeType = cast(CompositeType) type;
+    auto compositeType = cast(immutable CompositeType) type;
     if (compositeType !is null) {
         return stack.pop!size_t().to!string;
     }
