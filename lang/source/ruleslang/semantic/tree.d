@@ -152,7 +152,7 @@ public immutable class SignedIntegerLiteralNode : LiteralNode {
     }
 
     public override string toString() {
-        return format("SignedIntegerLiteral(%d)", type.value);
+        return format("SignedIntegerLiteral(%s %d)", specialType.toString(), type.value);
     }
 }
 
@@ -200,7 +200,7 @@ public immutable class UnsignedIntegerLiteralNode : LiteralNode {
     }
 
     public override string toString() {
-        return format("UnsignedIntegerLiteral(%d)", type.value);
+        return format("UnsignedIntegerLiteral(%s %d)", specialType.toString(), type.value);
     }
 }
 
@@ -245,7 +245,7 @@ public immutable class FloatLiteralNode : LiteralNode {
     }
 
     public override string toString() {
-        return format("FloatLiteral(%g)", type.value);
+        return format("FloatLiteral(%s %g)", specialType.toString(), type.value);
     }
 }
 
