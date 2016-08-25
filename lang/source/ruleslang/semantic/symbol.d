@@ -3,7 +3,6 @@ module ruleslang.semantic.symbol;
 import std.conv : to;
 
 import ruleslang.semantic.type;
-import ruleslang.evaluation.value;
 import ruleslang.util;
 
 public immutable interface Symbol {

@@ -2,7 +2,6 @@ module ruleslang.test.semantic.symbol;
 
 import ruleslang.semantic.type;
 import ruleslang.semantic.symbol;
-import ruleslang.evaluation.value;
 
 unittest {
     assertAreApplicable([], []);

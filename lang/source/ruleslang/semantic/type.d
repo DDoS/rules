@@ -8,7 +8,6 @@ import std.exception : assumeUnique;
 import std.math: isNaN, isInfinity;
 import std.utf : codeLength;
 
-import ruleslang.evaluation.value;
 import ruleslang.util;
 
 public enum ConversionKind {
@@ -428,7 +427,6 @@ public immutable interface LiteralType : Type {
 }
 
 public immutable interface AtomicLiteralType : LiteralType {
-    public immutable(Value) asValue();
     public immutable(AtomicType) getBackingType();
 }
 
@@ -467,10 +465,6 @@ public immutable class BooleanLiteralType : AtomicLiteralType {
             return AtomicType.BOOL;
         }
         return null;
-    }
-
-    public override immutable(Value) asValue() {
-        return valueOf(value);
     }
 
     public override immutable(AtomicType) getBackingType() {
@@ -552,10 +546,6 @@ private template IntegerLiteralTypeTemplate(T) {
             return getBackingType().lowestUpperBound(other);
         }
 
-        public override immutable(Value) asValue() {
-            return valueOf(value);
-        }
-
         public override immutable(AtomicType) getBackingType() {
             static if (__traits(isUnsigned, T)) {
                 return AtomicType.UINT64;
@@ -629,10 +619,6 @@ public immutable class FloatLiteralType : AtomicLiteralType {
             return this;
         }
         return getBackingType().lowestUpperBound(other);
-    }
-
-    public override immutable(Value) asValue() {
-        return valueOf(value);
     }
 
     public override immutable(AtomicType) getBackingType() {
