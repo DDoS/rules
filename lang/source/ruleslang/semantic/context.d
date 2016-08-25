@@ -6,7 +6,7 @@ import std.format : format;
 
 import ruleslang.semantic.type;
 import ruleslang.semantic.symbol;
-import ruleslang.evaluation.value;
+import ruleslang.evaluation.runtime;
 import ruleslang.util;
 
 public class Context {
@@ -212,75 +212,109 @@ public enum OperatorFunction : string {
     CONDITIONAL_FUNCTION = "opConditional"
 }
 
+public immutable struct IntrinsicFunction {
+    public Function func;
+    public FunctionImpl impl;
+
+    public this(immutable Function func, immutable FunctionImpl impl) {
+        this.func = func;
+        this.impl = impl;
+    }
+}
+
 public class IntrinsicNameSpace : NameSpace {
     public static const IntrinsicNameSpace INSTANCE = new IntrinsicNameSpace();
-    private alias Functions = immutable Function[];
-    private static immutable Functions[string] unaryOperators;
-    private static immutable Functions[string] binaryOperators;
-    private static immutable Functions[string] ternaryOperators;
+    private alias IntrinsicFunctions = immutable IntrinsicFunction[];
+    private static immutable IntrinsicFunctions[string] unaryOperators;
+    private static immutable IntrinsicFunctions[string] binaryOperators;
+    private static immutable IntrinsicFunctions[string] ternaryOperators;
+    public static immutable FunctionImpl[string] FUNCTION_IMPLEMENTATIONS;
 
     public static this() {
-        string getName(immutable Function func) {
-            return func.name;
+        string getName(immutable IntrinsicFunction intrinsic) {
+            return intrinsic.func.name;
         }
         // The list of dlang types equivalent to the plang ones
         alias IntegerTypes = AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong);
         alias NumericTypes = AliasSeq!(IntegerTypes, float, double);
         alias AllTypes = AliasSeq!(bool, NumericTypes);
-        // Build the intrinsic unary and binary function lists
-        immutable(Function)[] functions = [];
+        // Build the intrinsic unary function list
+        immutable(IntrinsicFunction)[] unaryFunctions = [];
         // Operator unary -
-        functions ~= genUnaryFunctions!(OperatorFunction.NEGATE_FUNCTION, ToSigned, NumericTypes);
+        unaryFunctions ~= genUnaryFunctions!(OperatorFunction.NEGATE_FUNCTION, ToSigned, NumericTypes);
         // Operator unary +
-        functions ~= genUnaryFunctions!(OperatorFunction.REAFFIRM_FUNCTION, Same, NumericTypes);
+        unaryFunctions ~= genUnaryFunctions!(OperatorFunction.REAFFIRM_FUNCTION, Same, NumericTypes);
         // Operator unary !
-        functions ~= genUnaryFunctions!(OperatorFunction.LOGICAL_NOT_FUNCTION, Same, bool);
+        unaryFunctions ~= genUnaryFunctions!(OperatorFunction.LOGICAL_NOT_FUNCTION, Same, bool);
         // Operator unary ~
-        functions ~= genUnaryFunctions!(OperatorFunction.BITWISE_NOT_FUNCTION, Same, IntegerTypes);
+        unaryFunctions ~= genUnaryFunctions!(OperatorFunction.BITWISE_NOT_FUNCTION, Same, IntegerTypes);
         // Numeric cast functions
-        functions ~= genCastFunctions!NumericTypes();
-        auto assocUnaryFunctions = functions.associateArrays!getName();
+        unaryFunctions ~= genCastFunctions!NumericTypes();
+        auto assocUnaryFunctions = unaryFunctions.associateArrays!getName();
         unaryOperators = assocUnaryFunctions.assumeUnique();
-        functions.length = 0;
+        // Build the intrinsic binary function list
+        immutable(IntrinsicFunction)[] binaryFunctions = [];
         // Operators binary **, *, /, %, +, -
-        functions ~= genBinaryFunctions!(OperatorFunction.EXPONENT_FUNCTION, Same, Same, NumericTypes)();
-        functions ~= genBinaryFunctions!(OperatorFunction.MULTIPLY_FUNCTION, Same, Same, NumericTypes)();
-        functions ~= genBinaryFunctions!(OperatorFunction.DIVIDE_FUNCTION, Same, Same, NumericTypes)();
-        functions ~= genBinaryFunctions!(OperatorFunction.REMAINDER_FUNCTION, Same, Same, NumericTypes)();
-        functions ~= genBinaryFunctions!(OperatorFunction.ADD_FUNCTION, Same, Same, NumericTypes)();
-        functions ~= genBinaryFunctions!(OperatorFunction.SUBTRACT_FUNCTION, Same, Same, NumericTypes)();
+        binaryFunctions ~= genBinaryFunctions!(OperatorFunction.EXPONENT_FUNCTION, Same, Same, NumericTypes)();
+        binaryFunctions ~= genBinaryFunctions!(OperatorFunction.MULTIPLY_FUNCTION, Same, Same, NumericTypes)();
+        binaryFunctions ~= genBinaryFunctions!(OperatorFunction.DIVIDE_FUNCTION, Same, Same, NumericTypes)();
+        binaryFunctions ~= genBinaryFunctions!(OperatorFunction.REMAINDER_FUNCTION, Same, Same, NumericTypes)();
+        binaryFunctions ~= genBinaryFunctions!(OperatorFunction.ADD_FUNCTION, Same, Same, NumericTypes)();
+        binaryFunctions ~= genBinaryFunctions!(OperatorFunction.SUBTRACT_FUNCTION, Same, Same, NumericTypes)();
         // Operators binary <<, >>, >>>
-        functions ~= genBinaryFunctions!(OperatorFunction.LEFT_SHIFT_FUNCTION, Constant!ulong, Same, IntegerTypes)();
-        functions ~= genBinaryFunctions!(OperatorFunction.ARITHMETIC_RIGHT_SHIFT_FUNCTION, Constant!ulong, Same, IntegerTypes)();
-        functions ~= genBinaryFunctions!(OperatorFunction.LOGICAL_RIGHT_SHIFT_FUNCTION, Constant!ulong, Same, IntegerTypes)();
+        binaryFunctions ~= genBinaryFunctions!(OperatorFunction.LEFT_SHIFT_FUNCTION, Constant!ulong, Same, IntegerTypes)();
+        binaryFunctions ~= genBinaryFunctions!(OperatorFunction.ARITHMETIC_RIGHT_SHIFT_FUNCTION,
+                Constant!ulong, Same, IntegerTypes)();
+        binaryFunctions ~= genBinaryFunctions!(OperatorFunction.LOGICAL_RIGHT_SHIFT_FUNCTION,
+                Constant!ulong, Same, IntegerTypes)();
         // Operators binary ==, !=, <, >, <=, >=
-        functions ~= genBinaryFunctions!(OperatorFunction.EQUALS_FUNCTION, Same, Constant!bool, AllTypes)();
-        functions ~= genBinaryFunctions!(OperatorFunction.NOT_EQUALS_FUNCTION, Same, Constant!bool, AllTypes)();
-        functions ~= genBinaryFunctions!(OperatorFunction.LESSER_THAN_FUNCTION, Same, Constant!bool, AllTypes)();
-        functions ~= genBinaryFunctions!(OperatorFunction.GREATER_THAN_FUNCTION, Same, Constant!bool, AllTypes)();
-        functions ~= genBinaryFunctions!(OperatorFunction.LESSER_OR_EQUAL_TO_FUNCTION, Same, Constant!bool, AllTypes)();
-        functions ~= genBinaryFunctions!(OperatorFunction.GREATER_OR_EQUAL_TO_FUNCTION, Same, Constant!bool, AllTypes)();
+        binaryFunctions ~= genBinaryFunctions!(OperatorFunction.EQUALS_FUNCTION, Same, Constant!bool, AllTypes)();
+        binaryFunctions ~= genBinaryFunctions!(OperatorFunction.NOT_EQUALS_FUNCTION, Same, Constant!bool, AllTypes)();
+        binaryFunctions ~= genBinaryFunctions!(OperatorFunction.LESSER_THAN_FUNCTION, Same, Constant!bool, AllTypes)();
+        binaryFunctions ~= genBinaryFunctions!(OperatorFunction.GREATER_THAN_FUNCTION, Same, Constant!bool, AllTypes)();
+        binaryFunctions ~= genBinaryFunctions!(OperatorFunction.LESSER_OR_EQUAL_TO_FUNCTION, Same, Constant!bool, AllTypes)();
+        binaryFunctions ~= genBinaryFunctions!(OperatorFunction.GREATER_OR_EQUAL_TO_FUNCTION, Same, Constant!bool, AllTypes)();
         // Operators binary &, ^, |
-        functions ~= genBinaryFunctions!(OperatorFunction.BITWISE_AND_FUNCTION, Same, Same, IntegerTypes)();
-        functions ~= genBinaryFunctions!(OperatorFunction.BITWISE_XOR_FUNCTION, Same, Same, IntegerTypes)();
-        functions ~= genBinaryFunctions!(OperatorFunction.BITWISE_OR_FUNCTION, Same, Same, IntegerTypes)();
+        binaryFunctions ~= genBinaryFunctions!(OperatorFunction.BITWISE_AND_FUNCTION, Same, Same, IntegerTypes)();
+        binaryFunctions ~= genBinaryFunctions!(OperatorFunction.BITWISE_XOR_FUNCTION, Same, Same, IntegerTypes)();
+        binaryFunctions ~= genBinaryFunctions!(OperatorFunction.BITWISE_OR_FUNCTION, Same, Same, IntegerTypes)();
         // Operators binary &&, ^^, ||
-        functions ~= genBinaryFunctions!(OperatorFunction.LOGICAL_AND_FUNCTION, Same, Same, bool)();
-        functions ~= genBinaryFunctions!(OperatorFunction.LOGICAL_XOR_FUNCTION, Same, Same, bool)();
-        functions ~= genBinaryFunctions!(OperatorFunction.LOGICAL_OR_FUNCTION, Same, Same, bool)();
+        binaryFunctions ~= genBinaryFunctions!(OperatorFunction.LOGICAL_AND_FUNCTION, Same, Same, bool)();
+        binaryFunctions ~= genBinaryFunctions!(OperatorFunction.LOGICAL_XOR_FUNCTION, Same, Same, bool)();
+        binaryFunctions ~= genBinaryFunctions!(OperatorFunction.LOGICAL_OR_FUNCTION, Same, Same, bool)();
         // TODO: operators ~, ..
-        auto assocBinaryFunctions = functions.associateArrays!getName();
+        auto assocBinaryFunctions = binaryFunctions.associateArrays!getName();
         binaryOperators = assocBinaryFunctions.assumeUnique();
-        functions.length = 0;
+        // Build the intrinsic unary function list
+        immutable(IntrinsicFunction)[] ternaryFunctions = [];
         // Operators ternary ... if ... else ...
-        functions ~= genTernaryFunctions!(OperatorFunction.CONDITIONAL_FUNCTION, Constant!bool, Same, Same, AllTypes)();
-        auto assocTernaryFunctions = functions.associateArrays!getName();
+        ternaryFunctions ~= genTernaryFunctions!(OperatorFunction.CONDITIONAL_FUNCTION, Constant!bool, Same, Same, AllTypes)();
+        auto assocTernaryFunctions = ternaryFunctions.associateArrays!getName();
         ternaryOperators = assocTernaryFunctions.assumeUnique();
+        // Create the function implementation lookup table
+        void addNoReplace(ref FunctionImpl[string] array, IntrinsicFunction intrinsic) {
+            auto name = intrinsic.func.symbolicName;
+            auto already = name in array;
+            assert (already is null);
+            array[name] = intrinsic.impl;
+        }
+        FunctionImpl[string] functionImpls;
+        foreach (intrinsic; unaryFunctions) {
+            addNoReplace(functionImpls, intrinsic);
+        }
+        foreach (intrinsic; binaryFunctions) {
+            addNoReplace(functionImpls, intrinsic);
+        }
+        foreach (intrinsic; ternaryFunctions) {
+            addNoReplace(functionImpls, intrinsic);
+        }
+        FUNCTION_IMPLEMENTATIONS = functionImpls.assumeUnique();
+        import std.stdio;
     }
 
     private this() {
     }
-
+    // TODO: convert all this to static
     public override immutable(Field) getField(string name) const {
         return null;
     }
@@ -290,9 +324,10 @@ public class IntrinsicNameSpace : NameSpace {
             return [];
         }
         // Search for functions that can be applied to the argument types
-        Functions searchFunctions = getFunctions(name, argumentTypes.length);
+        IntrinsicFunctions searchFunctions = getFunctions(name, argumentTypes.length);
         immutable(ApplicableFunction)[] functions = [];
-        foreach (func; searchFunctions) {
+        foreach (intrinsic; searchFunctions) {
+            auto func = intrinsic.func;
             ConversionKind[] argumentConversions;
             if (func.areApplicable(argumentTypes, argumentConversions)) {
                 functions ~= immutable ApplicableFunction(func, argumentConversions.assumeUnique());
@@ -302,8 +337,9 @@ public class IntrinsicNameSpace : NameSpace {
     }
 
     public immutable(Function) getExactFunction(string name, immutable(Type)[] parameterTypes) const {
-        Functions searchFunctions = getFunctions(name, parameterTypes.length);
-        foreach (func; searchFunctions) {
+        IntrinsicFunctions searchFunctions = getFunctions(name, parameterTypes.length);
+        foreach (intrinsic; searchFunctions) {
+            auto func = intrinsic.func;
             if (func.isExactly(name, parameterTypes)) {
                 return func;
             }
@@ -311,8 +347,8 @@ public class IntrinsicNameSpace : NameSpace {
         return null;
     }
 
-    private Functions getFunctions(string name, size_t argumentCount) const {
-        Functions* searchFunctions;
+    private IntrinsicFunctions getFunctions(string name, size_t argumentCount) const {
+        IntrinsicFunctions* searchFunctions;
         switch (argumentCount) {
             case 1:
                 searchFunctions = name in unaryOperators;
@@ -357,30 +393,34 @@ private template ToSigned(T) {
     }
 }
 
-private immutable(Function)[] genUnaryFunctions(OperatorFunction func,
+private immutable(IntrinsicFunction)[] genUnaryFunctions(OperatorFunction op,
         alias ReturnFromInner, Inner, Inners...)() {
     alias Return = ReturnFromInner!Inner;
     auto innerType = atomicTypeFor!Inner();
     auto returnType = atomicTypeFor!Return();
-    auto funcs = [new immutable Function(func, [innerType], returnType)];
+    auto func = new immutable Function(op, [innerType], returnType);
+    auto impl = genUnaryOperatorImpl!(op, Inner, Return);
+    auto funcs = [immutable IntrinsicFunction(func, impl)];
     static if (Inners.length > 0) {
-        funcs ~= genUnaryFunctions!(func, ReturnFromInner, Inners)();
+        funcs ~= genUnaryFunctions!(op, ReturnFromInner, Inners)();
     }
     return funcs;
 }
 
-private immutable(Function)[] genCastFunctions(Types...)() {
-    immutable(Function)[] genCasts(To, From, Froms...)() {
+private immutable(IntrinsicFunction)[] genCastFunctions(Types...)() {
+    immutable(IntrinsicFunction)[] genCasts(To, From, Froms...)() {
         auto fromType = atomicTypeFor!From();
         auto toType = atomicTypeFor!To();
-        auto funcs = [new immutable Function(toType.toString(), [fromType], toType)];
+        auto func = new immutable Function(toType.toString(), [fromType], toType);
+        auto impl = genCastImpl!(From, To);
+        auto funcs = [immutable IntrinsicFunction(func, impl)];
         static if (Froms.length > 0) {
             funcs ~= genCasts!(To, Froms);
         }
         return funcs;
     }
 
-    immutable(Function)[] genCastsToTypes(To, Tos...)() {
+    immutable(IntrinsicFunction)[] genCastsToTypes(To, Tos...)() {
         auto funcs = genCasts!(To, Types);
         static if (Tos.length > 0) {
             funcs ~= genCastsToTypes!Tos();
@@ -391,21 +431,23 @@ private immutable(Function)[] genCastFunctions(Types...)() {
     return genCastsToTypes!Types;
 }
 
-private immutable(Function)[] genBinaryFunctions(OperatorFunction func,
+private immutable(IntrinsicFunction)[] genBinaryFunctions(OperatorFunction op,
         alias RightFromLeft, alias ReturnFromLeft, Left, Lefts...)() {
     alias Right = RightFromLeft!Left;
     alias Return = ReturnFromLeft!Left;
     auto leftType = atomicTypeFor!Left();
     auto rightType = atomicTypeFor!Right();
     auto returnType = atomicTypeFor!Return();
-    auto funcs = [new immutable Function(func, [leftType, rightType], returnType)];
+    auto func = new immutable Function(op, [leftType, rightType], returnType);
+    auto impl = genBinaryOperatorImpl!(op, Left, Right, Return);
+    auto funcs = [immutable IntrinsicFunction(func, impl)];
     static if (Lefts.length > 0) {
-        funcs ~= genBinaryFunctions!(func, RightFromLeft, ReturnFromLeft, Lefts)();
+        funcs ~= genBinaryFunctions!(op, RightFromLeft, ReturnFromLeft, Lefts)();
     }
     return funcs;
 }
 
-private immutable(Function)[] genTernaryFunctions(OperatorFunction func,
+private immutable(IntrinsicFunction)[] genTernaryFunctions(OperatorFunction op,
         alias LeftFromMiddle, alias RightFromMiddle, alias ReturnFromMiddle, Middle, Middles...)() {
     alias Left = LeftFromMiddle!Middle;
     alias Right = RightFromMiddle!Middle;
@@ -414,9 +456,11 @@ private immutable(Function)[] genTernaryFunctions(OperatorFunction func,
     auto middleType = atomicTypeFor!Middle();
     auto rightType = atomicTypeFor!Right();
     auto returnType = atomicTypeFor!Return();
-    auto funcs = [new immutable Function(func, [leftType, middleType, rightType], returnType)];
+    auto func = new immutable Function(op, [leftType, middleType, rightType], returnType);
+    auto impl = genTernaryOperatorImpl!(op, Left, Middle, Right, Return);
+    auto funcs = [immutable IntrinsicFunction(func, impl)];
     static if (Middles.length > 0) {
-        funcs ~= genTernaryFunctions!(func, LeftFromMiddle, RightFromMiddle, ReturnFromMiddle, Middles)();
+        funcs ~= genTernaryFunctions!(op, LeftFromMiddle, RightFromMiddle, ReturnFromMiddle, Middles)();
     }
     return funcs;
 }
@@ -480,32 +524,34 @@ private enum string[string] FUNCTION_TO_DLANG_OPERATOR = [
     "opConditional": "$0 ? $1 : $2"
 ];
 
-public alias FunctionImpl = immutable(Value) function(immutable(Value)[]);
-
 private FunctionImpl genUnaryOperatorImpl(OperatorFunction func, Inner, Return)() {
-    FunctionImpl implementation = (arguments) {
-        assert (arguments.length == 1);
-        enum op = FUNCTION_TO_DLANG_OPERATOR[func].positionalReplace("arguments[0].as!Inner");
-        return valueOf(cast(Return) mixin("(" ~ op ~ ")"));
+    FunctionImpl implementation = (stack) {
+        enum op = FUNCTION_TO_DLANG_OPERATOR[func].positionalReplace("stack.pop!Inner()");
+        mixin("stack.push!Return(cast(Return) (" ~ op ~ "));");
+    };
+    return implementation;
+}
+
+private FunctionImpl genCastImpl(From, To)() {
+    FunctionImpl implementation = (stack) {
+        mixin("stack.push!To(cast(To) stack.pop!From());");
     };
     return implementation;
 }
 
 private FunctionImpl genBinaryOperatorImpl(OperatorFunction func, Left, Right, Return)() {
-    FunctionImpl implementation = (arguments) {
-        assert (arguments.length == 2);
-        enum op = FUNCTION_TO_DLANG_OPERATOR[func].positionalReplace("arguments[0].as!Left", "arguments[1].as!Right");
-        return valueOf(cast(Return) mixin("(" ~ op ~ ")"));
+    FunctionImpl implementation = (stack) {
+        enum op = FUNCTION_TO_DLANG_OPERATOR[func].positionalReplace("stack.pop!Left()", "stack.pop!Right()");
+        mixin("stack.push!Return(cast(Return) (" ~ op ~ "));");
     };
     return implementation;
 }
 
 private FunctionImpl genTernaryOperatorImpl(OperatorFunction func, Left, Middle, Right, Return)() {
-    FunctionImpl implementation = (arguments) {
-        assert (arguments.length == 3);
-        enum op = FUNCTION_TO_DLANG_OPERATOR[func].positionalReplace("arguments[0].as!Left", "arguments[1].as!Middle",
-                "arguments[2].as!Right");
-        return valueOf(cast(Return) mixin("(" ~ op ~ ")"));
+    FunctionImpl implementation = (stack) {
+        enum op = FUNCTION_TO_DLANG_OPERATOR[func].positionalReplace("stack.pop!Left()", "stack.pop!Middle()",
+                "stack.pop!Right()");
+                mixin("stack.push!Return(cast(Return) (" ~ op ~ "));");
     };
     return implementation;
 }

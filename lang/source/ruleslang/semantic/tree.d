@@ -614,7 +614,8 @@ private immutable(TypedNode) addCastNode(immutable TypedNode fromNode, immutable
 private immutable(LiteralNode) specializeNode(immutable LiteralNode fromNode, immutable Type toType) {
     auto specialized = fromNode.specializeTo(toType);
     if (specialized is null) {
-        throw new Exception(format("Cannot specialize node %s to type %s", fromNode.toString(), toType.toString()));
+        throw new Exception(format("Specialization of node %s to type %s is not implemented",
+                fromNode.toString(), toType.toString()));
     }
     return specialized;
 }

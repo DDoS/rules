@@ -8,6 +8,7 @@ import ruleslang.util;
 
 public immutable interface Symbol {
     @property public string name();
+    @property public string symbolicName();
 }
 
 public immutable class Field : Symbol {
@@ -20,6 +21,10 @@ public immutable class Field : Symbol {
     }
 
     @property public override string name() {
+        return _name;
+    }
+
+    @property public override string symbolicName() {
         return _name;
     }
 
@@ -38,17 +43,23 @@ public immutable class Field : Symbol {
 
 public immutable class Function : Symbol {
     private string _name;
+    private string _symbolicName;
     private Type[] _parameterTypes;
     private Type _returnType;
 
     public this(string name, immutable(Type)[] parameterTypes, immutable Type returnType) {
         _name = name;
+        _symbolicName = genSymbolicName(name, parameterTypes, returnType);
         _returnType = returnType;
         _parameterTypes = parameterTypes;
     }
 
     @property public override string name() {
         return _name;
+    }
+
+    @property public override string symbolicName() {
+        return _symbolicName;
     }
 
     @property public immutable(Type[]) parameterTypes() {
@@ -101,6 +112,25 @@ public immutable class Function : Symbol {
     public bool opEquals(immutable Function other) {
         return isExactly(other.name, other.parameterTypes);
     }
+}
+
+private string genSymbolicName(string name, immutable(Type)[] parameterTypes, immutable(Type) returnType) {
+    char[] buffer = [];
+    buffer.reserve(256);
+    // First part if the function name
+    buffer ~= name;
+    // Next are the argument type names
+    buffer ~= '(';
+    foreach (i, paramType; parameterTypes) {
+        buffer ~= paramType.toString();
+        if (i < parameterTypes.length - 1) {
+            buffer ~= ',';
+        }
+    }
+    buffer ~= ')';
+    // Finally we append the return type
+    buffer ~= returnType.toString();
+    return buffer.idup;
 }
 
 public immutable string[string] UNARY_OPERATOR_TO_FUNCTION;

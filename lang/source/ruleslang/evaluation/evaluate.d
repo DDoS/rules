@@ -9,13 +9,15 @@ public immutable class Evaluator {
     private this() {
     }
 
-    public void evaluateBooleanLiteral(Runtime runtime, immutable BooleanLiteralNode booleadLiteral) {
+    public void evaluateBooleanLiteral(Runtime runtime, immutable BooleanLiteralNode booleanLiteral) {
+        runtime.stack.push!bool(booleanLiteral.getType().value);
     }
 
     public void evaluateStringLiteral(Runtime runtime, immutable StringLiteralNode stringLiteral) {
     }
 
     public void evaluateSignedIntegerLiteral(Runtime runtime, immutable SignedIntegerLiteralNode signedIntegerLiteral) {
+        //runtime.stack.push!bool(booleanLiteral.getType().value);
     }
 
     public void evaluateUnsignedIntegerLiteral(Runtime runtime, immutable UnsignedIntegerLiteralNode unsignedIntegerLiteral) {
