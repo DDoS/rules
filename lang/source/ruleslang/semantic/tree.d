@@ -141,7 +141,7 @@ public immutable class SignedIntegerLiteralNode : LiteralNode {
                 return new immutable SignedIntegerLiteralNode(type, atomicSpecial);
             }
             if (atomicSpecial.isFloat()) {
-                return new immutable FloatLiteralNode(type.value()).specializeTo(specialType);
+                return new immutable FloatLiteralNode(type.value).specializeTo(specialType);
             }
         }
         return null;
@@ -189,7 +189,7 @@ public immutable class UnsignedIntegerLiteralNode : LiteralNode {
                 return new immutable UnsignedIntegerLiteralNode(type, atomicSpecial);
             }
             if (atomicSpecial.isFloat()) {
-                return new immutable FloatLiteralNode(type.value()).specializeTo(specialType);
+                return new immutable FloatLiteralNode(type.value).specializeTo(specialType);
             }
         }
         return null;
@@ -343,7 +343,7 @@ public immutable class StructLiteralNode : LiteralNode {
 public immutable struct ArrayLabel {
     public static immutable ArrayLabel OTHER = immutable ArrayLabel(0, true);
     private ulong _index;
-    private bool _other;
+    public bool other;
 
     public this(ulong index) {
         this(index, false);
@@ -351,20 +351,16 @@ public immutable struct ArrayLabel {
 
     private this(ulong index, bool other) {
         _index = index;
-        _other = other;
+        this.other = other;
     }
 
     @property public ulong index() {
-        assert (!_other);
+        assert (!other);
         return _index;
     }
 
-    @property public bool other() {
-        return _other;
-    }
-
     public string toString() {
-        return _other ? "other" : _index.to!string;
+        return other ? "other" : _index.to!string;
     }
 }
 
@@ -381,7 +377,7 @@ public immutable class ArrayLiteralNode : LiteralNode {
         // The array size if the max index label plus one
         ulong maxIndex = 0;
         foreach (label; labels) {
-            if (!label.other() && label.index > maxIndex) {
+            if (!label.other && label.index > maxIndex) {
                 maxIndex = label.index;
             }
         }
@@ -429,7 +425,7 @@ public immutable class FieldAccessNode : TypedNode {
     }
 
     public override immutable(Type) getType() {
-        return field.type();
+        return field.type;
     }
 
     public override void evaluate(Runtime runtime) {
@@ -492,7 +488,7 @@ public immutable class IndexAccessNode : TypedNode {
         // If the value is an array, just use the component type
         auto arrayType = cast(immutable ArrayType) compositeType;
         if (arrayType !is null) {
-            type = arrayType.componentType();
+            type = arrayType.componentType;
             // If it is a sized array an we know the index then we can also do bounds checking
             auto sizedArrayType = cast(immutable SizedArrayType) arrayType;
             if (indexKnown && sizedArrayType !is null && index >= sizedArrayType.size) {
@@ -563,7 +559,7 @@ public immutable class FunctionCallNode : TypedNode {
     }
 
     public override immutable(Type) getType() {
-        return func.returnType();
+        return func.returnType;
     }
 
     public override void evaluate(Runtime runtime) {
