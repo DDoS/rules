@@ -21,6 +21,10 @@ public class Runtime {
         return _stack;
     }
 
+    public void call(immutable Function func) {
+        call(func.symbolicName);
+    }
+
     public void call(string symbolicName) {
         auto func = symbolicName in IntrinsicNameSpace.FUNCTION_IMPLEMENTATIONS;
         if (func is null) {

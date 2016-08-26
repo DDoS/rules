@@ -540,8 +540,8 @@ public immutable class IndexAccessNode : TypedNode {
 }
 
 public immutable class FunctionCallNode : TypedNode {
-    private Function func;
-    private TypedNode[] arguments;
+    public Function func;
+    public TypedNode[] arguments;
 
     public this(immutable Function func, immutable(TypedNode)[] arguments) {
         assert (func.parameterCount == arguments.length);

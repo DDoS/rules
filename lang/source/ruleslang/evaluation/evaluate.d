@@ -58,6 +58,12 @@ public immutable class Evaluator {
     }
 
     public void evaluateFunctionCall(Runtime runtime, immutable FunctionCallNode functionCall) {
+        // Evaluate the arguments in reverse order to place them on the stack
+        foreach_reverse (arg; functionCall.arguments) {
+            arg.evaluate(runtime);
+        }
+        // Then call the function, which will pop the arguments from the stack
+        runtime.call(functionCall.func);
     }
 }
 
