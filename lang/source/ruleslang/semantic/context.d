@@ -20,7 +20,7 @@ public class Context {
         foreignNames = new ForeignNameSpace();
         importedNames = new ImportedNameSpace();
         scopeNames = new ScopeNameSpace();
-        intrisicNames = cast(IntrinsicNameSpace) IntrinsicNameSpace.INSTANCE;
+        intrisicNames = new IntrinsicNameSpace();
         priority = [
             cast(NameSpace) intrisicNames, cast(NameSpace) scopeNames, cast(NameSpace) importedNames
         ];
@@ -223,7 +223,6 @@ public immutable struct IntrinsicFunction {
 }
 
 public class IntrinsicNameSpace : NameSpace {
-    public static const IntrinsicNameSpace INSTANCE = new IntrinsicNameSpace();
     private alias IntrinsicFunctions = immutable IntrinsicFunction[];
     private static immutable IntrinsicFunctions[string] unaryOperators;
     private static immutable IntrinsicFunctions[string] binaryOperators;
@@ -309,17 +308,16 @@ public class IntrinsicNameSpace : NameSpace {
             addNoReplace(functionImpls, intrinsic);
         }
         FUNCTION_IMPLEMENTATIONS = functionImpls.assumeUnique();
-        import std.stdio;
     }
 
     private this() {
     }
-    // TODO: convert all this to static
+
     public override immutable(Field) getField(string name) const {
         return null;
     }
 
-    public override immutable(ApplicableFunction)[] getFunctions(string name, immutable(Type)[] argumentTypes) const {
+    public override immutable(ApplicableFunction)[] getFunctions(string name, immutable(Type)[] argumentTypes) {
         if (argumentTypes.length <= 0 || argumentTypes.length > 3) {
             return [];
         }
@@ -336,7 +334,7 @@ public class IntrinsicNameSpace : NameSpace {
         return functions;
     }
 
-    public immutable(Function) getExactFunction(string name, immutable(Type)[] parameterTypes) const {
+    public static immutable(Function) getExactFunction(string name, immutable(Type)[] parameterTypes) {
         IntrinsicFunctions searchFunctions = getFunctions(name, parameterTypes.length);
         foreach (intrinsic; searchFunctions) {
             auto func = intrinsic.func;
@@ -347,7 +345,7 @@ public class IntrinsicNameSpace : NameSpace {
         return null;
     }
 
-    private IntrinsicFunctions getFunctions(string name, size_t argumentCount) const {
+    private static IntrinsicFunctions getFunctions(string name, size_t argumentCount) {
         IntrinsicFunctions* searchFunctions;
         switch (argumentCount) {
             case 1:

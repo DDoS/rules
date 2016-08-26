@@ -593,7 +593,7 @@ private immutable(TypedNode) addCastNode(immutable TypedNode fromNode, immutable
             return specializeNode(fromLiteralNode, toType);
         }
         // Add a call to the appropriate cast function
-        auto castFunc = IntrinsicNameSpace.INSTANCE.getExactFunction(toType.toString(), [fromNode.getType()]);
+        auto castFunc = IntrinsicNameSpace.getExactFunction(toType.toString(), [fromNode.getType()]);
         assert (castFunc !is null);
         return new immutable FunctionCallNode(castFunc, [fromNode]);
     }
