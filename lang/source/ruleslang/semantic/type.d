@@ -444,7 +444,7 @@ public immutable class BooleanLiteralType : AtomicLiteralType {
         }
         // Can only cast to the atomic type bool
         auto atomic = type.exactCastImmutable!AtomicType();
-        if (atomic !is null && atomic.opEquals(AtomicType.BOOL)) {
+        if (atomic is AtomicType.BOOL) {
             conversions.thenIdentity();
             return true;
         }
@@ -461,7 +461,7 @@ public immutable class BooleanLiteralType : AtomicLiteralType {
             return this;
         }
         // The only two boolean types are the atomic and literal. Their LUB is BOOL
-        if (other.opEquals(AtomicType.BOOL) || other.exactCastImmutable!BooleanLiteralType() !is null) {
+        if (other is AtomicType.BOOL || other.exactCastImmutable!BooleanLiteralType() !is null) {
             return AtomicType.BOOL;
         }
         return null;

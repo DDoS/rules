@@ -71,7 +71,7 @@ public immutable class BooleanLiteralNode : LiteralNode {
     }
 
     public override immutable(LiteralNode) specializeTo(immutable Type specialType) {
-        if (specialType == AtomicType.BOOL) {
+        if (specialType is AtomicType.BOOL) {
             return this;
         }
         return null;

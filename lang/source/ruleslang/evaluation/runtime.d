@@ -71,27 +71,27 @@ public class Stack {
     }
 
     public void push(T)(immutable AtomicType type, T data) if (is(T : long) || is(T : double)) {
-        if (type == AtomicType.BOOL) {
+        if (type is AtomicType.BOOL) {
             push!bool(cast(bool) data);
-        } else if (type == AtomicType.SINT8) {
+        } else if (type is AtomicType.SINT8) {
             push!byte(cast(byte) data);
-        } else if (type == AtomicType.UINT8) {
+        } else if (type is AtomicType.UINT8) {
             push!ubyte(cast(ubyte) data);
-        } else if (type == AtomicType.SINT16) {
+        } else if (type is AtomicType.SINT16) {
             push!short(cast(short) data);
-        } else if (type == AtomicType.UINT16) {
+        } else if (type is AtomicType.UINT16) {
             push!ushort(cast(ushort) data);
-        } else if (type == AtomicType.SINT32) {
+        } else if (type is AtomicType.SINT32) {
             push!int(cast(int) data);
-        } else if (type == AtomicType.UINT32) {
+        } else if (type is AtomicType.UINT32) {
             push!uint(cast(uint) data);
-        } else if (type == AtomicType.SINT64) {
+        } else if (type is AtomicType.SINT64) {
             push!long(cast(long) data);
-        } else if (type == AtomicType.UINT64) {
+        } else if (type is AtomicType.UINT64) {
             push!ulong(cast(ulong) data);
-        } else if (type == AtomicType.FP32) {
+        } else if (type is AtomicType.FP32) {
             push!float(cast(float) data);
-        } else if (type == AtomicType.FP64) {
+        } else if (type is AtomicType.FP64) {
             push!double(cast(double) data);
         } else {
             assert (0);
@@ -109,37 +109,37 @@ public class Stack {
     }
 
     public Variant pop(immutable AtomicType type) {
-        if (type == AtomicType.BOOL) {
+        if (type is AtomicType.BOOL) {
             return Variant(pop!bool);
         }
-        if (type == AtomicType.SINT8) {
+        if (type is AtomicType.SINT8) {
             return Variant(pop!byte);
         }
-        if (type == AtomicType.UINT8) {
+        if (type is AtomicType.UINT8) {
             return Variant(pop!ubyte);
         }
-        if (type == AtomicType.SINT16) {
+        if (type is AtomicType.SINT16) {
             return Variant(pop!short);
         }
-        if (type == AtomicType.UINT16) {
+        if (type is AtomicType.UINT16) {
             return Variant(pop!ushort);
         }
-        if (type == AtomicType.SINT32) {
+        if (type is AtomicType.SINT32) {
             return Variant(pop!int);
         }
-        if (type == AtomicType.UINT32) {
+        if (type is AtomicType.UINT32) {
             return Variant(pop!uint);
         }
-        if (type == AtomicType.SINT64) {
+        if (type is AtomicType.SINT64) {
             return Variant(pop!long);
         }
-        if (type == AtomicType.UINT64) {
+        if (type is AtomicType.UINT64) {
             return Variant(pop!ulong);
         }
-        if (type == AtomicType.FP32) {
+        if (type is AtomicType.FP32) {
             return Variant(pop!float);
         }
-        if (type == AtomicType.FP64) {
+        if (type is AtomicType.FP64) {
             return Variant(pop!double);
         }
         assert (0);
