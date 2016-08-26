@@ -4,6 +4,7 @@ import std.format : format;
 import std.variant : Variant;
 
 import ruleslang.semantic.type;
+import ruleslang.semantic.symbol;
 import ruleslang.semantic.context;
 
 public alias FunctionImpl = void function(Stack);

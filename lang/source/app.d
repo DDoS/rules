@@ -56,9 +56,13 @@ private void printInfo(Expression expression, Context context, Runtime runtime) 
     if (typedNode !is null) {
         auto type = typedNode.getType();
         stdout.writeln("RHS type: ", type.toString());
-        typedNode.evaluate(runtime);
-        if (!runtime.stack.isEmpty()) {
-            stdout.writeln("RHS value: ", runtime.stack.getTop(type));
+        try {
+            typedNode.evaluate(runtime);
+            if (!runtime.stack.isEmpty()) {
+                stdout.writeln("RHS value: ", runtime.stack.getTop(type));
+            }
+        } catch (NotImplementedException ignored) {
+            stdout.writeln("RHS value not implemented: ", ignored.msg);
         }
     }
 }

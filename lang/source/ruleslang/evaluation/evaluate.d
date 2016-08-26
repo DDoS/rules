@@ -14,6 +14,7 @@ public immutable class Evaluator {
     }
 
     public void evaluateStringLiteral(Runtime runtime, immutable StringLiteralNode stringLiteral) {
+        throw new NotImplementedException();
     }
 
     public void evaluateSignedIntegerLiteral(Runtime runtime, immutable SignedIntegerLiteralNode signedIntegerLiteral) {
@@ -29,26 +30,39 @@ public immutable class Evaluator {
     }
 
     public void evaluateEmptyLiteral(Runtime runtime, immutable EmptyLiteralNode emptyLiteral) {
+        throw new NotImplementedException();
     }
 
     public void evaluateTupleLiteral(Runtime runtime, immutable TupleLiteralNode tupleLiteral) {
+        throw new NotImplementedException();
     }
 
     public void evaluateStructLiteral(Runtime runtime, immutable StructLiteralNode structLiteral) {
+        throw new NotImplementedException();
     }
 
     public void evaluateArrayLiteral(Runtime runtime, immutable ArrayLiteralNode arrayLiteral) {
+        throw new NotImplementedException();
     }
 
     public void evaluateFieldAccess(Runtime runtime, immutable FieldAccessNode fieldAccess) {
+        throw new NotImplementedException();
     }
 
     public void evaluateMemberAccess(Runtime runtime, immutable MemberAccessNode memberAccess) {
+        throw new NotImplementedException();
     }
 
     public void evaluateIndexAccess(Runtime runtime, immutable IndexAccessNode indexAccess) {
+        throw new NotImplementedException();
     }
 
     public void evaluateFunctionCall(Runtime runtime, immutable FunctionCallNode functionCall) {
+    }
+}
+
+public class NotImplementedException : Exception {
+    public this(string func = __FUNCTION__) {
+        super(func);
     }
 }
