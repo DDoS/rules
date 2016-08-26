@@ -222,7 +222,7 @@ unittest {
     );
     assertEqual(
         "{sint_lit(1) a, sint_lit(2) b, sint_lit(3) c}[2]",
-        type("{0: {a: 1, b: 2, c: 3}, 1: {1, 2, 3, 4}}")
+        type("{0: {a: 1, b: 1 + 1, c: 3}, 1: {1, 2, 3, 4}}")
     );
     assertEqual(
         "{}[2]",
