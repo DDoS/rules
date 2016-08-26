@@ -55,8 +55,7 @@ unittest {
         interpret("1 opAdd 2u")
     );
     assertEqual(
-        "FunctionCall(opEquals(FunctionCall(opAdd(SignedIntegerLiteral(sint64 1), SignedIntegerLiteral(sint64 1))),"
-            ~ " SignedIntegerLiteral(sint64 2))) | bool",
+        "FunctionCall(opEquals(SignedIntegerLiteral(sint64 2), SignedIntegerLiteral(sint64 2))) | bool",
         interpret("1 + 1 == 2")
     );
     assertEqual(
@@ -80,7 +79,7 @@ unittest {
         interpret("uint8(1.2)")
     );
     assertEqual(
-        "FunctionCall(fp32(FunctionCall(opNegate(FloatLiteral(fp64 2.6))))) | fp32",
+        "FunctionCall(fp32(FloatLiteral(fp64 -2.6))) | fp32",
         interpret("fp32(-2.6)")
     );
     assertEqual(
@@ -107,8 +106,7 @@ unittest {
     assertInterpretFails("\"1\"[2]");
     assertInterpretFails("\"1\"[0 + 0]");
     assertEqual(
-        "IndexAccess(StringLiteral(\"1\")[FunctionCall(opAdd(UnsignedIntegerLiteral(uint64 0),"
-            ~ " UnsignedIntegerLiteral(uint64 0)))])) | uint32",
+        "IndexAccess(StringLiteral(\"1\")[UnsignedIntegerLiteral(uint64 0)])) | uint_lit(49)",
         interpret("\"1\"[0u + 0u]")
     );
     assertEqual(
@@ -122,7 +120,11 @@ unittest {
         interpret("{0, 1.}[1u]")
     );
     assertInterpretFails("{0, 1.}[2u]");
-    assertInterpretFails("{0, 1.}[0u + 1u]");
+    assertEqual(
+        "IndexAccess(TupleLiteral({SignedIntegerLiteral(sint64 0), FloatLiteral(fp64 1)})[UnsignedIntegerLiteral(uint64 1)]))"
+            ~ " | fp_lit(1)",
+        interpret("{0, 1.}[0u + 1u]")
+    );
     assertEqual(
         "IndexAccess(ArrayLiteral({0: SignedIntegerLiteral(sint64 1), 1: SignedIntegerLiteral(sint64 2)})["
             ~ "UnsignedIntegerLiteral(uint64 0)])) | sint64",
@@ -136,7 +138,7 @@ unittest {
     assertInterpretFails("{0: 1, 1: 2}[2u]");
     assertEqual(
         "IndexAccess(ArrayLiteral({0: SignedIntegerLiteral(sint64 1), 1: SignedIntegerLiteral(sint64 2)})["
-            ~ "FunctionCall(opAdd(UnsignedIntegerLiteral(uint64 0), UnsignedIntegerLiteral(uint64 0)))])) | sint64",
+            ~ "UnsignedIntegerLiteral(uint64 0)])) | sint64",
         interpret("{0: 1, 1: 2}[0u + 0u]")
     );}
 

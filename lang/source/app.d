@@ -17,7 +17,7 @@ import ruleslang.evaluation.evaluate;
 
 void main() {
     auto context = new Context();
-    auto runtime = new Runtime();
+    auto runtime = new IntrinsicRuntime();
     while (true) {
         stdout.write("> ");
         auto source = stdin.readln();
@@ -49,21 +49,22 @@ void main() {
 
 private void printInfo(Expression expression, Context context, Runtime runtime) {
     auto node = expression.interpret(context);
-    if (cast(NullNode) node is null) {
-        stdout.writeln("RHS semantic: ", node.toString());
+    if (cast(NullNode) node !is null) {
+        return;
     }
-    auto typedNode = cast(immutable(TypedNode)) node;
-    if (typedNode !is null) {
-        auto type = typedNode.getType();
-        stdout.writeln("RHS type: ", type.toString());
-        try {
-            typedNode.evaluate(runtime);
-            if (!runtime.stack.isEmpty()) {
-                stdout.writeln("RHS value: ", runtime.stack.getTop(type));
-            }
-        } catch (NotImplementedException ignored) {
-            stdout.writeln("RHS value not implemented: ", ignored.msg);
-        }
+    stdout.writeln("RHS semantic: ", node.toString());
+    auto typedNode = cast(immutable TypedNode) node;
+    if (typedNode is null) {
+        return;
+    }
+    auto reducedNode = typedNode.reduceLiterals();
+    auto type = reducedNode.getType();
+    stdout.writeln("RHS type: ", type.toString());
+    try {
+        reducedNode.evaluate(runtime);
+        stdout.writeln("RHS value: ", runtime.stack.getTop(type));
+    } catch (NotImplementedException ignored) {
+        stdout.writeln("RHS value not implemented: ", ignored.msg);
     }
 }
 

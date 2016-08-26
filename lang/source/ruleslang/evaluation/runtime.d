@@ -9,9 +9,8 @@ import ruleslang.semantic.context;
 
 public alias FunctionImpl = void function(Stack);
 
-public class Runtime {
+public abstract class Runtime {
     private Stack _stack;
-    private FunctionImpl[string] userFunctions;
 
     public this() {
         _stack = new Stack(4 * 1024);
@@ -25,7 +24,11 @@ public class Runtime {
         call(func.symbolicName);
     }
 
-    public void call(string symbolicName) {
+    public abstract void call(string symbolicName);
+}
+
+public class IntrinsicRuntime : Runtime {
+    public override void call(string symbolicName) {
         auto func = symbolicName in IntrinsicNameSpace.FUNCTION_IMPLEMENTATIONS;
         if (func is null) {
             throw new Exception(format("Unknown function %s", symbolicName));

@@ -1,6 +1,7 @@
 module ruleslang.semantic.tree;
 
 import std.conv : to;
+import std.algorithm.searching;
 import std.format : format;
 
 import ruleslang.semantic.type;
@@ -19,6 +20,7 @@ public immutable interface Node {
 public immutable interface TypedNode : Node {
     public immutable(TypedNode)[] getChildren();
     public immutable(Type) getType();
+    public bool isIntrinsicEvaluable();
 }
 
 public immutable interface LiteralNode : TypedNode {
@@ -38,6 +40,10 @@ public immutable class NullNode : TypedNode {
 
     public override immutable(Type) getType() {
         return AtomicType.BOOL;
+    }
+
+    public override bool isIntrinsicEvaluable() {
+        return false;
     }
 
     public override void evaluate(Runtime runtime) {
@@ -71,6 +77,10 @@ public immutable class BooleanLiteralNode : LiteralNode {
         return null;
     }
 
+    public override bool isIntrinsicEvaluable() {
+        return true;
+    }
+
     public override void evaluate(Runtime runtime) {
         Evaluator.INSTANCE.evaluateBooleanLiteral(runtime, this);
     }
@@ -97,6 +107,10 @@ public immutable class StringLiteralNode : LiteralNode {
 
     public override immutable(LiteralNode) specializeTo(immutable Type specialType) {
         return null;
+    }
+
+    public override bool isIntrinsicEvaluable() {
+        return true;
     }
 
     public override void evaluate(Runtime runtime) {
@@ -147,6 +161,10 @@ public immutable class SignedIntegerLiteralNode : LiteralNode {
         return null;
     }
 
+    public override bool isIntrinsicEvaluable() {
+        return true;
+    }
+
     public override void evaluate(Runtime runtime) {
         Evaluator.INSTANCE.evaluateSignedIntegerLiteral(runtime, this);
     }
@@ -195,6 +213,10 @@ public immutable class UnsignedIntegerLiteralNode : LiteralNode {
         return null;
     }
 
+    public override bool isIntrinsicEvaluable() {
+        return true;
+    }
+
     public override void evaluate(Runtime runtime) {
         Evaluator.INSTANCE.evaluateUnsignedIntegerLiteral(runtime, this);
     }
@@ -240,6 +262,10 @@ public immutable class FloatLiteralNode : LiteralNode {
         return null;
     }
 
+    public override bool isIntrinsicEvaluable() {
+        return true;
+    }
+
     public override void evaluate(Runtime runtime) {
         Evaluator.INSTANCE.evaluateFloatLiteral(runtime, this);
     }
@@ -267,6 +293,10 @@ public immutable class EmptyLiteralNode : LiteralNode {
         return null;
     }
 
+    public override bool isIntrinsicEvaluable() {
+        return true;
+    }
+
     public override void evaluate(Runtime runtime) {
         Evaluator.INSTANCE.evaluateEmptyLiteral(runtime, this);
     }
@@ -281,8 +311,8 @@ public immutable class TupleLiteralNode : LiteralNode {
     private TupleLiteralType type;
 
     public this(immutable(TypedNode)[] values) {
-        this.values = values;
-        this.type = new immutable TupleLiteralType(values.getTypes());
+        this.values = values.reduceLiterals();
+        this.type = new immutable TupleLiteralType(this.values.getTypes());
     }
 
     public override immutable(TypedNode)[] getChildren() {
@@ -295,6 +325,10 @@ public immutable class TupleLiteralNode : LiteralNode {
 
     public override immutable(LiteralNode) specializeTo(immutable Type specialType) {
         return null;
+    }
+
+    public override bool isIntrinsicEvaluable() {
+        return values.all!(a => a.isIntrinsicEvaluable());
     }
 
     public override void evaluate(Runtime runtime) {
@@ -314,9 +348,9 @@ public immutable class StructLiteralNode : LiteralNode {
     public this(immutable(TypedNode)[] values, immutable(string)[] labels) {
         assert(values.length > 0);
         assert(values.length == labels.length);
-        this.values = values;
+        this.values = values.reduceLiterals();
         this.labels = labels;
-        type = new immutable StructureLiteralType(values.getTypes(), labels);
+        type = new immutable StructureLiteralType(this.values.getTypes(), labels);
     }
 
     public override immutable(TypedNode)[] getChildren() {
@@ -329,6 +363,10 @@ public immutable class StructLiteralNode : LiteralNode {
 
     public override immutable(LiteralNode) specializeTo(immutable Type specialType) {
         return null;
+    }
+
+    public override bool isIntrinsicEvaluable() {
+        return values.all!(a => a.isIntrinsicEvaluable());
     }
 
     public override void evaluate(Runtime runtime) {
@@ -372,7 +410,7 @@ public immutable class ArrayLiteralNode : LiteralNode {
     public this(immutable(TypedNode)[] values, immutable(ArrayLabel)[] labels) {
         assert(values.length > 0);
         assert(values.length == labels.length);
-        this.values = values;
+        this.values = values.reduceLiterals();
         this.labels = labels;
         // The array size if the max index label plus one
         ulong maxIndex = 0;
@@ -381,7 +419,7 @@ public immutable class ArrayLiteralNode : LiteralNode {
                 maxIndex = label.index;
             }
         }
-        type = new immutable SizedArrayLiteralType(values.getTypes(), maxIndex + 1);
+        type = new immutable SizedArrayLiteralType(this.values.getTypes(), maxIndex + 1);
     }
 
     public override immutable(TypedNode)[] getChildren() {
@@ -394,6 +432,10 @@ public immutable class ArrayLiteralNode : LiteralNode {
 
     public override immutable(LiteralNode) specializeTo(immutable Type specialType) {
         return null;
+    }
+
+    public override bool isIntrinsicEvaluable() {
+        return values.all!(a => a.isIntrinsicEvaluable());
     }
 
     public override void evaluate(Runtime runtime) {
@@ -428,6 +470,10 @@ public immutable class FieldAccessNode : TypedNode {
         return field.type;
     }
 
+    public override bool isIntrinsicEvaluable() {
+        return false;
+    }
+
     public override void evaluate(Runtime runtime) {
         Evaluator.INSTANCE.evaluateFieldAccess(runtime, this);
     }
@@ -443,9 +489,9 @@ public immutable class MemberAccessNode : TypedNode {
     private Type type;
 
     public this(immutable TypedNode value, string name) {
-        this.value = value;
+        this.value = value.reduceLiterals();
         this.name = name;
-        type = value.getType().castOrFail!(immutable StructureType)().getMemberType(name);
+        type = this.value.getType().castOrFail!(immutable StructureType)().getMemberType(name);
         assert (type !is null);
     }
 
@@ -455,6 +501,10 @@ public immutable class MemberAccessNode : TypedNode {
 
     public override immutable(Type) getType() {
         return type;
+    }
+
+    public override bool isIntrinsicEvaluable() {
+        return value.isIntrinsicEvaluable();
     }
 
     public override void evaluate(Runtime runtime) {
@@ -472,15 +522,15 @@ public immutable class IndexAccessNode : TypedNode {
     private Type type;
 
     public this(immutable TypedNode valueNode, immutable TypedNode indexNode) {
-        this.valueNode = valueNode;
-        this.indexNode = addCastNode(indexNode, AtomicType.UINT64);
+        this.valueNode = valueNode.reduceLiterals();
+        this.indexNode = addCastNode(indexNode.reduceLiterals(), AtomicType.UINT64);
         // Get the member type at the index
-        auto compositeType = cast(immutable CompositeType) valueNode.getType();
+        auto compositeType = cast(immutable CompositeType) this.valueNode.getType();
         assert (compositeType !is null);
         // First check if we can know the index, for that it must be an integer literal type
         ulong index;
         bool indexKnown = false;
-        auto integerLiteralIndex = cast(immutable IntegerLiteralType) indexNode.getType();
+        auto integerLiteralIndex = cast(immutable IntegerLiteralType) this.indexNode.getType();
         if (integerLiteralIndex !is null) {
             index = integerLiteralIndex.unsignedValue();
             indexKnown = true;
@@ -530,6 +580,10 @@ public immutable class IndexAccessNode : TypedNode {
         return type;
     }
 
+    public override bool isIntrinsicEvaluable() {
+        return valueNode.isIntrinsicEvaluable() && indexNode.isIntrinsicEvaluable();
+    }
+
     public override void evaluate(Runtime runtime) {
         Evaluator.INSTANCE.evaluateIndexAccess(runtime, this);
     }
@@ -546,10 +600,10 @@ public immutable class FunctionCallNode : TypedNode {
     public this(immutable Function func, immutable(TypedNode)[] arguments) {
         assert (func.parameterCount == arguments.length);
         this.func = func;
-        // Wrap the argument nodes in casts to make the conversions explicits
+        // Perform literal reduction then wrap the argument nodes in casts to make the conversions explicit
         immutable(TypedNode)[] castArguments = [];
         foreach (i, arg; arguments) {
-            castArguments ~= addCastNode(arg, func.parameterTypes[i]);
+            castArguments ~= addCastNode(arg.reduceLiterals(), func.parameterTypes[i]);
         }
         this.arguments = castArguments;
     }
@@ -560,6 +614,10 @@ public immutable class FunctionCallNode : TypedNode {
 
     public override immutable(Type) getType() {
         return func.returnType;
+    }
+
+    public override bool isIntrinsicEvaluable() {
+        return arguments.all!(a => a.isIntrinsicEvaluable());
     }
 
     public override void evaluate(Runtime runtime) {
@@ -614,4 +672,46 @@ private immutable(LiteralNode) specializeNode(immutable LiteralNode fromNode, im
                 fromNode.toString(), toType.toString()));
     }
     return specialized;
+}
+
+public immutable(TypedNode) reduceLiterals(immutable TypedNode node) {
+    // First check if it can be evaluated using the intrinsic runtime
+    if (!node.isIntrinsicEvaluable()) {
+        return node;
+    }
+    // Don't attempt to further reduce an existing literal
+    if (cast(immutable LiteralNode) node !is null) {
+        return node;
+    }
+    // If it can, then do so
+    auto runtime = new IntrinsicRuntime();
+    node.evaluate(runtime);
+    // The result should be on the top of the stack
+    assert (!runtime.stack.isEmpty());
+    // Now we create a new literal node based on the node type
+    auto atomicType = cast(immutable AtomicType) node.getType();
+    if (atomicType !is null) {
+        auto value = runtime.stack.pop(atomicType);
+        if (atomicType.isBoolean()) {
+            return new immutable BooleanLiteralNode(value.get!bool());
+        }
+        if (atomicType.isFloat()) {
+            return new immutable FloatLiteralNode(value.get!double());
+        }
+        if (atomicType.isInteger()) {
+            if (atomicType.isSigned()) {
+                return new immutable SignedIntegerLiteralNode(value.get!long());
+            }
+            return new immutable UnsignedIntegerLiteralNode(value.get!ulong());
+        }
+    }
+    assert (0);
+}
+
+public immutable(TypedNode)[] reduceLiterals(immutable(TypedNode)[] nodes) {
+    immutable(TypedNode)[] reduced = [];
+    foreach (node; nodes) {
+        reduced ~= node.reduceLiterals();
+    }
+    return reduced;
 }
