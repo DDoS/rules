@@ -524,7 +524,7 @@ public immutable class IndexAccessNode : TypedNode {
     public this(immutable TypedNode valueNode, immutable TypedNode indexNode) {
         this.valueNode = valueNode.reduceLiterals();
         this.indexNode = addCastNode(indexNode.reduceLiterals(), AtomicType.UINT64);
-        // Get the member type at the index
+        // Next find the acess type
         auto compositeType = cast(immutable CompositeType) this.valueNode.getType();
         assert (compositeType !is null);
         // First check if we can know the index, for that it must be an integer literal type
@@ -535,41 +535,21 @@ public immutable class IndexAccessNode : TypedNode {
             index = integerLiteralIndex.unsignedValue();
             indexKnown = true;
         }
-        // If the value is an array, just use the component type
+        // If the index is know, get the member type at the index
+        if (indexKnown) {
+            type = compositeType.getMemberType(index);
+            if (type is null) {
+                throw new Exception(format("Index %d is out of range of composite %s", index, compositeType.toString()));
+            }
+            return;
+        }
+        // Otherwise, for an array type, just use the component type
         auto arrayType = cast(immutable ArrayType) compositeType;
         if (arrayType !is null) {
             type = arrayType.componentType;
-            // If it is a sized array an we know the index then we can also do bounds checking
-            auto sizedArrayType = cast(immutable SizedArrayType) arrayType;
-            if (indexKnown && sizedArrayType !is null && index >= sizedArrayType.size) {
-                throw new Exception(format("Index %d is out of range of array %s", index, sizedArrayType.toString()));
-            }
             return;
         }
-        // Otherwise if we have string literal, get the character literal at the index if it is know
-        auto stringLiteralType = cast(immutable StringLiteralType) compositeType;
-        if (stringLiteralType !is null) {
-            if (!indexKnown) {
-                // The index isn't know, use the string array type
-                type = stringLiteralType.getBackingType().componentType;
-                return;
-            }
-            auto str = stringLiteralType.value;
-            if (index >= str.length) {
-                throw new Exception(format("Index %d is out of range of string \"%s\"", index, str));
-            }
-            type = new immutable UnsignedIntegerLiteralType(str[index]);
-            return;
-        }
-        // For any other composite type, query the member type and make sure it exists
-        if (!indexKnown) {
-            throw new Exception(format("Index must be known at compile time for type %s", compositeType.toString()));
-        }
-        auto memberType = compositeType.getMemberType(index);
-        if (memberType is null) {
-            throw new Exception(format("Index %d is out of range of type %s", index, compositeType.toString()));
-        }
-        type = memberType;
+        throw new Exception(format("Index must be known at compile time for type %s", compositeType.toString()));
     }
 
     public override immutable(TypedNode)[] getChildren() {
@@ -685,7 +665,11 @@ public immutable(TypedNode) reduceLiterals(immutable TypedNode node) {
     }
     // If it can, then do so
     auto runtime = new IntrinsicRuntime();
-    node.evaluate(runtime);
+    try {
+        node.evaluate(runtime);
+    } catch (NotImplementedException) {
+        return node;
+    }
     // The result should be on the top of the stack
     assert (!runtime.stack.isEmpty());
     // Now we create a new literal node based on the node type

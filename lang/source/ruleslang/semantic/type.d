@@ -637,98 +637,6 @@ public immutable interface CompositeType : Type {
     public immutable(Type) getMemberType(ulong index);
 }
 
-public immutable class StringLiteralType : LiteralType, CompositeType {
-    public dstring value;
-    private SizedArrayType arrayType;
-    private ulong utf8Length;
-    private ulong utf16Length;
-
-    public this(dstring value) {
-        this.value = value;
-        arrayType = new immutable SizedArrayType(AtomicType.UINT32, value.length);
-        utf8Length = value.codeLength!char;
-        utf16Length = value.codeLength!wchar;
-    }
-
-    public immutable(Type) getArrayType() {
-        return arrayType;
-    }
-
-    public override bool convertibleTo(immutable Type type, TypeConversionChain conversions) {
-        // Allow identity conversion
-        if (opEquals(type)) {
-            conversions.thenIdentity();
-            return true;
-        }
-        // Allow conversion to shorter string literals
-        auto literalType = type.exactCastImmutable!StringLiteralType();
-        if (literalType !is null) {
-            if (typeid(literalType) != typeid(StringLiteralType)) {
-                return false;
-            }
-            auto literalLength = literalType.value.length;
-            if (literalLength < value.length && value[0 .. literalLength] == literalType.value[0 .. literalLength]) {
-                conversions.thenSizedArrayShorten();
-                return true;
-            }
-            return false;
-        }
-        // Allow sized array conversions
-        return arrayType.convertibleTo(type, conversions);
-    }
-
-    public override bool specializableTo(immutable Type type, TypeConversionChain conversions) {
-        if (convertibleTo(type, conversions)) {
-            return true;
-        }
-        // Can convert the string to UTF-16 or UTF-8
-        auto clone = conversions.clone().thenStringLiteralToUtf16();
-        if (new immutable SizedArrayType(AtomicType.UINT16, utf16Length).convertibleTo(type, clone)) {
-            conversions.copy(clone);
-            return true;
-        }
-        clone = conversions.clone().thenStringLiteralToUtf8();
-        if (new immutable SizedArrayType(AtomicType.UINT8, utf8Length).convertibleTo(type, clone)) {
-            conversions.copy(clone);
-            return true;
-        }
-        return false;
-    }
-
-    public override immutable(Type) lowestUpperBound(immutable Type other) {
-        if (opEquals(other)) {
-            return this;
-        }
-        auto ignored = new TypeConversionChain();
-        if (convertibleTo(other, ignored)) {
-            return other;
-        }
-        if (other.convertibleTo(this, ignored)) {
-            return this;
-        }
-        // If the LUB fails, use the array form instead
-        return arrayType.lowestUpperBound(other);
-    }
-
-    public override bool moreMembersThan(ulong count) {
-        return value.length > count;
-    }
-
-    public override immutable(Type) getMemberType(ulong index) {
-        return index >= value.length ? null : new immutable UnsignedIntegerLiteralType(value[index]);
-    }
-
-    public override immutable(SizedArrayType) getBackingType() {
-        return arrayType;
-    }
-
-    public override string toString() {
-        return format("string_lit(\"%s\")", value);
-    }
-
-    mixin literalTypeOpEquals!StringLiteralType;
-}
-
 public immutable class AnyType : CompositeType {
     public static immutable AnyType INSTANCE = new immutable AnyType();
     private this() {
@@ -1003,11 +911,6 @@ public immutable class ArrayType : CompositeType {
             // Defer to the tuple type
             return tupleType.lowestUpperBound(this);
         }
-        // There is also with a string, but we need to convert to the array type first
-        auto stringLiteralType = cast(immutable StringLiteralType) other;
-        if (stringLiteralType !is null) {
-            return lowestUpperBound(stringLiteralType.getArrayType());
-        }
         return null;
     }
 
@@ -1087,10 +990,6 @@ public immutable class SizedArrayType : ArrayType {
 public immutable class AnyTypeLiteral : AnyType, LiteralType {
     public static immutable AnyTypeLiteral INSTANCE = new immutable AnyTypeLiteral();
 
-    public override immutable(AnyType) getBackingType() {
-        return this;
-    }
-
     public override bool specializableTo(immutable Type type, TypeConversionChain conversions) {
         if (super.convertibleTo(type, conversions)) {
             return true;
@@ -1101,6 +1000,10 @@ public immutable class AnyTypeLiteral : AnyType, LiteralType {
             return true;
         }
         return false;
+    }
+
+    public override immutable(AnyType) getBackingType() {
+        return this;
     }
 
     public override bool opEquals(immutable Type type) {
@@ -1114,7 +1017,7 @@ public immutable class TupleLiteralType : TupleType, LiteralType {
     }
 
     public override bool specializableTo(immutable Type type, TypeConversionChain conversions) {
-        if (super.convertibleTo(type, conversions)) {
+        if (convertibleTo(type, conversions)) {
             return true;
         }
         // Can specialize to another composite
@@ -1160,13 +1063,12 @@ public immutable class StructureLiteralType : StructureType, LiteralType {
     }
 
     public override bool specializableTo(immutable Type type, TypeConversionChain conversions) {
-        if (super.convertibleTo(type, conversions)) {
+        if (convertibleTo(type, conversions)) {
             return true;
         }
-        // Try to specialize to a structure type by member names
+        // Only allow specialization to structure types
         auto structureType = cast(immutable StructureType) type;
         if (structureType is null) {
-            // Otherwise try the tuple specialization
             return false;
         }
         // Each member must be specializable to that of the other struct
@@ -1225,7 +1127,7 @@ public immutable class SizedArrayLiteralType : SizedArrayType, LiteralType {
     }
 
     public override bool specializableTo(immutable Type type, TypeConversionChain conversions) {
-        if (super.convertibleTo(type, conversions)) {
+        if (convertibleTo(type, conversions)) {
             return true;
         }
         // Only allow specialization to array types
@@ -1252,6 +1154,10 @@ public immutable class SizedArrayLiteralType : SizedArrayType, LiteralType {
         return true;
     }
 
+    public override immutable(Type) getMemberType(ulong index) {
+        return index >= _memberTypes.length ? null : _memberTypes[index];
+    }
+
     public override immutable(SizedArrayType) getBackingType() {
         return this;
     }
@@ -1261,4 +1167,90 @@ public immutable class SizedArrayLiteralType : SizedArrayType, LiteralType {
         return sizedArrayType !is null && sizedArrayType.componentType.opEquals(componentType);
 
     }
+}
+
+public immutable class StringLiteralType : SizedArrayType, LiteralType {
+    public dstring value;
+    private ulong utf8Length;
+    private ulong utf16Length;
+
+    public this(dstring value) {
+        super(AtomicType.UINT32, value.length);
+        this.value = value;
+        utf8Length = value.codeLength!char;
+        utf16Length = value.codeLength!wchar;
+    }
+
+    public override bool convertibleTo(immutable Type type, TypeConversionChain conversions) {
+        // Allow identity conversion
+        if (opEquals(type)) {
+            conversions.thenIdentity();
+            return true;
+        }
+        // Allow conversion to shorter string literals
+        auto literalType = type.exactCastImmutable!StringLiteralType();
+        if (literalType !is null) {
+            if (typeid(literalType) != typeid(StringLiteralType)) {
+                return false;
+            }
+            auto literalLength = literalType.value.length;
+            if (literalLength < value.length && value[0 .. literalLength] == literalType.value[0 .. literalLength]) {
+                conversions.thenSizedArrayShorten();
+                return true;
+            }
+            return false;
+        }
+        // Allow sized array conversions
+        return super.convertibleTo(type, conversions);
+    }
+
+    public override bool specializableTo(immutable Type type, TypeConversionChain conversions) {
+        if (convertibleTo(type, conversions)) {
+            return true;
+        }
+        // Can convert the string to UTF-16 or UTF-8
+        auto clone = conversions.clone().thenStringLiteralToUtf16();
+        if (new immutable SizedArrayType(AtomicType.UINT16, utf16Length).convertibleTo(type, clone)) {
+            conversions.copy(clone);
+            return true;
+        }
+        clone = conversions.clone().thenStringLiteralToUtf8();
+        if (new immutable SizedArrayType(AtomicType.UINT8, utf8Length).convertibleTo(type, clone)) {
+            conversions.copy(clone);
+            return true;
+        }
+        return false;
+    }
+
+    public override immutable(Type) lowestUpperBound(immutable Type other) {
+        // There is a lowest upper bound with a string
+        auto stringLiteralType = cast(immutable StringLiteralType) other;
+        if (stringLiteralType is null) {
+            // Otherwise try the sized array LUB
+            return super.lowestUpperBound(other);
+        }
+        // Return the shortest matching prefix
+        size_t longest = 0;
+        foreach (i, c; value) {
+            if (i >= stringLiteralType.value.length || c != stringLiteralType.value[i]) {
+                break;
+            }
+            longest += 1;
+        }
+        return new immutable StringLiteralType(value[0 .. longest]);
+    }
+
+    public override immutable(Type) getMemberType(ulong index) {
+        return index >= value.length ? null : new immutable UnsignedIntegerLiteralType(value[index]);
+    }
+
+    public override immutable(SizedArrayType) getBackingType() {
+        return this;
+    }
+
+    public override string toString() {
+        return format("string_lit(\"%s\")", value);
+    }
+
+    mixin literalTypeOpEquals!StringLiteralType;
 }
