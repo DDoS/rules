@@ -2,6 +2,7 @@ module ruleslang.evaluation.runtime;
 
 import std.format : format;
 import std.variant : Variant;
+import core.memory : GC;
 
 import ruleslang.semantic.type;
 import ruleslang.semantic.symbol;
@@ -11,13 +12,19 @@ public alias FunctionImpl = void function(Stack);
 
 public abstract class Runtime {
     private Stack _stack;
+    private Heap _heap;
 
     public this() {
         _stack = new Stack(4 * 1024);
+        _heap = new Heap(8 * 1024);
     }
 
     @property public Stack stack() {
         return _stack;
+    }
+
+    @property public Heap heap() {
+        return _heap;
     }
 
     public void call(immutable Function func) {
@@ -44,7 +51,7 @@ public class Stack {
 
     public this(size_t byteSize) {
         this.byteSize = byteSize;
-        memory = new byte[byteSize].ptr;
+        memory = allocateScanned(byteSize);
         byteIndex = 0;
     }
 
@@ -60,13 +67,18 @@ public class Stack {
         return byteIndex <= 0;
     }
 
-    public void push(T)(T data) if (is(T : long) || is(T : double)) {
+    public void push(T)(T data) if (is(T : long) || is(T : double) || is(T == void*)) {
+        // Get the data type size
         auto dataByteSize = T.sizeof;
+        // Check for a stack overflow
         if (byteIndex + dataByteSize > byteSize) {
             throw new Exception("Stack overflow");
         }
+        // Calculate the address in the stack memory
         T* address = cast(T*) (memory + byteIndex);
+        // Set the data
         *address = data;
+        // Increase the stack position
         byteIndex += dataByteSize;
     }
 
@@ -98,14 +110,22 @@ public class Stack {
         }
     }
 
-    public T pop(T)() if (is(T : long) || is(T : double)) {
+    public T pop(T)() if (is(T : long) || is(T : double) || is(T == void*)) {
+        // Get the data type size
         auto dataByteSize = T.sizeof;
+        // Check for a stack underflow
         if (byteIndex - dataByteSize < 0) {
             throw new Exception("Stack underflow");
         }
+        // Reduce the stack position
         byteIndex -= dataByteSize;
+        // Calculate the address in the stack memory
         T* address = cast(T*) (memory + byteIndex);
-        return *address;
+        // Get the data and clear the memory to help the GC
+        T t = *address;
+        *address = 0;
+        // Return the data
+        return t;
     }
 
     public Variant pop(immutable AtomicType type) {
@@ -185,4 +205,28 @@ public class Stack {
         assert(stack.pop(AtomicType.UINT16) == 12);
         assert(stack.byteIndex == 0);
     }
+}
+
+public class Heap {
+    private void* memory;
+    private size_t byteSize;
+
+    public this(size_t byteSize) {
+        this.byteSize = byteSize;
+        memory = .allocateScanned(byteSize);
+    }
+
+    public void* allocateScanned(size_t byteSize) {
+        return .allocateScanned(byteSize);
+    }
+
+    public void* allocateNotScanned(size_t byteSize) {
+        // Memory cannot be moved and is not scanned
+        return GC.calloc(byteSize, GC.BlkAttr.NO_MOVE | GC.BlkAttr.NO_SCAN);
+    }
+}
+
+private void* allocateScanned(size_t byteSize) {
+    // Memory cannot be moved and is scanned
+    return GC.calloc(byteSize, GC.BlkAttr.NO_MOVE);
 }

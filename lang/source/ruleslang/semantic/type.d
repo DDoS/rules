@@ -184,8 +184,8 @@ public immutable class AtomicType : Type {
     private static immutable immutable(AtomicType)[immutable(AtomicType)] UNSIGNED_TO_SIGNED;
     private static immutable immutable(AtomicType)[immutable(AtomicType)] SIGNED_TO_UNSIGNED;
     private static immutable immutable(AtomicType)[immutable(AtomicType)] INTEGER_TO_FLOAT;
-    private string name;
-    private uint bitCount;
+    public string name;
+    public uint bitCount;
     private bool signed;
     private bool fp;
 

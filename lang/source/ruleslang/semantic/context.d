@@ -144,6 +144,78 @@ public immutable struct ApplicableFunction {
     }
 }
 
+public immutable struct CompositeInfo {
+    public size_t totalSize;
+    public size_t[] memberOffsetByIndex;
+    public size_t[string] memberOffsetByName;
+    public CompositeInfo.Kind kind;
+
+    public enum Kind {
+        TUPLE, STRUCT, ARRAY, SIZED_ARRAY
+    }
+}
+
+public CompositeInfo compositeInfo(immutable TupleType type) {
+    size_t total = 0;
+    auto offsets = new size_t[type.memberTypes.length];
+    foreach (i, memberType; type.memberTypes) {
+        offsets[i] = total;
+        total += memberType.getStorageSize();
+    }
+    CompositeInfo.Kind kind;
+    size_t[string] names;
+    auto structType = cast(immutable StructureType) type;
+    if (structType !is null) {
+        kind = CompositeInfo.Kind.STRUCT;
+        foreach (i, name; structType.memberNames) {
+            names[name] = offsets[i];
+        }
+    } else {
+        kind = CompositeInfo.Kind.TUPLE;
+        names = null;
+    }
+    return immutable CompositeInfo(total, offsets.idup, names.assumeUnique(), kind);
+}
+
+public CompositeInfo compositeInfo(immutable ArrayType type) {
+    auto componentSize = type.componentType.getStorageSize();
+    size_t total;
+    CompositeInfo.Kind kind;
+    auto sizedArray = cast(immutable SizedArrayType) type;
+    if (sizedArray !is null) {
+        total = componentSize * sizedArray.size;
+        kind = CompositeInfo.Kind.SIZED_ARRAY;
+    } else {
+        total = 0;
+        kind = CompositeInfo.Kind.ARRAY;
+    }
+    return immutable CompositeInfo(total, [componentSize], null, kind);
+}
+
+private static size_t getStorageSize(immutable Type type) {
+    // For atomic type use the bit count
+    auto atomic = cast(immutable AtomicType) type;
+    if (atomic !is null) {
+        size_t size = atomic.bitCount;
+        // The smallest storable size is 8 bits (for bool)
+        if (size < 8) {
+            size = 8;
+        }
+        return size;
+    }
+    // For composite types, use the native word size
+    auto composite = cast(immutable CompositeType) type;
+    if (composite !is null) {
+        return size_t.sizeof;
+    }
+    // For literal types, use the backing type
+    auto literal = cast(immutable LiteralType) type;
+    if (literal !is null) {
+        return getStorageSize(literal.getBackingType());
+    }
+    assert (0);
+}
+
 public interface NameSpace {
     public immutable(Field) getField(string name);
     public immutable(ApplicableFunction)[] getFunctions(string name, immutable(Type)[] argumentTypes);

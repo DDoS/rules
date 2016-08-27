@@ -14,7 +14,8 @@ public immutable class Evaluator {
     }
 
     public void evaluateStringLiteral(Runtime runtime, immutable StringLiteralNode stringLiteral) {
-        throw new NotImplementedException();
+        auto address = runtime.heap.allocateNotScanned(12);
+        runtime.stack.push(address);
     }
 
     public void evaluateSignedIntegerLiteral(Runtime runtime, immutable SignedIntegerLiteralNode signedIntegerLiteral) {

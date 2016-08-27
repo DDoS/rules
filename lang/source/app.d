@@ -69,17 +69,17 @@ private void printInfo(Expression expression, Context context, Runtime runtime) 
 }
 
 private string getTop(Stack stack, immutable Type type) {
-    auto literalType = cast(immutable LiteralType) type;
-    if (literalType !is null) {
-        return getTop(stack, literalType.getBackingType());
-    }
     auto atomicType = cast(immutable AtomicType) type;
     if (atomicType !is null) {
         return stack.pop(atomicType).toString();
     }
     auto compositeType = cast(immutable CompositeType) type;
     if (compositeType !is null) {
-        return stack.pop!size_t().to!string;
+        return stack.pop!size_t().to!string();
+    }
+    auto literalType = cast(immutable LiteralType) type;
+    if (literalType !is null) {
+        return getTop(stack, literalType.getBackingType());
     }
     assert (0);
 }
