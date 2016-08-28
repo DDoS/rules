@@ -156,6 +156,11 @@ public immutable interface Type {
 }
 
 public immutable class AtomicType : Type {
+    private immutable struct DataInfo {
+        private uint bitCount;
+        private bool signed;
+        private bool fp;
+    }
     public static immutable AtomicType BOOL = new immutable AtomicType("bool", 1, false, false);
     public static immutable AtomicType SINT8 = new immutable AtomicType("sint8", 8, true, false);
     public static immutable AtomicType UINT8 = new immutable AtomicType("uint8", 8, false, false);
@@ -179,17 +184,19 @@ public immutable class AtomicType : Type {
     public static immutable immutable(AtomicType)[] FLOATING_POINT_TYPES = [
         FP32, FP64
     ];
-    private static immutable immutable(AtomicType)[][immutable(AtomicType)] SUPERTYPES;
-    private static immutable immutable(AtomicType)[][immutable(AtomicType)] CONVERSIONS;
-    private static immutable immutable(AtomicType)[immutable(AtomicType)] UNSIGNED_TO_SIGNED;
-    private static immutable immutable(AtomicType)[immutable(AtomicType)] SIGNED_TO_UNSIGNED;
-    private static immutable immutable(AtomicType)[immutable(AtomicType)] INTEGER_TO_FLOAT;
+    private static immutable immutable(AtomicType)[][immutable(DataInfo)] SUPERTYPES;
+    private static immutable immutable(AtomicType)[][immutable(DataInfo)] CONVERSIONS;
+    private static immutable immutable(AtomicType)[immutable(DataInfo)] UNSIGNED_TO_SIGNED;
+    private static immutable immutable(AtomicType)[immutable(DataInfo)] SIGNED_TO_UNSIGNED;
+    private static immutable immutable(AtomicType)[immutable(DataInfo)] INTEGER_TO_FLOAT;
     public string name;
-    public uint bitCount;
-    private bool signed;
-    private bool fp;
+    private DataInfo info;
 
     public static this() {
+        immutable(DataInfo) getInfo(immutable AtomicType type) {
+            return type.info;
+        }
+
         immutable(AtomicType)[][immutable(AtomicType)] supertypes = [
             BOOL: [],
             SINT8: [SINT16],
@@ -203,51 +210,53 @@ public immutable class AtomicType : Type {
             FP32: [FP64],
             FP64: []
         ];
-        auto supertypesCopy = supertypes.dup;
+        auto supertypesCopy = supertypes.dup.mapKeys!getInfo();
         SUPERTYPES = supertypesCopy.assumeUnique();
 
-        auto conversions = supertypes.transitiveClosure();
+        auto conversions = supertypes.transitiveClosure().mapKeys!getInfo();
         conversions.rehash;
         CONVERSIONS = conversions.assumeUnique();
 
-        immutable(AtomicType)[immutable(AtomicType)] unsignedToSigned = [
-           UINT8: SINT8, UINT16: SINT16, UINT32: SINT32, UINT64: SINT64,
+        immutable(AtomicType)[immutable(DataInfo)] unsignedToSigned = [
+           UINT8.info: SINT8, UINT16.info: SINT16, UINT32.info: SINT32, UINT64.info: SINT64,
         ];
         UNSIGNED_TO_SIGNED = unsignedToSigned.assumeUnique();
 
-        immutable(AtomicType)[immutable(AtomicType)] signedToUnsigned = [
-           SINT8: UINT8, SINT16: UINT16, SINT32: UINT32, SINT64: UINT64,
+        immutable(AtomicType)[immutable(DataInfo)] signedToUnsigned = [
+           SINT8.info: UINT8, SINT16.info: UINT16, SINT32.info: UINT32, SINT64.info: UINT64,
         ];
         SIGNED_TO_UNSIGNED = signedToUnsigned.assumeUnique();
 
-        immutable(AtomicType)[immutable(AtomicType)] integerToFloat = [
-           UINT8: FP32, SINT8: FP32, UINT16: FP32, SINT16: FP32,
-           UINT32: FP32, SINT32: FP32, UINT64: FP32, SINT64: FP32,
+        immutable(AtomicType)[immutable(DataInfo)] integerToFloat = [
+           UINT8.info: FP32, SINT8.info: FP32, UINT16.info: FP32, SINT16.info: FP32,
+           UINT32.info: FP32, SINT32.info: FP32, UINT64.info: FP32, SINT64.info: FP32,
         ];
         INTEGER_TO_FLOAT = integerToFloat.assumeUnique();
     }
 
     private this(string name, uint bitCount, bool signed, bool fp) {
         this.name = name;
-        this.bitCount = bitCount;
-        this.signed = signed;
-        this.fp = fp;
+        info = immutable DataInfo(bitCount, signed, fp);
+    }
+
+    @property public uint bitCount() {
+        return info.bitCount;
     }
 
     public bool isBoolean() {
-        return bitCount == 1;
+        return info.bitCount == 1;
     }
 
     public bool isInteger() {
-        return bitCount > 1 && !fp;
+        return info.bitCount > 1 && !info.fp;
     }
 
     public bool isSigned() {
-        return signed;
+        return info.signed;
     }
 
     public bool isFloat() {
-        return fp;
+        return info.fp;
     }
 
     public bool inRange(T)(T value) if (__traits(isIntegral, T) || __traits(isFloating, T)) {
@@ -255,7 +264,7 @@ public immutable class AtomicType : Type {
             // No non-boolean value is in range of a boolean
             return false;
         }
-        if (fp) {
+        if (info.fp) {
             // Check if the value fits in this float type range
             static if (__traits(isFloating, T)) {
                 // If the value is a float, NaN and infinity are part of the valid range
@@ -263,7 +272,7 @@ public immutable class AtomicType : Type {
                     return true;
                 }
             }
-            final switch (bitCount) {
+            final switch (info.bitCount) {
                 case 32:
                     return value >= -0x1.fffffeP+127f && value <= 0x1.fffffeP+127f;
                 case 64:
@@ -275,25 +284,25 @@ public immutable class AtomicType : Type {
             return false;
         } else static if (__traits(isUnsigned, T)) {
             // The value is an unsigned int
-            if (!signed) {
+            if (!info.signed) {
                 // The type is an unsigned int
                 return checkUnsignedRange(value);
             }
             // The type is signed, only need to check the upper limit
-            return value <= cast(ulong) (-1L >>> (65 - bitCount));
+            return value <= cast(ulong) (-1L >>> (65 - info.bitCount));
         } else {
             //  The value is a signed int
-            if (!signed) {
+            if (!info.signed) {
                 // The type is an unsigned int
                 return checkUnsignedRange(value);
             }
             // The type is a signed int
-            return value >= cast(long) (-1L << (bitCount - 1)) && value <= cast(long) (-1L >>> (65 - bitCount));
+            return value >= cast(long) (-1L << (info.bitCount - 1)) && value <= cast(long) (-1L >>> (65 - info.bitCount));
         }
     }
 
     private bool checkUnsignedRange(T)(T value) {
-        return value >= 0 && cast(ulong) value <= (cast(ulong) -1 >>> (64 - bitCount));
+        return value >= 0 && cast(ulong) value <= (cast(ulong) -1 >>> (64 - info.bitCount));
     }
 
     public override bool convertibleTo(immutable Type type, TypeConversionChain conversions) {
@@ -302,11 +311,11 @@ public immutable class AtomicType : Type {
             return false;
         }
         // Check if the conversion is valid
-        if (!CONVERSIONS[this].canFind(atomic)) {
+        if (!CONVERSIONS[info].canFind!((a, b) => a.info == b.info)(atomic)) {
             return false;
         }
         // Find the conversion type
-        if (this is atomic) {
+        if (info == atomic.info) {
             conversions.thenIdentity();
         } else if (isInteger()) {
             if (atomic.isInteger()) {
@@ -328,23 +337,13 @@ public immutable class AtomicType : Type {
         return true;
     }
 
-    public override immutable(Type) lowestUpperBound(immutable Type other) {
-        // A LUB exists with another atomic type
-        auto atomicOther = other.exactCastImmutable!AtomicType();
-        if (atomicOther !is null) {
-            return lowestUpperBound!AtomicType(atomicOther);
+    public override immutable(Type) lowestUpperBound(immutable Type type) {
+        // A LUB only exists with another atomic type
+        auto other = cast(immutable AtomicType) type;
+        if (other is null) {
+            return null;
         }
-        // A LUB exists with an atomic literal type
-        auto literalOther = cast(immutable AtomicLiteralType) other;
-        if (literalOther !is null) {
-            return lowestUpperBound!AtomicLiteralType(literalOther);
-        }
-        // There are no LUB for any other type
-        return null;
-    }
-
-    private immutable(Type) lowestUpperBound(T)(immutable T other) {
-        // If any type is a supe type of the other, it is the LUB
+        // If any type is a super type of the other, it is the LUB
         auto ignored = new TypeConversionChain();
         auto thisToOther = convertibleTo(other, ignored);
         auto otherToThis = other.convertibleTo(this, ignored);
@@ -361,14 +360,7 @@ public immutable class AtomicType : Type {
         }
         // Otherwise we get the super types of each
         auto thisParents = this.getSupertypes();
-        static if (is(T : AtomicType)) {
-            auto otherParents = other.getSupertypes();
-        } else static if (is(T : AtomicLiteralType)) {
-            // For a literal type, that is the equivalent atomic type
-            auto otherParents = [other.getBackingType()];
-        } else {
-            static assert (0);
-        }
+        auto otherParents = other.getSupertypes();
         // Then we recurse on each combinatio of super types, and keep the smallest result
         immutable(Type)* candidate = null;
         foreach (thisParent; thisParents) {
@@ -387,25 +379,23 @@ public immutable class AtomicType : Type {
     }
 
     public immutable(AtomicType)[] getSupertypes() {
-        return SUPERTYPES[this];
+        return SUPERTYPES[info];
     }
 
     public immutable(AtomicType) asSigned() {
         if (isSigned()) {
             return this;
         }
-        return UNSIGNED_TO_SIGNED[this];
-    }
-
-    public bool hasSmallerRange(immutable AtomicType other) {
-        if (this.bitCount == other.bitCount) {
-            return !this.isSigned() && other.isSigned();
-        }
-        return this.bitCount < other.bitCount;
+        return UNSIGNED_TO_SIGNED[info];
     }
 
     public override string toString() {
         return name;
+    }
+
+    public bool isEquivalent(immutable Type type) {
+        auto atomicType = cast(immutable AtomicType) type;
+        return atomicType !is null && info == atomicType.info;
     }
 
     public override bool opEquals(immutable Type type) {
@@ -423,32 +413,24 @@ private mixin template literalTypeOpEquals(L) {
 
 public immutable interface LiteralType : Type {
     public bool specializableTo(immutable Type type, TypeConversionChain conversions);
-    public immutable(Type) getBackingType();
 }
 
-public immutable interface AtomicLiteralType : LiteralType {
-    public immutable(AtomicType) getBackingType();
-}
-
-public immutable class BooleanLiteralType : AtomicLiteralType {
+public immutable class BooleanLiteralType : AtomicType, LiteralType {
     public bool value;
 
     public this(bool value) {
+        super("bool_lit", 1, false, false);
         this.value = value;
     }
 
     public override bool convertibleTo(immutable Type type, TypeConversionChain conversions) {
+        // Allow identity conversions
         if (opEquals(type)) {
             conversions.thenIdentity();
             return true;
         }
-        // Can only cast to the atomic type bool
-        auto atomic = type.exactCastImmutable!AtomicType();
-        if (atomic is AtomicType.BOOL) {
-            conversions.thenIdentity();
-            return true;
-        }
-        return false;
+        // Otherwise try the super type conversions
+        return AtomicType.BOOL.convertibleTo(type, conversions);
     }
 
     public override bool specializableTo(immutable Type type, TypeConversionChain conversions) {
@@ -457,17 +439,16 @@ public immutable class BooleanLiteralType : AtomicLiteralType {
     }
 
     public override immutable(Type) lowestUpperBound(immutable Type other) {
-        if (opEquals(other)) {
+        // There is a lowest upper bound with another boolean literal type
+        auto booleanLiteral = cast (immutable BooleanLiteralType) other;
+        if (booleanLiteral is null) {
+            // Otherwise try the Atomic LUB
+            return super.lowestUpperBound(other);
+        }
+        // If the values are equal, return this, else return bool
+        if (value == booleanLiteral.value) {
             return this;
         }
-        // The only two boolean types are the atomic and literal. Their LUB is BOOL
-        if (other is AtomicType.BOOL || other.exactCastImmutable!BooleanLiteralType() !is null) {
-            return AtomicType.BOOL;
-        }
-        return null;
-    }
-
-    public override immutable(AtomicType) getBackingType() {
         return AtomicType.BOOL;
     }
 
@@ -478,7 +459,7 @@ public immutable class BooleanLiteralType : AtomicLiteralType {
     mixin literalTypeOpEquals!BooleanLiteralType;
 }
 
-public immutable interface IntegerLiteralType : AtomicLiteralType {
+public immutable interface IntegerLiteralType : LiteralType {
     public ulong unsignedValue();
     public long signedValue();
     public immutable(FloatLiteralType) toFloatLiteral();
@@ -488,10 +469,15 @@ public alias SignedIntegerLiteralType = IntegerLiteralTypeTemplate!long;
 public alias UnsignedIntegerLiteralType = IntegerLiteralTypeTemplate!ulong;
 
 private template IntegerLiteralTypeTemplate(T) {
-    public immutable class IntegerLiteralTypeTemplate : IntegerLiteralType {
+    public immutable class IntegerLiteralTypeTemplate : AtomicType, IntegerLiteralType {
         public T value;
 
         public this(T value) {
+            static if (__traits(isUnsigned, T)) {
+                super("uint_lit", 64, false, false);
+            } else {
+                super("sint_lit", 64, true, false);
+            }
             this.value = value;
         }
 
@@ -500,9 +486,15 @@ private template IntegerLiteralTypeTemplate(T) {
                 conversions.thenIdentity();
                 return true;
             }
-            // Can cast the atomic type
-            if (getBackingType().convertibleTo(type, conversions)) {
-                return true;
+            // Can cast to the atomic type
+            static if (__traits(isUnsigned, T)) {
+                if (AtomicType.UINT64.convertibleTo(type, conversions)) {
+                    return true;
+                }
+            } else {
+                if (AtomicType.SINT64.convertibleTo(type, conversions)) {
+                    return true;
+                }
             }
             // Can cast to a float literal type if converting the value to floating point gives the same value
             auto floatLiteral = type.exactCastImmutable!FloatLiteralType();
@@ -533,24 +525,48 @@ private template IntegerLiteralTypeTemplate(T) {
         }
 
         public override immutable(Type) lowestUpperBound(immutable Type other) {
-            if (opEquals(other)) {
-                return this;
+            // There is a lowest upper bound with a signed integer literal type
+            auto signedIntegerLiteral = cast(immutable SignedIntegerLiteralType) other;
+            if (signedIntegerLiteral !is null) {
+                static if (__traits(isUnsigned, T)) {
+                    // Signed and unsigned gives fp64
+                    return AtomicType.FP64;
+                } else {
+                    // If the values are equal, return this, else return sint64
+                    if (value == signedIntegerLiteral.value) {
+                        return this;
+                    }
+                    return AtomicType.SINT64;
+                }
             }
-            auto ignored = new TypeConversionChain();
-            if (convertibleTo(other, ignored)) {
-                return other;
+            // There is a lowest upper bound with an unsigned integer literal type
+            auto unsignedIntegerLiteral = cast(immutable UnsignedIntegerLiteralType) other;
+            if (unsignedIntegerLiteral !is null) {
+                static if (__traits(isUnsigned, T)) {
+                    // If the values are equal, return this, else return uint64
+                    if (value == unsignedIntegerLiteral.value) {
+                        return this;
+                    }
+                    return AtomicType.UINT64;
+                } else {
+                    // Signed and unsigned gives fp64
+                    return AtomicType.FP64;
+                }
             }
-            if (other.convertibleTo(this, ignored)) {
-                return this;
+            // There is a lowest upper bound with a float literal type
+            auto floatLiteral = cast(immutable FloatLiteralType) other;
+            if (floatLiteral !is null) {
+                // If the values are equal, return the float literal, else return fp64
+                if (value == floatLiteral.value) {
+                    return floatLiteral;
+                }
+                return AtomicType.FP64;
             }
-            return getBackingType().lowestUpperBound(other);
-        }
-
-        public override immutable(AtomicType) getBackingType() {
+            // Otherwise try the Atomic LUB
             static if (__traits(isUnsigned, T)) {
-                return AtomicType.UINT64;
+                return AtomicType.UINT64.lowestUpperBound(other);
             } else {
-                return AtomicType.SINT64;
+                return AtomicType.SINT64.lowestUpperBound(other);
             }
         }
 
@@ -578,10 +594,11 @@ private template IntegerLiteralTypeTemplate(T) {
     }
 }
 
-public immutable class FloatLiteralType : AtomicLiteralType {
+public immutable class FloatLiteralType : AtomicType, LiteralType {
     public double value;
 
     public this(double value) {
+        super("fp_lit", 64, true, true);
         this.value = value;
     }
 
@@ -590,8 +607,8 @@ public immutable class FloatLiteralType : AtomicLiteralType {
             conversions.thenIdentity();
             return true;
         }
-        // Can cast the atomic type
-        return getBackingType().convertibleTo(type, conversions);
+        // Can cast to the atomic type
+        return AtomicType.FP64.convertibleTo(type, conversions);
     }
 
     public override bool specializableTo(immutable Type type, TypeConversionChain conversions) {
@@ -608,21 +625,35 @@ public immutable class FloatLiteralType : AtomicLiteralType {
     }
 
     public override immutable(Type) lowestUpperBound(immutable Type other) {
-        if (opEquals(other)) {
-            return this;
+        // There is a lowest upper bound with a signed integer literal type
+        auto signedIntegerLiteral = cast(immutable SignedIntegerLiteralType) other;
+        if (signedIntegerLiteral !is null) {
+            // If the values are equal, return this, else return fp64
+            if (value == signedIntegerLiteral.value) {
+                return this;
+            }
+            return AtomicType.FP64;
         }
-        auto ignored = new TypeConversionChain();
-        if (convertibleTo(other, ignored)) {
-            return other;
+        // There is a lowest upper bound with an unsigned integer literal type
+        auto unsignedIntegerLiteral = cast(immutable UnsignedIntegerLiteralType) other;
+        if (unsignedIntegerLiteral !is null) {
+            // If the values are equal, return this, else return fp64
+            if (value == unsignedIntegerLiteral.value) {
+                return this;
+            }
+            return AtomicType.FP64;
         }
-        if (other.convertibleTo(this, ignored)) {
-            return this;
+        // There is a lowest upper bound with a float literal type
+        auto floatLiteral = cast(immutable FloatLiteralType) other;
+        if (floatLiteral !is null) {
+            // If the values are equal, return this, else return fp64
+            if (value == floatLiteral.value) {
+                return this;
+            }
+            return AtomicType.FP64;
         }
-        return getBackingType().lowestUpperBound(other);
-    }
-
-    public override immutable(AtomicType) getBackingType() {
-        return AtomicType.FP64;
+        // Otherwise try the Atomic LUB
+        return AtomicType.FP64.lowestUpperBound(other);
     }
 
     public override string toString() {
@@ -1002,10 +1033,6 @@ public immutable class AnyTypeLiteral : AnyType, LiteralType {
         return false;
     }
 
-    public override immutable(AnyType) getBackingType() {
-        return this;
-    }
-
     public override bool opEquals(immutable Type type) {
         return type.exactCastImmutable!AnyTypeLiteral() !is null;
     }
@@ -1045,10 +1072,6 @@ public immutable class TupleLiteralType : TupleType, LiteralType {
         }
         conversions.thenReferenceNarrowing();
         return true;
-    }
-
-    public override immutable(TupleType) getBackingType() {
-        return this;
     }
 
     public override bool opEquals(immutable Type type) {
@@ -1092,10 +1115,6 @@ public immutable class StructureLiteralType : StructureType, LiteralType {
         }
         conversions.thenReferenceNarrowing();
         return true;
-    }
-
-    public override immutable(StructureType) getBackingType() {
-        return this;
     }
 
     public override bool opEquals(immutable Type type) {
@@ -1156,10 +1175,6 @@ public immutable class SizedArrayLiteralType : SizedArrayType, LiteralType {
 
     public override immutable(Type) getMemberType(ulong index) {
         return index >= _memberTypes.length ? null : _memberTypes[index];
-    }
-
-    public override immutable(SizedArrayType) getBackingType() {
-        return this;
     }
 
     public override bool opEquals(immutable Type type) {
@@ -1242,10 +1257,6 @@ public immutable class StringLiteralType : SizedArrayType, LiteralType {
 
     public override immutable(Type) getMemberType(ulong index) {
         return index >= value.length ? null : new immutable UnsignedIntegerLiteralType(value[index]);
-    }
-
-    public override immutable(SizedArrayType) getBackingType() {
-        return this;
     }
 
     public override string toString() {

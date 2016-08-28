@@ -77,9 +77,5 @@ private string getTop(Stack stack, immutable Type type) {
     if (compositeType !is null) {
         return stack.pop!size_t().to!string();
     }
-    auto literalType = cast(immutable LiteralType) type;
-    if (literalType !is null) {
-        return getTop(stack, literalType.getBackingType());
-    }
     assert (0);
 }

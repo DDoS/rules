@@ -208,11 +208,6 @@ private static size_t getStorageSize(immutable Type type) {
     if (composite !is null) {
         return size_t.sizeof;
     }
-    // For literal types, use the backing type
-    auto literal = cast(immutable LiteralType) type;
-    if (literal !is null) {
-        return getStorageSize(literal.getBackingType());
-    }
     assert (0);
 }
 

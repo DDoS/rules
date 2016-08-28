@@ -88,6 +88,14 @@ public V[][K] associateArrays(alias makeKey, K = ReturnType!makeKey, V)(V[] arra
     return assoc;
 }
 
+public V[Kb] mapKeys(alias mapKey, Ka, Kb = ReturnType!mapKey, V)(V[Ka] array) {
+    V[Kb] mapped;
+    foreach (k, v; array) {
+        mapped[mapKey(k)] = v;
+    }
+    return mapped;
+}
+
 public auto stringZip(string joiner, string stringer = ".to!string()", RangeA, RangeB)(RangeA a, RangeB b)
         if (isInputRange!RangeA && isInputRange!RangeB) {
     return zip(a, b).map!("a[0]" ~ stringer ~ " ~ \"" ~ joiner ~ "\" ~ a[1]" ~ stringer);
