@@ -1,5 +1,6 @@
 module ruleslang.syntax.source;
 
+import std.conv : to;
 import std.uni : normalize, NFC;
 import std.utf : toUTF32;
 import std.string : stripRight;

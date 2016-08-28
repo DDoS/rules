@@ -1,6 +1,7 @@
 module ruleslang.semantic.symbol;
 
 import std.conv : to;
+import std.exception : assumeUnique;
 
 import ruleslang.semantic.type;
 import ruleslang.util;
