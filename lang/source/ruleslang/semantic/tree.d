@@ -92,9 +92,11 @@ public immutable class BooleanLiteralNode : LiteralNode {
 
 public immutable class StringLiteralNode : LiteralNode {
     private StringLiteralType type;
+    private CompositeInfo info;
 
     public this(dstring value) {
         type = new immutable StringLiteralType(value);
+        info = type.compositeInfo();
     }
 
     public override immutable(TypedNode)[] getChildren() {
@@ -103,6 +105,10 @@ public immutable class StringLiteralNode : LiteralNode {
 
     public override immutable(StringLiteralType) getType() {
         return type;
+    }
+
+    public immutable(CompositeInfo) getCompositeInfo() {
+        return info;
     }
 
     public override immutable(LiteralNode) specializeTo(immutable Type specialType) {

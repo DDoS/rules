@@ -2,6 +2,7 @@ import std.stdio;
 import std.conv : to;
 
 import ruleslang.syntax.source;
+import ruleslang.syntax.dchars;
 import ruleslang.syntax.token;
 import ruleslang.syntax.tokenizer;
 import ruleslang.syntax.ast.statement;
@@ -62,20 +63,24 @@ private void printInfo(Expression expression, Context context, Runtime runtime) 
     stdout.writeln("RHS type: ", type.toString());
     try {
         reducedNode.evaluate(runtime);
-        stdout.writeln("RHS value: ", runtime.stack.getTop(type));
+        stdout.writeln("RHS value: ", runtime.getStackTop(type));
     } catch (NotImplementedException ignored) {
         stdout.writeln("RHS value not implemented: ", ignored.msg);
     }
 }
 
-private string getTop(Stack stack, immutable Type type) {
+private string getStackTop(Runtime runtime, immutable Type type) {
     auto atomicType = cast(immutable AtomicType) type;
     if (atomicType !is null) {
-        return stack.pop(atomicType).toString();
+        return runtime.stack.pop(atomicType).toString();
     }
     auto compositeType = cast(immutable CompositeType) type;
     if (compositeType !is null) {
-        return stack.pop!size_t().to!string();
+        auto data = runtime.stack.pop!(void*);
+        auto infoIndex = *cast(CompositeHeader*) data;
+        auto dataSize = runtime.getCompositeInfo(infoIndex).dataSize;
+        dchar[] stringData = (cast(dchar*) (data + CompositeHeader.sizeof))[0 .. dataSize / dchar.sizeof];
+        return stringData.idup.escapeString().to!string();
     }
     assert (0);
 }

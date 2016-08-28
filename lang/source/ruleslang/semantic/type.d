@@ -1265,3 +1265,83 @@ public immutable class StringLiteralType : SizedArrayType, LiteralType {
 
     mixin literalTypeOpEquals!StringLiteralType;
 }
+
+public immutable struct CompositeInfo {
+    public enum Kind {
+        TUPLE, STRUCT, ARRAY, SIZED_ARRAY
+    }
+
+    public size_t dataSize;
+    public size_t[] memberOffsetByIndex;
+    public size_t[string] memberOffsetByName;
+    public CompositeInfo.Kind kind;
+}
+
+public CompositeInfo compositeInfo(immutable CompositeType type) {
+    auto tuple = cast(immutable TupleType) type;
+    if (tuple !is null) {
+        return tuple.tupleInfo();
+    }
+    auto array = cast(immutable ArrayType) type;
+    if (array !is null) {
+        return array.arrayInfo();
+    }
+    assert (0);
+}
+
+private CompositeInfo tupleInfo(immutable TupleType type) {
+    size_t dataSize = 0;
+    auto offsets = new size_t[type.memberTypes.length];
+    foreach (i, memberType; type.memberTypes) {
+        offsets[i] = dataSize;
+        dataSize += memberType.getStorageSize();
+    }
+    CompositeInfo.Kind kind;
+    size_t[string] names;
+    auto structType = cast(immutable StructureType) type;
+    if (structType !is null) {
+        kind = CompositeInfo.Kind.STRUCT;
+        foreach (i, name; structType.memberNames) {
+            names[name] = offsets[i];
+        }
+    } else {
+        kind = CompositeInfo.Kind.TUPLE;
+        names = null;
+    }
+    return immutable CompositeInfo(dataSize, offsets.idup, names.assumeUnique(), kind);
+}
+
+private CompositeInfo arrayInfo(immutable ArrayType type) {
+    auto componentSize = type.componentType.getStorageSize();
+    size_t dataSize;
+    CompositeInfo.Kind kind;
+    auto sizedArray = cast(immutable SizedArrayType) type;
+    if (sizedArray !is null) {
+        dataSize = componentSize * sizedArray.size;
+        kind = CompositeInfo.Kind.SIZED_ARRAY;
+    } else {
+        // The data size if only that of the length field
+        dataSize = size_t.sizeof;
+        kind = CompositeInfo.Kind.ARRAY;
+    }
+    return immutable CompositeInfo(dataSize, [componentSize], null, kind);
+}
+
+private static size_t getStorageSize(immutable Type type) {
+    // For atomic type use the bit count
+    auto atomic = cast(immutable AtomicType) type;
+    if (atomic !is null) {
+        size_t size = atomic.bitCount;
+        // The smallest storable size is 8 bits (for bool)
+        if (size < 8) {
+            size = 8;
+        }
+        return size / 8;
+    }
+    // For composite types, use the native word size
+    auto composite = cast(immutable CompositeType) type;
+    if (composite !is null) {
+        return size_t.sizeof;
+    }
+    assert (0);
+}

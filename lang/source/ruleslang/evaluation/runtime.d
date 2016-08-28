@@ -8,15 +8,19 @@ import ruleslang.semantic.type;
 import ruleslang.semantic.symbol;
 import ruleslang.semantic.context;
 
+public alias CompositeHeader = uint;
 public alias FunctionImpl = void function(Stack);
 
 public abstract class Runtime {
     private Stack _stack;
     private Heap _heap;
+    private immutable(CompositeInfo)[] composites;
 
     public this() {
         _stack = new Stack(4 * 1024);
         _heap = new Heap(8 * 1024);
+        composites = [];
+        composites.reserve(256);
     }
 
     @property public Stack stack() {
@@ -32,6 +36,23 @@ public abstract class Runtime {
     }
 
     public abstract void call(string symbolicName);
+
+    public CompositeHeader registerCompositeInfo(immutable CompositeInfo info) {
+        // If it already exists in the list, return the index
+        foreach (CompositeHeader i, composite; composites) {
+            if (composite == info) {
+                return i;
+            }
+        }
+        // Otherwise append it
+        composites ~= info;
+        return cast(CompositeHeader) composites.length - 1;
+    }
+
+    public immutable(CompositeInfo) getCompositeInfo(CompositeHeader index) {
+        assert (index < composites.length);
+        return composites[index];
+    }
 }
 
 public class IntrinsicRuntime : Runtime {
@@ -123,7 +144,11 @@ public class Stack {
         T* address = cast(T*) (memory + byteIndex);
         // Get the data and clear the memory to help the GC
         T t = *address;
-        *address = 0;
+        static if (is(T == void*)) {
+            *address = null;
+        } else {
+            *address = 0;
+        }
         // Return the data
         return t;
     }

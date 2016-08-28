@@ -14,7 +14,21 @@ public immutable class Evaluator {
     }
 
     public void evaluateStringLiteral(Runtime runtime, immutable StringLiteralNode stringLiteral) {
-        auto address = runtime.heap.allocateNotScanned(12);
+        // Grab and register the composite info
+        auto info = stringLiteral.getCompositeInfo();
+        auto infoIndex = runtime.registerCompositeInfo(info);
+        // Calculate the size of the string (header + data) and allocate the memory
+        auto size = CompositeHeader.sizeof + info.dataSize;
+        auto address = runtime.heap.allocateNotScanned(size);
+        // Next set the header
+        *(cast (CompositeHeader*) address) = infoIndex;
+        // Then place the string data
+        auto dataSegment = cast(dchar*) (address + CompositeHeader.sizeof);
+        foreach (dchar c; stringLiteral.getType().value) {
+            *dataSegment = c;
+            dataSegment += 1;
+        }
+        // Finally push the address to the stack
         runtime.stack.push(address);
     }
 
