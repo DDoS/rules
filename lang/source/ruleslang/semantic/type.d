@@ -507,6 +507,7 @@ private template IntegerLiteralTypeTemplate(T) {
                 super("sint_lit", backing.bitCount, backing.isSigned(), backing.isFloat());
             }
             this.value = value;
+            assert (inRange(value));
         }
 
         public override bool convertibleTo(immutable Type type, TypeConversionChain conversions) {
@@ -623,6 +624,7 @@ public immutable class FloatLiteralType : AtomicType, AtomicLiteralType {
         assert (backing.isFloat());
         super("fp_lit", backing.bitCount, backing.isSigned(), backing.isFloat());
         this.value = value;
+        assert (inRange(value));
     }
 
     public override bool convertibleTo(immutable Type type, TypeConversionChain conversions) {
