@@ -485,7 +485,11 @@ unittest {
             new immutable SignedIntegerLiteralType(1));
     assertLUB(new immutable SignedIntegerLiteralType(1), new immutable SignedIntegerLiteralType(2), AtomicType.SINT64);
     assertLUB(new immutable SignedIntegerLiteralType(1), AtomicType.FP64, AtomicType.FP64);
+    assertLUB(new immutable UnsignedIntegerLiteralType(1), AtomicType.UINT8, AtomicType.UINT64);
+    assertLUB(new immutable SignedIntegerLiteralType(1), AtomicType.SINT8, AtomicType.SINT64);
     assertLUB(new immutable SignedIntegerLiteralType(1), AtomicType.UINT8, AtomicType.SINT64);
+    assertLUB(new immutable SignedIntegerLiteralType(1), AtomicType.UINT64, AtomicType.FP64);
+    assertLUB(new immutable UnsignedIntegerLiteralType(1), AtomicType.SINT8, AtomicType.FP64);
     assertLUB(new immutable SignedIntegerLiteralType(1), new immutable UnsignedIntegerLiteralType(1), AtomicType.FP64);
     assertNoLUB(new immutable SignedIntegerLiteralType(1), AtomicType.BOOL);
     assertLUB(new immutable SignedIntegerLiteralType(1), new immutable FloatLiteralType(1),
@@ -530,14 +534,14 @@ private void assertNotSpecializable(immutable LiteralType from, immutable Type t
     assert(!from.specializableTo(to, chain));
 }
 
-private void assertLUB(immutable Type a, immutable Type b, immutable Type c) {
+private void assertLUB(immutable Type a, immutable Type b, immutable Type c, string file = __FILE__, size_t line = __LINE__) {
     assert (c !is null);
     auto lub = a.lowestUpperBound(b);
     assert (lub !is null);
-    assertEqual(lub, c);
+    assertEqual(lub, c, file, line);
 }
 
-private void assertNoLUB(immutable Type a, immutable Type b) {
+private void assertNoLUB(immutable Type a, immutable Type b, string file = __FILE__, size_t line = __LINE__) {
     auto lub = a.lowestUpperBound(b);
-    assert (lub is null);
+    assertEqual(lub, null);
 }

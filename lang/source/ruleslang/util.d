@@ -16,7 +16,7 @@ public T castOrFail(T, S)(S s) {
     return t;
 }
 
-public immutable(T) exactCastImmutable(T, S)(S s) {
+public immutable(T) exactCastImmutable(T, S)(S s) if (!is(T == interface)) {
     auto t = cast(immutable T) s;
     if (t is null || typeid(t) != typeid(T)) {
         return null;

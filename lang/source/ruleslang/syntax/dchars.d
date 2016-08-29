@@ -4,7 +4,7 @@ import std.conv : parse, to;
 import std.exception : assumeUnique;
 import std.format : format;
 import std.uni : isGraphical;
-import std.algorithm.iteration : map, reduce;
+import std.algorithm.iteration : map, fold;
 
 import ruleslang.util;
 
@@ -110,6 +110,5 @@ public dstring escapeChar(dchar c) {
 }
 
 public dstring escapeString(dstring source) {
-    // MAP-REDUCE! WHERE DOING BIG DATA CLOUD STUFF RIGHT HERE
-    return source.map!escapeChar.reduce!"a ~ b";
+    return source.map!escapeChar.fold!"a ~ b"(""d);
 }

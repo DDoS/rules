@@ -71,7 +71,7 @@ public immutable class BooleanLiteralNode : LiteralNode {
     }
 
     public override immutable(LiteralNode) specializeTo(immutable Type specialType) {
-        if (AtomicType.BOOL.isEquivalent(specialType)) {
+        if (specialType.opEquals(AtomicType.BOOL)) {
             return this;
         }
         return null;
@@ -130,17 +130,13 @@ public immutable class StringLiteralNode : LiteralNode {
 
 public immutable class SignedIntegerLiteralNode : LiteralNode {
     private SignedIntegerLiteralType type;
-    public AtomicType specialType;
 
     public this(long value) {
-        auto type = new immutable SignedIntegerLiteralType(value);
-        this(type, AtomicType.SINT64);
+        type = new immutable SignedIntegerLiteralType(value);
     }
 
-    private this(immutable SignedIntegerLiteralType type, immutable AtomicType specialType) {
-        this.type = type;
-        assert (specialType.isInteger());
-        this.specialType = specialType;
+    private this(immutable AtomicType backingType, long value) {
+        type = new immutable SignedIntegerLiteralType(backingType, value);
     }
 
     public override immutable(TypedNode)[] getChildren() {
@@ -152,16 +148,17 @@ public immutable class SignedIntegerLiteralNode : LiteralNode {
     }
 
     public override immutable(LiteralNode) specializeTo(immutable Type specialType) {
-        if (this.specialType.opEquals(specialType)) {
-            return this;
-        }
-        auto atomicSpecial = cast(immutable AtomicType) specialType;
+        auto atomicSpecial = specialType.exactCastImmutable!AtomicType();
         if (atomicSpecial !is null) {
             if (atomicSpecial.isInteger()) {
-                return new immutable SignedIntegerLiteralNode(type, atomicSpecial);
+                if (atomicSpecial.isSigned()) {
+                    return new immutable SignedIntegerLiteralNode(atomicSpecial, type.value);
+                } else {
+                    return new immutable UnsignedIntegerLiteralNode(atomicSpecial, type.value);
+                }
             }
             if (atomicSpecial.isFloat()) {
-                return new immutable FloatLiteralNode(type.value).specializeTo(specialType);
+                return new immutable FloatLiteralNode(atomicSpecial, type.value);
             }
         }
         return null;
@@ -176,23 +173,19 @@ public immutable class SignedIntegerLiteralNode : LiteralNode {
     }
 
     public override string toString() {
-        return format("SignedIntegerLiteral(%s %d)", specialType.toString(), type.value);
+        return format("SignedIntegerLiteral(%d)", type.value);
     }
 }
 
 public immutable class UnsignedIntegerLiteralNode : LiteralNode {
     private UnsignedIntegerLiteralType type;
-    public AtomicType specialType;
 
     public this(ulong value) {
-        auto type = new immutable UnsignedIntegerLiteralType(value);
-        this(type, AtomicType.UINT64);
+        type = new immutable UnsignedIntegerLiteralType(value);
     }
 
-    private this(immutable UnsignedIntegerLiteralType type, immutable AtomicType specialType) {
-        this.type = type;
-        assert (specialType.isInteger());
-        this.specialType = specialType;
+    private this(immutable AtomicType backingType, ulong value) {
+        type = new immutable UnsignedIntegerLiteralType(backingType, value);
     }
 
     public override immutable(TypedNode)[] getChildren() {
@@ -204,16 +197,17 @@ public immutable class UnsignedIntegerLiteralNode : LiteralNode {
     }
 
     public override immutable(LiteralNode) specializeTo(immutable Type specialType) {
-        if (this.specialType.opEquals(specialType)) {
-            return this;
-        }
-        auto atomicSpecial = cast(immutable AtomicType) specialType;
+        auto atomicSpecial = specialType.exactCastImmutable!AtomicType();
         if (atomicSpecial !is null) {
             if (atomicSpecial.isInteger()) {
-                return new immutable UnsignedIntegerLiteralNode(type, atomicSpecial);
+                if (atomicSpecial.isSigned()) {
+                    return new immutable SignedIntegerLiteralNode(atomicSpecial, type.value);
+                } else {
+                    return new immutable UnsignedIntegerLiteralNode(atomicSpecial, type.value);
+                }
             }
             if (atomicSpecial.isFloat()) {
-                return new immutable FloatLiteralNode(type.value).specializeTo(specialType);
+                return new immutable FloatLiteralNode(atomicSpecial, type.value);
             }
         }
         return null;
@@ -228,23 +222,19 @@ public immutable class UnsignedIntegerLiteralNode : LiteralNode {
     }
 
     public override string toString() {
-        return format("UnsignedIntegerLiteral(%s %d)", specialType.toString(), type.value);
+        return format("UnsignedIntegerLiteral(%d)", type.value);
     }
 }
 
 public immutable class FloatLiteralNode : LiteralNode {
     private FloatLiteralType type;
-    public AtomicType specialType;
 
     public this(double value) {
-        auto type = new immutable FloatLiteralType(value);
-        this(type, AtomicType.FP64);
+        type = new immutable FloatLiteralType(value);
     }
 
-    private this(immutable FloatLiteralType type, immutable AtomicType specialType) {
-        this.type = type;
-        assert (specialType.isFloat());
-        this.specialType = specialType;
+    private this(immutable AtomicType backingType, double value) {
+        type = new immutable FloatLiteralType(backingType, value);
     }
 
     public override immutable(TypedNode)[] getChildren() {
@@ -256,12 +246,9 @@ public immutable class FloatLiteralNode : LiteralNode {
     }
 
     public override immutable(LiteralNode) specializeTo(immutable Type specialType) {
-        if (this.specialType.opEquals(specialType)) {
-            return this;
-        }
-        auto atomicSpecial = cast(immutable AtomicType) specialType;
+        auto atomicSpecial = specialType.exactCastImmutable!AtomicType();
         if (atomicSpecial !is null && atomicSpecial.isFloat()) {
-            return new immutable FloatLiteralNode(type, atomicSpecial);
+            return new immutable FloatLiteralNode(atomicSpecial, type.value);
         }
         return null;
     }
@@ -275,7 +262,7 @@ public immutable class FloatLiteralNode : LiteralNode {
     }
 
     public override string toString() {
-        return format("FloatLiteral(%s %g)", specialType.toString(), type.value);
+        return format("FloatLiteral(%g)", type.value);
     }
 }
 

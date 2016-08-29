@@ -33,15 +33,15 @@ public immutable class Evaluator {
     }
 
     public void evaluateSignedIntegerLiteral(Runtime runtime, immutable SignedIntegerLiteralNode signedIntegerLiteral) {
-        runtime.stack.push(signedIntegerLiteral.specialType, signedIntegerLiteral.getType().value);
+        runtime.stack.push(signedIntegerLiteral.getType(), signedIntegerLiteral.getType().value);
     }
 
     public void evaluateUnsignedIntegerLiteral(Runtime runtime, immutable UnsignedIntegerLiteralNode unsignedIntegerLiteral) {
-        runtime.stack.push(unsignedIntegerLiteral.specialType, unsignedIntegerLiteral.getType().value);
+        runtime.stack.push(unsignedIntegerLiteral.getType(), unsignedIntegerLiteral.getType().value);
     }
 
     public void evaluateFloatLiteral(Runtime runtime, immutable FloatLiteralNode floatLiteral) {
-        runtime.stack.push(floatLiteral.specialType, floatLiteral.getType().value);
+        runtime.stack.push(floatLiteral.getType(), floatLiteral.getType().value);
     }
 
     public void evaluateEmptyLiteral(Runtime runtime, immutable EmptyLiteralNode emptyLiteral) {
