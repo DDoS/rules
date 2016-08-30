@@ -8,7 +8,7 @@ import ruleslang.semantic.type;
 import ruleslang.semantic.symbol;
 import ruleslang.semantic.context;
 
-public alias CompositeHeader = uint;
+public alias CompositeHeader = size_t;
 public alias FunctionImpl = void function(Stack);
 
 public abstract class Runtime {
@@ -194,16 +194,14 @@ public class Stack {
         assert (0);
     }
 
-    public void popTo(T)(ref void* to) {
+    public void popTo(T)(void* to) {
         // Pop the data from the stack
         T t = pop!T();
         // Copy the data to the given location
         *(cast(T*) to) = t;
-        // Increment the location by the data size
-        to += T.sizeof;
     }
 
-    public void popTo(immutable Type type, ref void* to) {
+    public void popTo(immutable Type type, void* to) {
         auto composite = cast(immutable CompositeType) type;
         if (composite !is null) {
             popTo!(void*)(to);
@@ -235,44 +233,48 @@ public class Stack {
     }
 
     unittest {
-        Stack stack = new Stack(1024);
-        assert(stack.byteSize == 1024);
+        static if (size_t.sizeof == 8) {
+            Stack stack = new Stack(1024);
+            assert(stack.byteSize == 1024);
 
-        stack.push!ubyte(3);
-        assert(stack.byteIndex == 1);
+            stack.push!ubyte(3);
+            assert(stack.byteIndex == 8);
 
-        stack.push!long(-1);
-        assert(stack.byteIndex == 9);
+            stack.push!long(-1);
+            assert(stack.byteIndex == 16);
 
-        assert(stack.pop!long() == -1);
-        assert(stack.byteIndex == 1);
+            assert(stack.pop!long() == -1);
+            assert(stack.byteIndex == 8);
 
-        stack.push!short(12);
-        assert(stack.byteIndex == 3);
+            stack.push!short(12);
+            assert(stack.byteIndex == 16);
 
-        stack.push!double(-129);
-        assert(stack.byteIndex == 11);
+            stack.push!double(-129);
+            assert(stack.byteIndex == 24);
 
-        stack.push!int(46);
-        assert(stack.byteIndex == 15);
+            stack.push!int(46);
+            assert(stack.byteIndex == 32);
 
-        assert(stack.pop!int() == 46);
-        assert(stack.byteIndex == 11);
+            assert(stack.pop!int() == 46);
+            assert(stack.byteIndex == 24);
 
-        assert(stack.pop!double() == -129);
-        assert(stack.byteIndex == 3);
+            assert(stack.pop!double() == -129);
+            assert(stack.byteIndex == 16);
 
-        assert(stack.pop!short() == 12);
-        assert(stack.byteIndex == 1);
+            assert(stack.pop!short() == 12);
+            assert(stack.byteIndex == 8);
 
-        assert(stack.pop!ubyte() == 3);
-        assert(stack.byteIndex == 0);
+            assert(stack.pop!ubyte() == 3);
+            assert(stack.byteIndex == 0);
 
-        stack.push(AtomicType.UINT16, 12);
-        assert(stack.byteIndex == 2);
+            stack.push(AtomicType.UINT16, 12);
+            assert(stack.byteIndex == 8);
 
-        assert(stack.pop(AtomicType.UINT16) == 12);
-        assert(stack.byteIndex == 0);
+            assert(stack.pop(AtomicType.UINT16) == 12);
+            assert(stack.byteIndex == 0);
+        } else {
+            pragma (msg, "The stack test can only be run on a 64 bit machine, skipping it!");
+        }
     }
 }
 
@@ -301,10 +303,20 @@ private void* allocateScanned(size_t byteSize) {
 }
 
 private size_t alignedSize(Data, Align)() {
+    // Add to the Data size to be a multiple of Align
     auto quotient = Data.sizeof / Align.sizeof;
     auto remainder = Data.sizeof % Align.sizeof;
     if (remainder > 0) {
         quotient += 1;
     }
     return quotient * Align.sizeof;
+}
+
+unittest {
+    assert (alignedSize!(byte, uint) == 4);
+    assert (alignedSize!(short, uint) == 4);
+    assert (alignedSize!(int, uint) == 4);
+    assert (alignedSize!(long, uint) == 8);
+    assert (alignedSize!(float, uint) == 4);
+    assert (alignedSize!(double, uint) == 8);
 }

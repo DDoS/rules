@@ -1,5 +1,6 @@
 module ruleslang.evaluation.evaluate;
 
+import ruleslang.semantic.type;
 import ruleslang.semantic.tree;
 import ruleslang.evaluation.runtime;
 
@@ -15,7 +16,7 @@ public immutable class Evaluator {
 
     public void evaluateStringLiteral(Runtime runtime, immutable StringLiteralNode stringLiteral) {
         // Allocate the string
-        auto address = runtime.allocate(stringLiteral);
+        auto address = runtime.allocate(stringLiteral.getCompositeInfo());
         // Then place the string data
         auto dataSegment = cast(dchar*) (address + CompositeHeader.sizeof);
         foreach (dchar c; stringLiteral.getType().value) {
@@ -40,21 +41,24 @@ public immutable class Evaluator {
 
     public void evaluateEmptyLiteral(Runtime runtime, immutable EmptyLiteralNode emptyLiteral) {
         // Allocate the empty composite
-        auto address = runtime.allocate(emptyLiteral);
+        auto address = runtime.allocate(emptyLiteral.getCompositeInfo());
         // It doesn't have any data, so just push the address to the stack
         runtime.stack.push(address);
     }
 
     public void evaluateTupleLiteral(Runtime runtime, immutable TupleLiteralNode tupleLiteral) {
         // Allocate the composite
-        auto address = runtime.allocate(tupleLiteral);
-        // Then evaluate the members to place the data on the stack
+        auto info = tupleLiteral.getCompositeInfo();
+        auto address = runtime.allocate(info);
+        // Place the composite data
         auto dataSegment = address + CompositeHeader.sizeof;
         foreach (i, memberType; tupleLiteral.getType().memberTypes) {
-            auto memberNode = tupleLiteral.values[i];
-            memberNode.evaluate(runtime);
-            // Pop the stack data to the data segment, which also increments the location
-            runtime.stack.popTo(memberType, dataSegment);
+            // Evaluate the member to place the value on the stack
+            tupleLiteral.values[i].evaluate(runtime);
+            // Get the member data address
+            auto memberAddress = dataSegment + info.memberOffsetByIndex[i];
+            // Pop the stack data to the data segment
+            runtime.stack.popTo(memberType, memberAddress);
         }
         // Finally push the address to the stack
         runtime.stack.push(address);
@@ -90,9 +94,8 @@ public immutable class Evaluator {
     }
 }
 
-private void* allocate(Runtime runtime, immutable CompositeNode node) {
-    // Grab and register the composite info
-    auto info = node.getCompositeInfo();
+private void* allocate(Runtime runtime, immutable CompositeInfo info) {
+    // Register the composite info
     auto infoIndex = runtime.registerCompositeInfo(info);
     // Calculate the size of the string (header + data) and allocate the memory
     auto size = CompositeHeader.sizeof + info.dataSize;

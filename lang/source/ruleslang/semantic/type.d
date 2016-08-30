@@ -1330,8 +1330,10 @@ private CompositeInfo tupleInfo(immutable TupleType type) {
     size_t dataSize = 0;
     auto offsets = new size_t[type.memberTypes.length];
     foreach (i, memberType; type.memberTypes) {
+        auto memberSize = memberType.getStorageSize();
+        dataSize = dataSize.alignOffset!size_t(memberSize);
         offsets[i] = dataSize;
-        dataSize += memberType.getStorageSize();
+        dataSize += memberSize;
     }
     CompositeInfo.Kind kind;
     size_t[string] names;
@@ -1364,7 +1366,7 @@ private CompositeInfo arrayInfo(immutable ArrayType type) {
     return immutable CompositeInfo(dataSize, [componentSize], null, kind);
 }
 
-private static size_t getStorageSize(immutable Type type) {
+private size_t getStorageSize(immutable Type type) {
     // For atomic type use the bit count
     auto atomic = cast(immutable AtomicType) type;
     if (atomic !is null) {
@@ -1381,4 +1383,54 @@ private static size_t getStorageSize(immutable Type type) {
         return size_t.sizeof;
     }
     assert (0);
+}
+
+private size_t alignOffset(Word)(size_t offset, size_t dataSize) {
+    // We must pad the offset to make it a multiple of dataSize or Word size, whichever is smaller
+    auto alignSize = dataSize < Word.sizeof ? dataSize : Word.sizeof;
+    auto remainder = offset % alignSize;
+    if (remainder > 0) {
+        offset += alignSize - remainder;
+    }
+    return offset;
+}
+
+unittest {
+    assert (alignOffset!long(0, 1) == 0);
+    assert (alignOffset!long(0, 2) == 0);
+    assert (alignOffset!long(0, 4) == 0);
+    assert (alignOffset!long(0, 8) == 0);
+
+    assert (alignOffset!long(1, 1) == 1);
+    assert (alignOffset!long(1, 2) == 2);
+    assert (alignOffset!long(1, 4) == 4);
+    assert (alignOffset!long(1, 8) == 8);
+
+    assert (alignOffset!long(2, 1) == 2);
+    assert (alignOffset!long(2, 2) == 2);
+    assert (alignOffset!long(2, 4) == 4);
+    assert (alignOffset!long(2, 8) == 8);
+
+    assert (alignOffset!long(4, 1) == 4);
+    assert (alignOffset!long(4, 2) == 4);
+    assert (alignOffset!long(4, 4) == 4);
+    assert (alignOffset!long(4, 8) == 8);
+
+    assert (alignOffset!long(8, 1) == 8);
+    assert (alignOffset!long(8, 2) == 8);
+    assert (alignOffset!long(8, 4) == 8);
+    assert (alignOffset!long(8, 8) == 8);
+
+    assert (alignOffset!long(31, 1) == 31);
+    assert (alignOffset!long(31, 2) == 32);
+    assert (alignOffset!long(31, 4) == 32);
+    assert (alignOffset!long(31, 8) == 32);
+
+    assert (alignOffset!long(33, 1) == 33);
+    assert (alignOffset!long(33, 2) == 34);
+    assert (alignOffset!long(33, 4) == 36);
+    assert (alignOffset!long(33, 8) == 40);
+
+    assert (alignOffset!long(33, 32) == 40);
+    assert (alignOffset!long(48, 32) == 48);
 }
