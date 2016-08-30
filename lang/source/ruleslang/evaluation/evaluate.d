@@ -19,10 +19,8 @@ public immutable class Evaluator {
         auto address = runtime.allocate(stringLiteral.getCompositeInfo());
         // Then place the string data
         auto dataSegment = cast(dchar*) (address + CompositeHeader.sizeof);
-        foreach (dchar c; stringLiteral.getType().value) {
-            *dataSegment = c;
-            dataSegment += 1;
-        }
+        auto value = stringLiteral.getType().value;
+        dataSegment[0 .. value.length] = value;
         // Finally push the address to the stack
         runtime.stack.push(address);
     }
