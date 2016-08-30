@@ -88,7 +88,7 @@ public class Stack {
         return byteIndex <= 0;
     }
 
-    public void push(T)(T data) if (is(T : long) || is(T : double) || is(T == void*)) {
+    public void push(T)(T data) if (isValidDataType!T()) {
         // Get the data type size
         enum dataByteSize = alignedSize!(T, size_t);
         // Check for a stack overflow
@@ -131,7 +131,7 @@ public class Stack {
         }
     }
 
-    public T pop(T)() if (is(T : long) || is(T : double) || is(T == void*)) {
+    public T pop(T)() if (isValidDataType!T()) {
         // Get the data type size
         enum dataByteSize = alignedSize!(T, size_t);
         // Check for a stack underflow
@@ -229,6 +229,63 @@ public class Stack {
             popTo!double(to);
         } else {
             assert (0);
+        }
+    }
+
+    public void* peek(T)() if (isValidDataType!T()) {
+        auto offset = byteIndex - T.sizeof;
+        if (offset < 0) {
+            throw new Exception("Stack underflow");
+        }
+        return memory + offset;
+    }
+
+    public void* peek(immutable Type type) {
+        auto composite = cast(immutable CompositeType) type;
+        if (composite !is null) {
+            return peek!(void*);
+        }
+        if (AtomicType.BOOL.isEquivalent(type)) {
+            return peek!bool();
+        }
+        if (AtomicType.SINT8.isEquivalent(type)) {
+            return peek!byte();
+        }
+        if (AtomicType.UINT8.isEquivalent(type)) {
+            return peek!ubyte();
+        }
+        if (AtomicType.SINT16.isEquivalent(type)) {
+            return peek!short();
+        }
+        if (AtomicType.UINT16.isEquivalent(type)) {
+            return peek!ushort();
+        }
+        if (AtomicType.SINT32.isEquivalent(type)) {
+            return peek!int();
+        }
+        if (AtomicType.UINT32.isEquivalent(type)) {
+            return peek!uint();
+        }
+        if (AtomicType.SINT64.isEquivalent(type)) {
+            return peek!long();
+        }
+        if (AtomicType.UINT64.isEquivalent(type)) {
+            return peek!ulong();
+        }
+        if (AtomicType.FP32.isEquivalent(type)) {
+            return peek!float();
+        }
+        if (AtomicType.FP64.isEquivalent(type)) {
+            return peek!double();
+        }
+        assert (0);
+    }
+
+    private static bool isValidDataType(T)() {
+        static if (is(T : long) || is(T : double) || is(T == void*)) {
+            return true;
+        } else {
+            return false;
         }
     }
 
