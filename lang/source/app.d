@@ -2,7 +2,6 @@ import std.stdio;
 import std.conv : to;
 
 import ruleslang.syntax.source;
-import ruleslang.syntax.dchars;
 import ruleslang.syntax.token;
 import ruleslang.syntax.tokenizer;
 import ruleslang.syntax.ast.statement;
@@ -70,17 +69,94 @@ private void printInfo(Expression expression, Context context, Runtime runtime) 
 }
 
 private string getStackTop(Runtime runtime, immutable Type type) {
+    return runtime.asString(type, runtime.stack.peek(type));
+}
+
+private string asString(Runtime runtime, immutable Type type, void* address) {
     auto atomicType = cast(immutable AtomicType) type;
     if (atomicType !is null) {
-        return runtime.stack.pop(atomicType).toString();
+        return atomicType.asString(address);
     }
-    auto compositeType = cast(immutable CompositeType) type;
-    if (compositeType !is null) {
-        auto data = runtime.stack.pop!(void*);
-        auto infoIndex = *cast(CompositeHeader*) data;
-        auto dataSize = runtime.getCompositeInfo(infoIndex).dataSize;
-        dchar[] stringData = (cast(dchar*) (data + CompositeHeader.sizeof))[0 .. dataSize / dchar.sizeof];
-        return stringData.idup.escapeString().to!string();
+
+    auto compositeAddress = *(cast(void**) address);
+    auto info = runtime.getCompositeInfo(*(cast(CompositeHeader*) compositeAddress));
+    auto dataSegment = compositeAddress + CompositeHeader.sizeof;
+
+    auto stringLiteral = cast(immutable StringLiteralType) type;
+    if (stringLiteral !is null) {
+        dchar[] stringData = (cast(dchar*) dataSegment)[0 .. info.dataSize / dchar.sizeof];
+        return '"' ~ stringData.idup.to!string() ~ '"';
+    }
+
+    auto anyType = cast(immutable AnyType) type;
+    if (anyType !is null) {
+        return "{}";
+    }
+
+    auto structType = cast(immutable StructureType) type;
+    if (structType !is null) {
+        string str = "{";
+        foreach (i, memberName; structType.memberNames) {
+            auto memberType = structType.getMemberType(i);
+            str ~= memberName ~ ": ";
+            str ~= runtime.asString(memberType, dataSegment + info.memberOffsetByName[memberName]);
+            if (i < structType.memberNames.length - 1) {
+                str ~= ", ";
+            }
+        }
+        str ~= "}";
+        return str.idup;
+    }
+
+    auto tupleType = cast(immutable TupleType) type;
+    if (tupleType !is null) {
+        string str = "{";
+        foreach (i, memberType; tupleType.memberTypes) {
+            str ~= runtime.asString(memberType, dataSegment + info.memberOffsetByIndex[i]);
+            if (i < tupleType.memberTypes.length - 1) {
+                str ~= ", ";
+            }
+        }
+        str ~= "}";
+        return str.idup;
+    }
+
+    assert (0);
+}
+
+private string asString(immutable AtomicType type, void* address) {
+    if (AtomicType.BOOL.isEquivalent(type)) {
+        return (*(cast(bool*) address)).to!string();
+    }
+    if (AtomicType.SINT8.isEquivalent(type)) {
+        return (*(cast(byte*) address)).to!string();
+    }
+    if (AtomicType.UINT8.isEquivalent(type)) {
+        return (*(cast(ubyte*) address)).to!string();
+    }
+    if (AtomicType.SINT16.isEquivalent(type)) {
+        return (*(cast(short*) address)).to!string();
+    }
+    if (AtomicType.UINT16.isEquivalent(type)) {
+        return (*(cast(ushort*) address)).to!string();
+    }
+    if (AtomicType.SINT32.isEquivalent(type)) {
+        return (*(cast(int*) address)).to!string();
+    }
+    if (AtomicType.UINT32.isEquivalent(type)) {
+        return (*(cast(uint*) address)).to!string();
+    }
+    if (AtomicType.SINT64.isEquivalent(type)) {
+        return (*(cast(long*) address)).to!string();
+    }
+    if (AtomicType.UINT64.isEquivalent(type)) {
+        return (*(cast(ulong*) address)).to!string();
+    }
+    if (AtomicType.FP32.isEquivalent(type)) {
+        return (*(cast(float*) address)).to!string();
+    }
+    if (AtomicType.FP64.isEquivalent(type)) {
+        return (*(cast(double*) address)).to!string();
     }
     assert (0);
 }
