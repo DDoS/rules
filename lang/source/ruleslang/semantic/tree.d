@@ -685,13 +685,13 @@ public immutable(TypedNode) reduceLiterals(immutable TypedNode node) {
             return new immutable BooleanLiteralNode(value.get!bool());
         }
         if (atomicType.isFloat()) {
-            return new immutable FloatLiteralNode(value.get!double());
+            return new immutable FloatLiteralNode(atomicType, value.get!double());
         }
         if (atomicType.isInteger()) {
             if (atomicType.isSigned()) {
-                return new immutable SignedIntegerLiteralNode(value.get!long());
+                return new immutable SignedIntegerLiteralNode(atomicType, value.get!long());
             }
-            return new immutable UnsignedIntegerLiteralNode(value.get!ulong());
+            return new immutable UnsignedIntegerLiteralNode(atomicType, value.get!ulong());
         }
     }
     assert (0);
