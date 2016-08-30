@@ -90,7 +90,7 @@ public class Stack {
 
     public void push(T)(T data) if (is(T : long) || is(T : double) || is(T == void*)) {
         // Get the data type size
-        auto dataByteSize = T.sizeof;
+        enum dataByteSize = alignedSize!(T, size_t);
         // Check for a stack overflow
         if (byteIndex + dataByteSize > byteSize) {
             throw new Exception("Stack overflow");
@@ -133,7 +133,7 @@ public class Stack {
 
     public T pop(T)() if (is(T : long) || is(T : double) || is(T == void*)) {
         // Get the data type size
-        auto dataByteSize = T.sizeof;
+        enum dataByteSize = alignedSize!(T, size_t);
         // Check for a stack underflow
         if (byteIndex - dataByteSize < 0) {
             throw new Exception("Stack underflow");
@@ -298,4 +298,13 @@ public class Heap {
 private void* allocateScanned(size_t byteSize) {
     // Memory cannot be moved and is scanned
     return GC.calloc(byteSize, GC.BlkAttr.NO_MOVE);
+}
+
+private size_t alignedSize(Data, Align)() {
+    auto quotient = Data.sizeof / Align.sizeof;
+    auto remainder = Data.sizeof % Align.sizeof;
+    if (remainder > 0) {
+        quotient += 1;
+    }
+    return quotient * Align.sizeof;
 }
