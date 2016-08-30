@@ -345,10 +345,11 @@ public immutable class TupleLiteralNode : CompositeNode, LiteralNode {
     }
 }
 
-public immutable class StructLiteralNode : LiteralNode {
-    private TypedNode[] values;
+public immutable class StructLiteralNode : CompositeNode, LiteralNode {
+    public TypedNode[] values;
     private string[] labels;
     private StructureLiteralType type;
+    private CompositeInfo info;
 
     public this(immutable(TypedNode)[] values, immutable(string)[] labels) {
         assert(values.length > 0);
@@ -356,6 +357,7 @@ public immutable class StructLiteralNode : LiteralNode {
         this.values = values.reduceLiterals();
         this.labels = labels;
         type = new immutable StructureLiteralType(this.values.getTypes(), labels);
+        info = type.compositeInfo();
     }
 
     public override immutable(TypedNode)[] getChildren() {
@@ -364,6 +366,10 @@ public immutable class StructLiteralNode : LiteralNode {
 
     public override immutable(StructureLiteralType) getType() {
         return type;
+    }
+
+    public override immutable(CompositeInfo) getCompositeInfo() {
+        return info;
     }
 
     public override immutable(LiteralNode) specializeTo(immutable Type specialType) {

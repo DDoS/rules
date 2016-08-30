@@ -45,14 +45,23 @@ public immutable class Evaluator {
     }
 
     public void evaluateTupleLiteral(Runtime runtime, immutable TupleLiteralNode tupleLiteral) {
+        evaluateTupleLiteral(runtime, tupleLiteral.getType(), tupleLiteral.getCompositeInfo(), tupleLiteral.values);
+    }
+
+    public void evaluateStructLiteral(Runtime runtime, immutable StructLiteralNode structLiteral) {
+        // This is the same as a tuple literal evalution-wise. The member names are just used for access operations
+        evaluateTupleLiteral(runtime, structLiteral.getType, structLiteral.getCompositeInfo(), structLiteral.values);
+    }
+
+    private static void evaluateTupleLiteral(Runtime runtime, immutable TupleType type, immutable CompositeInfo info,
+            immutable(TypedNode)[] values) {
         // Allocate the composite
-        auto info = tupleLiteral.getCompositeInfo();
         auto address = runtime.allocate(info);
         // Place the composite data
         auto dataSegment = address + CompositeHeader.sizeof;
-        foreach (i, memberType; tupleLiteral.getType().memberTypes) {
+        foreach (i, memberType; type.memberTypes) {
             // Evaluate the member to place the value on the stack
-            tupleLiteral.values[i].evaluate(runtime);
+            values[i].evaluate(runtime);
             // Get the member data address
             auto memberAddress = dataSegment + info.memberOffsetByIndex[i];
             // Pop the stack data to the data segment
@@ -60,10 +69,6 @@ public immutable class Evaluator {
         }
         // Finally push the address to the stack
         runtime.stack.push(address);
-    }
-
-    public void evaluateStructLiteral(Runtime runtime, immutable StructLiteralNode structLiteral) {
-        throw new NotImplementedException();
     }
 
     public void evaluateArrayLiteral(Runtime runtime, immutable ArrayLiteralNode arrayLiteral) {
