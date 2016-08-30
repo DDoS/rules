@@ -28,6 +28,10 @@ public immutable interface LiteralNode : TypedNode {
     public immutable(LiteralNode) specializeTo(immutable Type type);
 }
 
+public immutable interface CompositeNode : TypedNode {
+    public immutable(CompositeInfo) getCompositeInfo();
+}
+
 public immutable class NullNode : TypedNode {
     public static immutable NullNode INSTANCE = new immutable NullNode();
 
@@ -90,7 +94,7 @@ public immutable class BooleanLiteralNode : LiteralNode {
     }
 }
 
-public immutable class StringLiteralNode : LiteralNode {
+public immutable class StringLiteralNode : CompositeNode, LiteralNode {
     private StringLiteralType type;
     private CompositeInfo info;
 
@@ -107,7 +111,7 @@ public immutable class StringLiteralNode : LiteralNode {
         return type;
     }
 
-    public immutable(CompositeInfo) getCompositeInfo() {
+    public override immutable(CompositeInfo) getCompositeInfo() {
         return info;
     }
 
@@ -266,7 +270,7 @@ public immutable class FloatLiteralNode : LiteralNode {
     }
 }
 
-public immutable class EmptyLiteralNode : LiteralNode {
+public immutable class EmptyLiteralNode : CompositeNode, LiteralNode {
     public static immutable EmptyLiteralNode INSTANCE = new immutable EmptyLiteralNode();
 
     private this() {
@@ -278,6 +282,10 @@ public immutable class EmptyLiteralNode : LiteralNode {
 
     public override immutable(AnyTypeLiteral) getType() {
         return AnyTypeLiteral.INSTANCE;
+    }
+
+    public override immutable(CompositeInfo) getCompositeInfo() {
+        return AnyType.INFO;
     }
 
     public override immutable(LiteralNode) specializeTo(immutable Type specialType) {
@@ -297,13 +305,15 @@ public immutable class EmptyLiteralNode : LiteralNode {
     }
 }
 
-public immutable class TupleLiteralNode : LiteralNode {
-    private TypedNode[] values;
+public immutable class TupleLiteralNode : CompositeNode, LiteralNode {
+    public TypedNode[] values;
     private TupleLiteralType type;
+    private CompositeInfo info;
 
     public this(immutable(TypedNode)[] values) {
         this.values = values.reduceLiterals();
         this.type = new immutable TupleLiteralType(this.values.getTypes());
+        info = type.compositeInfo();
     }
 
     public override immutable(TypedNode)[] getChildren() {
@@ -312,6 +322,10 @@ public immutable class TupleLiteralNode : LiteralNode {
 
     public override immutable(TupleLiteralType) getType() {
         return type;
+    }
+
+    public override immutable(CompositeInfo) getCompositeInfo() {
+        return info;
     }
 
     public override immutable(LiteralNode) specializeTo(immutable Type specialType) {

@@ -14,14 +14,8 @@ public immutable class Evaluator {
     }
 
     public void evaluateStringLiteral(Runtime runtime, immutable StringLiteralNode stringLiteral) {
-        // Grab and register the composite info
-        auto info = stringLiteral.getCompositeInfo();
-        auto infoIndex = runtime.registerCompositeInfo(info);
-        // Calculate the size of the string (header + data) and allocate the memory
-        auto size = CompositeHeader.sizeof + info.dataSize;
-        auto address = runtime.heap.allocateNotScanned(size);
-        // Next set the header
-        *(cast (CompositeHeader*) address) = infoIndex;
+        // Allocate the string
+        auto address = runtime.allocate(stringLiteral);
         // Then place the string data
         auto dataSegment = cast(dchar*) (address + CompositeHeader.sizeof);
         foreach (dchar c; stringLiteral.getType().value) {
@@ -45,11 +39,25 @@ public immutable class Evaluator {
     }
 
     public void evaluateEmptyLiteral(Runtime runtime, immutable EmptyLiteralNode emptyLiteral) {
-        throw new NotImplementedException();
+        // Allocate the empty composite
+        auto address = runtime.allocate(emptyLiteral);
+        // It doesn't have any data, so just push the address to the stack
+        runtime.stack.push(address);
     }
 
     public void evaluateTupleLiteral(Runtime runtime, immutable TupleLiteralNode tupleLiteral) {
-        throw new NotImplementedException();
+        // Allocate the composite
+        auto address = runtime.allocate(tupleLiteral);
+        // Then evaluate the members to place the data on the stack
+        auto dataSegment = address + CompositeHeader.sizeof;
+        foreach (i, memberType; tupleLiteral.getType().memberTypes) {
+            auto memberNode = tupleLiteral.values[i];
+            memberNode.evaluate(runtime);
+            // Pop the stack data to the data segment, which also increments the location
+            runtime.stack.popTo(memberType, dataSegment);
+        }
+        // Finally push the address to the stack
+        runtime.stack.push(address);
     }
 
     public void evaluateStructLiteral(Runtime runtime, immutable StructLiteralNode structLiteral) {
@@ -80,6 +88,18 @@ public immutable class Evaluator {
         // Then call the function, which will pop the arguments from the stack
         runtime.call(functionCall.func);
     }
+}
+
+private void* allocate(Runtime runtime, immutable CompositeNode node) {
+    // Grab and register the composite info
+    auto info = node.getCompositeInfo();
+    auto infoIndex = runtime.registerCompositeInfo(info);
+    // Calculate the size of the string (header + data) and allocate the memory
+    auto size = CompositeHeader.sizeof + info.dataSize;
+    auto address = runtime.heap.allocateNotScanned(size);
+    // Next set the header
+    *(cast (CompositeHeader*) address) = infoIndex;
+    return address;
 }
 
 public class NotImplementedException : Exception {

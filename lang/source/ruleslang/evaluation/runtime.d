@@ -103,7 +103,7 @@ public class Stack {
         byteIndex += dataByteSize;
     }
 
-    public void push(T)(immutable AtomicType type, T data) if (is(T : long) || is(T : double)) {
+    public void push(T)(immutable AtomicType type, T data) {
         if (AtomicType.BOOL.isEquivalent(type)) {
             push!bool(cast(bool) data);
         } else if (AtomicType.SINT8.isEquivalent(type)) {
@@ -153,7 +153,11 @@ public class Stack {
         return t;
     }
 
-    public Variant pop(immutable AtomicType type) {
+    public Variant pop(immutable Type type) {
+        auto composite = cast(immutable CompositeType) type;
+        if (composite !is null) {
+            return Variant(pop!(void*));
+        }
         if (AtomicType.BOOL.isEquivalent(type)) {
             return Variant(pop!bool());
         }
@@ -188,6 +192,46 @@ public class Stack {
             return Variant(pop!double());
         }
         assert (0);
+    }
+
+    public void popTo(T)(ref void* to) {
+        // Pop the data from the stack
+        T t = pop!T();
+        // Copy the data to the given location
+        *(cast(T*) to) = t;
+        // Increment the location by the data size
+        to += T.sizeof;
+    }
+
+    public void popTo(immutable Type type, ref void* to) {
+        auto composite = cast(immutable CompositeType) type;
+        if (composite !is null) {
+            popTo!(void*)(to);
+        } else if (AtomicType.BOOL.isEquivalent(type)) {
+            popTo!bool(to);
+        } else if (AtomicType.SINT8.isEquivalent(type)) {
+            popTo!byte(to);
+        } else if (AtomicType.UINT8.isEquivalent(type)) {
+            popTo!ubyte(to);
+        } else if (AtomicType.SINT16.isEquivalent(type)) {
+            popTo!short(to);
+        } else if (AtomicType.UINT16.isEquivalent(type)) {
+            popTo!ushort(to);
+        } else if (AtomicType.SINT32.isEquivalent(type)) {
+            popTo!int(to);
+        } else if (AtomicType.UINT32.isEquivalent(type)) {
+            popTo!uint(to);
+        } else if (AtomicType.SINT64.isEquivalent(type)) {
+            popTo!long(to);
+        } else if (AtomicType.UINT64.isEquivalent(type)) {
+            popTo!ulong(to);
+        } else if (AtomicType.FP32.isEquivalent(type)) {
+            popTo!float(to);
+        } else if (AtomicType.FP64.isEquivalent(type)) {
+            popTo!double(to);
+        } else {
+            assert (0);
+        }
     }
 
     unittest {

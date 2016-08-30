@@ -701,6 +701,8 @@ public immutable interface CompositeType : Type {
 
 public immutable class AnyType : CompositeType {
     public static immutable AnyType INSTANCE = new immutable AnyType();
+    public static immutable CompositeInfo INFO = INSTANCE.compositeInfo();
+
     private this() {
     }
 
@@ -1316,6 +1318,10 @@ public CompositeInfo compositeInfo(immutable CompositeType type) {
     auto array = cast(immutable ArrayType) type;
     if (array !is null) {
         return array.arrayInfo();
+    }
+    auto any = cast(immutable AnyType) type;
+    if (any !is null) {
+        return immutable CompositeInfo(0, [], null, CompositeInfo.Kind.TUPLE);
     }
     assert (0);
 }
