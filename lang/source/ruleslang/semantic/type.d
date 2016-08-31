@@ -402,21 +402,9 @@ public immutable class AtomicType : Type {
         return name;
     }
 
-    public bool isEquivalent(immutable Type type) {
+    public override bool opEquals(immutable Type type) {
         auto atomicType = cast(immutable AtomicType) type;
         return atomicType !is null && info == atomicType.info;
-    }
-
-    public override bool opEquals(immutable Type type) {
-        auto atomicType = type.exactCastImmutable!AtomicType();
-        return this is atomicType;
-    }
-}
-
-private mixin template literalTypeOpEquals(L) {
-    public override bool opEquals(immutable Type type) {
-        auto literalType = type.exactCastImmutable!L();
-        return literalType !is null && value == literalType.value;
     }
 }
 
@@ -473,7 +461,10 @@ public immutable class BooleanLiteralType : AtomicType, AtomicLiteralType {
         return format("bool_lit(%s)", value);
     }
 
-    mixin literalTypeOpEquals!BooleanLiteralType;
+    public override bool opEquals(immutable Type type) {
+        auto literalType = type.exactCastImmutable!BooleanLiteralType();
+        return literalType !is null && value == literalType.value;
+    }
 }
 
 public immutable interface IntegerLiteralType : AtomicLiteralType {
@@ -608,7 +599,7 @@ private template IntegerLiteralTypeTemplate(T) {
 
         public override bool opEquals(immutable Type type) {
             auto literalType = type.exactCastImmutable!(IntegerLiteralTypeTemplate!T)();
-            return literalType !is null && isEquivalent(literalType) && value == literalType.value;
+            return literalType !is null && info == literalType.info && value == literalType.value;
         }
     }
 }
@@ -690,7 +681,7 @@ public immutable class FloatLiteralType : AtomicType, AtomicLiteralType {
 
     public override bool opEquals(immutable Type type) {
         auto literalType = type.exactCastImmutable!FloatLiteralType();
-        return literalType !is null && isEquivalent(literalType) && value == literalType.value;
+        return literalType !is null && info == literalType.info && value == literalType.value;
     }
 }
 
@@ -1296,7 +1287,10 @@ public immutable class StringLiteralType : SizedArrayType, LiteralType {
         return format("string_lit(\"%s\")", value);
     }
 
-    mixin literalTypeOpEquals!StringLiteralType;
+    public override bool opEquals(immutable Type type) {
+        auto literalType = type.exactCastImmutable!StringLiteralType();
+        return literalType !is null && value == literalType.value;
+    }
 }
 
 public immutable struct CompositeInfo {

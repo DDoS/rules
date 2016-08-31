@@ -104,27 +104,27 @@ public class Stack {
     }
 
     public void push(T)(immutable AtomicType type, T data) {
-        if (AtomicType.BOOL.isEquivalent(type)) {
+        if (AtomicType.BOOL.opEquals(type)) {
             push!bool(cast(bool) data);
-        } else if (AtomicType.SINT8.isEquivalent(type)) {
+        } else if (AtomicType.SINT8.opEquals(type)) {
             push!byte(cast(byte) data);
-        } else if (AtomicType.UINT8.isEquivalent(type)) {
+        } else if (AtomicType.UINT8.opEquals(type)) {
             push!ubyte(cast(ubyte) data);
-        } else if (AtomicType.SINT16.isEquivalent(type)) {
+        } else if (AtomicType.SINT16.opEquals(type)) {
             push!short(cast(short) data);
-        } else if (AtomicType.UINT16.isEquivalent(type)) {
+        } else if (AtomicType.UINT16.opEquals(type)) {
             push!ushort(cast(ushort) data);
-        } else if (AtomicType.SINT32.isEquivalent(type)) {
+        } else if (AtomicType.SINT32.opEquals(type)) {
             push!int(cast(int) data);
-        } else if (AtomicType.UINT32.isEquivalent(type)) {
+        } else if (AtomicType.UINT32.opEquals(type)) {
             push!uint(cast(uint) data);
-        } else if (AtomicType.SINT64.isEquivalent(type)) {
+        } else if (AtomicType.SINT64.opEquals(type)) {
             push!long(cast(long) data);
-        } else if (AtomicType.UINT64.isEquivalent(type)) {
+        } else if (AtomicType.UINT64.opEquals(type)) {
             push!ulong(cast(ulong) data);
-        } else if (AtomicType.FP32.isEquivalent(type)) {
+        } else if (AtomicType.FP32.opEquals(type)) {
             push!float(cast(float) data);
-        } else if (AtomicType.FP64.isEquivalent(type)) {
+        } else if (AtomicType.FP64.opEquals(type)) {
             push!double(cast(double) data);
         } else {
             assert (0);
@@ -158,37 +158,37 @@ public class Stack {
         if (composite !is null) {
             return Variant(pop!(void*));
         }
-        if (AtomicType.BOOL.isEquivalent(type)) {
+        if (AtomicType.BOOL.opEquals(type)) {
             return Variant(pop!bool());
         }
-        if (AtomicType.SINT8.isEquivalent(type)) {
+        if (AtomicType.SINT8.opEquals(type)) {
             return Variant(pop!byte());
         }
-        if (AtomicType.UINT8.isEquivalent(type)) {
+        if (AtomicType.UINT8.opEquals(type)) {
             return Variant(pop!ubyte());
         }
-        if (AtomicType.SINT16.isEquivalent(type)) {
+        if (AtomicType.SINT16.opEquals(type)) {
             return Variant(pop!short());
         }
-        if (AtomicType.UINT16.isEquivalent(type)) {
+        if (AtomicType.UINT16.opEquals(type)) {
             return Variant(pop!ushort());
         }
-        if (AtomicType.SINT32.isEquivalent(type)) {
+        if (AtomicType.SINT32.opEquals(type)) {
             return Variant(pop!int());
         }
-        if (AtomicType.UINT32.isEquivalent(type)) {
+        if (AtomicType.UINT32.opEquals(type)) {
             return Variant(pop!uint());
         }
-        if (AtomicType.SINT64.isEquivalent(type)) {
+        if (AtomicType.SINT64.opEquals(type)) {
             return Variant(pop!long());
         }
-        if (AtomicType.UINT64.isEquivalent(type)) {
+        if (AtomicType.UINT64.opEquals(type)) {
             return Variant(pop!ulong());
         }
-        if (AtomicType.FP32.isEquivalent(type)) {
+        if (AtomicType.FP32.opEquals(type)) {
             return Variant(pop!float());
         }
-        if (AtomicType.FP64.isEquivalent(type)) {
+        if (AtomicType.FP64.opEquals(type)) {
             return Variant(pop!double());
         }
         assert (0);
@@ -205,27 +205,27 @@ public class Stack {
         auto composite = cast(immutable CompositeType) type;
         if (composite !is null) {
             popTo!(void*)(to);
-        } else if (AtomicType.BOOL.isEquivalent(type)) {
+        } else if (AtomicType.BOOL.opEquals(type)) {
             popTo!bool(to);
-        } else if (AtomicType.SINT8.isEquivalent(type)) {
+        } else if (AtomicType.SINT8.opEquals(type)) {
             popTo!byte(to);
-        } else if (AtomicType.UINT8.isEquivalent(type)) {
+        } else if (AtomicType.UINT8.opEquals(type)) {
             popTo!ubyte(to);
-        } else if (AtomicType.SINT16.isEquivalent(type)) {
+        } else if (AtomicType.SINT16.opEquals(type)) {
             popTo!short(to);
-        } else if (AtomicType.UINT16.isEquivalent(type)) {
+        } else if (AtomicType.UINT16.opEquals(type)) {
             popTo!ushort(to);
-        } else if (AtomicType.SINT32.isEquivalent(type)) {
+        } else if (AtomicType.SINT32.opEquals(type)) {
             popTo!int(to);
-        } else if (AtomicType.UINT32.isEquivalent(type)) {
+        } else if (AtomicType.UINT32.opEquals(type)) {
             popTo!uint(to);
-        } else if (AtomicType.SINT64.isEquivalent(type)) {
+        } else if (AtomicType.SINT64.opEquals(type)) {
             popTo!long(to);
-        } else if (AtomicType.UINT64.isEquivalent(type)) {
+        } else if (AtomicType.UINT64.opEquals(type)) {
             popTo!ulong(to);
-        } else if (AtomicType.FP32.isEquivalent(type)) {
+        } else if (AtomicType.FP32.opEquals(type)) {
             popTo!float(to);
-        } else if (AtomicType.FP64.isEquivalent(type)) {
+        } else if (AtomicType.FP64.opEquals(type)) {
             popTo!double(to);
         } else {
             assert (0);
@@ -245,37 +245,37 @@ public class Stack {
         if (composite !is null) {
             return peek!(void*);
         }
-        if (AtomicType.BOOL.isEquivalent(type)) {
+        if (AtomicType.BOOL.opEquals(type)) {
             return peek!bool();
         }
-        if (AtomicType.SINT8.isEquivalent(type)) {
+        if (AtomicType.SINT8.opEquals(type)) {
             return peek!byte();
         }
-        if (AtomicType.UINT8.isEquivalent(type)) {
+        if (AtomicType.UINT8.opEquals(type)) {
             return peek!ubyte();
         }
-        if (AtomicType.SINT16.isEquivalent(type)) {
+        if (AtomicType.SINT16.opEquals(type)) {
             return peek!short();
         }
-        if (AtomicType.UINT16.isEquivalent(type)) {
+        if (AtomicType.UINT16.opEquals(type)) {
             return peek!ushort();
         }
-        if (AtomicType.SINT32.isEquivalent(type)) {
+        if (AtomicType.SINT32.opEquals(type)) {
             return peek!int();
         }
-        if (AtomicType.UINT32.isEquivalent(type)) {
+        if (AtomicType.UINT32.opEquals(type)) {
             return peek!uint();
         }
-        if (AtomicType.SINT64.isEquivalent(type)) {
+        if (AtomicType.SINT64.opEquals(type)) {
             return peek!long();
         }
-        if (AtomicType.UINT64.isEquivalent(type)) {
+        if (AtomicType.UINT64.opEquals(type)) {
             return peek!ulong();
         }
-        if (AtomicType.FP32.isEquivalent(type)) {
+        if (AtomicType.FP32.opEquals(type)) {
             return peek!float();
         }
-        if (AtomicType.FP64.isEquivalent(type)) {
+        if (AtomicType.FP64.opEquals(type)) {
             return peek!double();
         }
         assert (0);

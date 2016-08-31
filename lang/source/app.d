@@ -125,37 +125,37 @@ private string asString(Runtime runtime, immutable Type type, void* address) {
 }
 
 private string asString(immutable AtomicType type, void* address) {
-    if (AtomicType.BOOL.isEquivalent(type)) {
+    if (AtomicType.BOOL.opEquals(type)) {
         return (*(cast(bool*) address)).to!string();
     }
-    if (AtomicType.SINT8.isEquivalent(type)) {
+    if (AtomicType.SINT8.opEquals(type)) {
         return (*(cast(byte*) address)).to!string();
     }
-    if (AtomicType.UINT8.isEquivalent(type)) {
+    if (AtomicType.UINT8.opEquals(type)) {
         return (*(cast(ubyte*) address)).to!string();
     }
-    if (AtomicType.SINT16.isEquivalent(type)) {
+    if (AtomicType.SINT16.opEquals(type)) {
         return (*(cast(short*) address)).to!string();
     }
-    if (AtomicType.UINT16.isEquivalent(type)) {
+    if (AtomicType.UINT16.opEquals(type)) {
         return (*(cast(ushort*) address)).to!string();
     }
-    if (AtomicType.SINT32.isEquivalent(type)) {
+    if (AtomicType.SINT32.opEquals(type)) {
         return (*(cast(int*) address)).to!string();
     }
-    if (AtomicType.UINT32.isEquivalent(type)) {
+    if (AtomicType.UINT32.opEquals(type)) {
         return (*(cast(uint*) address)).to!string();
     }
-    if (AtomicType.SINT64.isEquivalent(type)) {
+    if (AtomicType.SINT64.opEquals(type)) {
         return (*(cast(long*) address)).to!string();
     }
-    if (AtomicType.UINT64.isEquivalent(type)) {
+    if (AtomicType.UINT64.opEquals(type)) {
         return (*(cast(ulong*) address)).to!string();
     }
-    if (AtomicType.FP32.isEquivalent(type)) {
+    if (AtomicType.FP32.opEquals(type)) {
         return (*(cast(float*) address)).to!string();
     }
-    if (AtomicType.FP64.isEquivalent(type)) {
+    if (AtomicType.FP64.opEquals(type)) {
         return (*(cast(double*) address)).to!string();
     }
     assert (0);
