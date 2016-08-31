@@ -140,7 +140,9 @@ unittest {
         "IndexAccess(ArrayLiteral({0: SignedIntegerLiteral(1), 1: SignedIntegerLiteral(2)})["
             ~ "UnsignedIntegerLiteral(0)])) | sint_lit(1)",
         interpret("{0: 1, 1: 2}[0u + 0u]")
-    );}
+    );
+    assertInterpretFails("{}[0]");
+}
 
 unittest {
     assertInterpretFails("{0: true, 1: 0}");
@@ -189,11 +191,11 @@ unittest {
         type("{1: {1, 2}, 0: {0: 1, 1: 2, 2: 3}}")
     );
     assertEqual(
-        "{sint_lit(1), sint_lit(1)}[2]",
+        "{}[2]",
         type("{1: {1, 1, 2}, 0: {0: 1, 1: 1, 2: 1}}")
     );
     assertEqual(
-        "sint64[2][2]",
+        "{}[2]",
         type("{0: {a: 1, b: 2}, 1: {0: 1, 1: 2}}")
     );
     assertEqual(
@@ -221,7 +223,7 @@ unittest {
         type("{0: {a: 1, b: 2, c: 3}, 1: {1, 2}}")
     );
     assertEqual(
-        "{sint_lit(1) a, sint_lit(2) b, sint_lit(3) c}[2]",
+        "{sint_lit(1), sint_lit(2), sint_lit(3)}[2]",
         type("{0: {a: 1, b: 1 + 1, c: 3}, 1: {1, 2, 3, 4}}")
     );
     assertEqual(
@@ -233,11 +235,11 @@ unittest {
         type("{0: {}, 1: {b: true}}")
     );
     assertEqual(
-        "sint64[2][2]",
+        "{}[2]",
         type("{0: {0: 1, 1: 2}, 1: {1, 2}}")
     );
     assertEqual(
-        "sint_lit(1)[2][2]",
+        "{}[2]",
         type("{0: {0: 1, 1: 1}, 1: {1, 1}}")
     );
     assertEqual(

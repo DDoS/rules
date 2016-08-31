@@ -29,7 +29,7 @@ public immutable interface LiteralNode : TypedNode {
 }
 
 public immutable interface CompositeNode : TypedNode {
-    public immutable(CompositeInfo) getCompositeInfo();
+    public immutable(TypeIdentity) getTypeIdentity();
 }
 
 public immutable class NullNode : TypedNode {
@@ -96,11 +96,11 @@ public immutable class BooleanLiteralNode : LiteralNode {
 
 public immutable class StringLiteralNode : CompositeNode, LiteralNode {
     private StringLiteralType type;
-    private CompositeInfo info;
+    private TypeIdentity info;
 
     public this(dstring value) {
         type = new immutable StringLiteralType(value);
-        info = type.compositeInfo();
+        info = type.identity();
     }
 
     public override immutable(TypedNode)[] getChildren() {
@@ -111,7 +111,7 @@ public immutable class StringLiteralNode : CompositeNode, LiteralNode {
         return type;
     }
 
-    public override immutable(CompositeInfo) getCompositeInfo() {
+    public override immutable(TypeIdentity) getTypeIdentity() {
         return info;
     }
 
@@ -152,7 +152,7 @@ public immutable class SignedIntegerLiteralNode : LiteralNode {
     }
 
     public override immutable(LiteralNode) specializeTo(immutable Type specialType) {
-        auto atomicSpecial = specialType.exactCastImmutable!AtomicType();
+        auto atomicSpecial = cast(immutable AtomicType) specialType;
         if (atomicSpecial !is null) {
             if (atomicSpecial.isInteger()) {
                 if (atomicSpecial.isSigned()) {
@@ -201,7 +201,7 @@ public immutable class UnsignedIntegerLiteralNode : LiteralNode {
     }
 
     public override immutable(LiteralNode) specializeTo(immutable Type specialType) {
-        auto atomicSpecial = specialType.exactCastImmutable!AtomicType();
+        auto atomicSpecial = cast(immutable AtomicType) specialType;
         if (atomicSpecial !is null) {
             if (atomicSpecial.isInteger()) {
                 if (atomicSpecial.isSigned()) {
@@ -250,7 +250,7 @@ public immutable class FloatLiteralNode : LiteralNode {
     }
 
     public override immutable(LiteralNode) specializeTo(immutable Type specialType) {
-        auto atomicSpecial = specialType.exactCastImmutable!AtomicType();
+        auto atomicSpecial = cast(immutable AtomicType) specialType;
         if (atomicSpecial !is null && atomicSpecial.isFloat()) {
             return new immutable FloatLiteralNode(atomicSpecial, type.value);
         }
@@ -284,7 +284,7 @@ public immutable class EmptyLiteralNode : CompositeNode, LiteralNode {
         return AnyTypeLiteral.INSTANCE;
     }
 
-    public override immutable(CompositeInfo) getCompositeInfo() {
+    public override immutable(TypeIdentity) getTypeIdentity() {
         return AnyType.INFO;
     }
 
@@ -308,12 +308,12 @@ public immutable class EmptyLiteralNode : CompositeNode, LiteralNode {
 public immutable class TupleLiteralNode : CompositeNode, LiteralNode {
     public TypedNode[] values;
     private TupleLiteralType type;
-    private CompositeInfo info;
+    private TypeIdentity info;
 
     public this(immutable(TypedNode)[] values) {
         this.values = values.reduceLiterals();
         this.type = new immutable TupleLiteralType(this.values.getTypes());
-        info = type.compositeInfo();
+        info = type.identity();
     }
 
     public override immutable(TypedNode)[] getChildren() {
@@ -324,7 +324,7 @@ public immutable class TupleLiteralNode : CompositeNode, LiteralNode {
         return type;
     }
 
-    public override immutable(CompositeInfo) getCompositeInfo() {
+    public override immutable(TypeIdentity) getTypeIdentity() {
         return info;
     }
 
@@ -349,7 +349,7 @@ public immutable class StructLiteralNode : CompositeNode, LiteralNode {
     public TypedNode[] values;
     private string[] labels;
     private StructureLiteralType type;
-    private CompositeInfo info;
+    private TypeIdentity info;
 
     public this(immutable(TypedNode)[] values, immutable(string)[] labels) {
         assert(values.length > 0);
@@ -357,7 +357,7 @@ public immutable class StructLiteralNode : CompositeNode, LiteralNode {
         this.values = values.reduceLiterals();
         this.labels = labels;
         type = new immutable StructureLiteralType(this.values.getTypes(), labels);
-        info = type.compositeInfo();
+        info = type.identity();
     }
 
     public override immutable(TypedNode)[] getChildren() {
@@ -368,7 +368,7 @@ public immutable class StructLiteralNode : CompositeNode, LiteralNode {
         return type;
     }
 
-    public override immutable(CompositeInfo) getCompositeInfo() {
+    public override immutable(TypeIdentity) getTypeIdentity() {
         return info;
     }
 
@@ -536,8 +536,8 @@ public immutable class IndexAccessNode : TypedNode {
         this.valueNode = valueNode.reduceLiterals();
         this.indexNode = addCastNode(indexNode.reduceLiterals(), AtomicType.UINT64);
         // Next find the acess type
-        auto compositeType = cast(immutable CompositeType) this.valueNode.getType();
-        assert (compositeType !is null);
+        auto referenceType = cast(immutable ReferenceType) this.valueNode.getType();
+        assert (referenceType !is null);
         // First check if we can know the index, for that it must be an integer literal type
         ulong index;
         bool indexKnown = false;
@@ -548,19 +548,20 @@ public immutable class IndexAccessNode : TypedNode {
         }
         // If the index is know, get the member type at the index
         if (indexKnown) {
-            type = compositeType.getMemberType(index);
+            type = referenceType.getMemberType(index);
+            // If the reference type is also a composite type, this method can return null for out-of-bounds
             if (type is null) {
-                throw new Exception(format("Index %d is out of range of composite %s", index, compositeType.toString()));
+                throw new Exception(format("Index %d is out of range of composite %s", index, referenceType.toString()));
             }
             return;
         }
         // Otherwise, for an array type, just use the component type
-        auto arrayType = cast(immutable ArrayType) compositeType;
+        auto arrayType = cast(immutable ArrayType) referenceType;
         if (arrayType !is null) {
             type = arrayType.componentType;
             return;
         }
-        throw new Exception(format("Index must be known at compile time for type %s", compositeType.toString()));
+        throw new Exception(format("Index must be known at compile time for type %s", referenceType.toString()));
     }
 
     public override immutable(TypedNode)[] getChildren() {
@@ -647,7 +648,7 @@ private immutable(TypedNode) addCastNode(immutable TypedNode fromNode, immutable
         return new immutable FunctionCallNode(castFunc, [fromNode]);
     }
     if (conversions.isNumericNarrowing()) {
-        // Must us specialization instead of a cast
+        // Must use specialization instead of a cast
         assert (fromLiteralNode !is null);
         return specializeNode(fromLiteralNode, toType);
     }

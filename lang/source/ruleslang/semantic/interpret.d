@@ -217,10 +217,10 @@ public immutable class Interpreter {
         // Interpret both the value and the index
         auto valueNode = indexAccess.value.interpret(context);
         auto indexNode = indexAccess.index.interpret(context);
-        // Check if the value type is an array
+        // Check if the value type is a indexible
         auto valueType = valueNode.getType();
-        auto compositeType = cast(immutable CompositeType) valueType;
-        if (compositeType is null) {
+        auto referenceType = cast(immutable ReferenceType) valueType;
+        if (referenceType is null) {
             throw new SourceException(format("Not a composite type %s", valueType.toString()), indexAccess.value);
         }
         // Check if the index type is a uint64

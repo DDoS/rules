@@ -16,9 +16,9 @@ public immutable class Evaluator {
 
     public void evaluateStringLiteral(Runtime runtime, immutable StringLiteralNode stringLiteral) {
         // Allocate the string
-        auto address = runtime.allocate(stringLiteral.getCompositeInfo());
+        auto address = runtime.allocate(stringLiteral.getTypeIdentity());
         // Then place the string data
-        auto dataSegment = cast(dchar*) (address + CompositeHeader.sizeof);
+        auto dataSegment = cast(dchar*) (address + IdentityHeader.sizeof);
         auto value = stringLiteral.getType().value;
         dataSegment[0 .. value.length] = value;
         // Finally push the address to the stack
@@ -38,27 +38,27 @@ public immutable class Evaluator {
     }
 
     public void evaluateEmptyLiteral(Runtime runtime, immutable EmptyLiteralNode emptyLiteral) {
-        // Allocate the empty composite
-        auto address = runtime.allocate(emptyLiteral.getCompositeInfo());
+        // Allocate the empty literal
+        auto address = runtime.allocate(emptyLiteral.getTypeIdentity());
         // It doesn't have any data, so just push the address to the stack
         runtime.stack.push(address);
     }
 
     public void evaluateTupleLiteral(Runtime runtime, immutable TupleLiteralNode tupleLiteral) {
-        evaluateTupleLiteral(runtime, tupleLiteral.getType(), tupleLiteral.getCompositeInfo(), tupleLiteral.values);
+        evaluateTupleLiteral(runtime, tupleLiteral.getType(), tupleLiteral.getTypeIdentity(), tupleLiteral.values);
     }
 
     public void evaluateStructLiteral(Runtime runtime, immutable StructLiteralNode structLiteral) {
         // This is the same as a tuple literal evalution-wise. The member names are just used for access operations
-        evaluateTupleLiteral(runtime, structLiteral.getType, structLiteral.getCompositeInfo(), structLiteral.values);
+        evaluateTupleLiteral(runtime, structLiteral.getType, structLiteral.getTypeIdentity(), structLiteral.values);
     }
 
-    private static void evaluateTupleLiteral(Runtime runtime, immutable TupleType type, immutable CompositeInfo info,
+    private static void evaluateTupleLiteral(Runtime runtime, immutable TupleType type, immutable TypeIdentity info,
             immutable(TypedNode)[] values) {
-        // Allocate the composite
+        // Allocate the literal
         auto address = runtime.allocate(info);
-        // Place the composite data
-        auto dataSegment = address + CompositeHeader.sizeof;
+        // Place the literal data
+        auto dataSegment = address + IdentityHeader.sizeof;
         foreach (i, memberType; type.memberTypes) {
             // Evaluate the member to place the value on the stack
             values[i].evaluate(runtime);
@@ -97,14 +97,14 @@ public immutable class Evaluator {
     }
 }
 
-private void* allocate(Runtime runtime, immutable CompositeInfo info) {
-    // Register the composite info
-    auto infoIndex = runtime.registerCompositeInfo(info);
+private void* allocate(Runtime runtime, immutable TypeIdentity identity) {
+    // Register the type identity
+    auto infoIndex = runtime.registerTypeIdentity(identity);
     // Calculate the size of the string (header + data) and allocate the memory
-    auto size = CompositeHeader.sizeof + info.dataSize;
+    auto size = IdentityHeader.sizeof + identity.dataSize;
     auto address = runtime.heap.allocateNotScanned(size);
     // Next set the header
-    *(cast (CompositeHeader*) address) = infoIndex;
+    *(cast (IdentityHeader*) address) = infoIndex;
     return address;
 }
 

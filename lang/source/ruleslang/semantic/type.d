@@ -685,14 +685,17 @@ public immutable class FloatLiteralType : AtomicType, AtomicLiteralType {
     }
 }
 
-public immutable interface CompositeType : Type {
-    public bool moreMembersThan(ulong count);
+public immutable interface ReferenceType : Type {
     public immutable(Type) getMemberType(ulong index);
+}
+
+public immutable interface CompositeType : ReferenceType {
+    public ulong getMemberCount();
 }
 
 public immutable class AnyType : CompositeType {
     public static immutable AnyType INSTANCE = new immutable AnyType();
-    public static immutable CompositeInfo INFO = INSTANCE.compositeInfo();
+    public static immutable TypeIdentity INFO = INSTANCE.identity();
 
     private this() {
     }
@@ -707,12 +710,16 @@ public immutable class AnyType : CompositeType {
     }
 
     public override immutable(Type) lowestUpperBound(immutable Type other) {
-        // No other type can be greater than this, so just return this
-        return this;
+        auto referenceType = cast(immutable ReferenceType) other;
+        if (referenceType !is null) {
+            // No other reference type can be greater than this, so just return this
+            return this;
+        }
+        return null;
     }
 
-    public override bool moreMembersThan(ulong count) {
-        return false;
+    public override ulong getMemberCount() {
+        return 0;
     }
 
     public override immutable(Type) getMemberType(ulong index) {
@@ -747,17 +754,17 @@ public immutable class TupleType : CompositeType {
             conversions.thenReferenceWidening();
             return true;
         }
-        // Can convert to another composite type if its members are an ordered subset
-        auto compositeType = cast(immutable CompositeType) type;
-        if (compositeType is null) {
+        // Can convert to another tuple type if its members are an ordered subset
+        auto tupleType = type.exactCastImmutable!TupleType();
+        if (tupleType is null) {
             return false;
         }
-        if (compositeType.moreMembersThan(memberTypes.length)) {
+        if (tupleType.getMemberCount() > memberTypes.length) {
             return false;
         }
         // Only allow identity conversion between members
         foreach (i, memberType; memberTypes) {
-            auto otherMemberType = compositeType.getMemberType(i);
+            auto otherMemberType = tupleType.getMemberType(i);
             if (otherMemberType !is null && !memberType.opEquals(otherMemberType)) {
                 return false;
             }
@@ -793,34 +800,15 @@ public immutable class TupleType : CompositeType {
             }
             return new immutable TupleType(memberIntersection);
         }
-        // If the other is an array type, the LUB is always the array type
-        auto arrayType = cast(immutable ArrayType) other;
-        if (arrayType !is null) {
-            // If the array is sized, intersect by ordered members
-            auto sizedArrayType = cast(immutable SizedArrayType) arrayType;
-            if (sizedArrayType is null) {
-                return other;
-            }
-            ulong arraySize = sizedArrayType.size;
-            ulong tupleSize = 0;
-            foreach (memberType; memberTypes) {
-                if (memberType.opEquals(sizedArrayType.componentType)) {
-                    tupleSize += 1;
-                } else {
-                    break;
-                }
-            }
-            auto size = min(tupleSize, arraySize);
-            if (size <= 0) {
-                return AnyType.INSTANCE;
-            }
-            return new immutable TupleType(memberTypes[0 .. size]);
+        // Otherwise if the other is a reference type, return the any type
+        if (cast(ReferenceType) other !is null) {
+            return AnyType.INSTANCE;
         }
         return null;
     }
 
-    public override bool moreMembersThan(ulong count) {
-        return  memberTypes.length > count;
+    public override ulong getMemberCount() {
+        return memberTypes.length;
     }
 
     public override immutable(Type) getMemberType(ulong index) {
@@ -921,7 +909,7 @@ public immutable class StructureType : TupleType {
     }
 }
 
-public immutable class ArrayType : CompositeType {
+public immutable class ArrayType : ReferenceType {
     public Type componentType;
     public uint totalDepth;
 
@@ -960,17 +948,14 @@ public immutable class ArrayType : CompositeType {
         if (other.convertibleTo(this, ignored)) {
             return this;
         }
-        // There is a lowest upper bound with a tuple type
-        auto tupleType = cast(immutable TupleType) other;
-        if (tupleType !is null) {
-            // Defer to the tuple type
-            return tupleType.lowestUpperBound(this);
+        // When it comes to arrays, only polymorphism on size it allowed, which means
+        // the types are linearly ordered and do not form a tree. So the above checks
+        // should be sufficient.
+        // If the other is a reference type, return the any type
+        if (cast(ReferenceType) other !is null) {
+            return AnyType.INSTANCE;
         }
         return null;
-    }
-
-    public override bool moreMembersThan(ulong count) {
-        return false;
     }
 
     public override immutable(Type) getMemberType(ulong index) {
@@ -988,7 +973,7 @@ public immutable class ArrayType : CompositeType {
     }
 }
 
-public immutable class SizedArrayType : ArrayType {
+public immutable class SizedArrayType : ArrayType, CompositeType {
     public ulong size;
 
     public this(immutable Type componentType, ulong size) {
@@ -1027,8 +1012,12 @@ public immutable class SizedArrayType : ArrayType {
         return false;
     }
 
-    public override bool moreMembersThan(ulong count) {
-        return size > count;
+    public override ulong getMemberCount() {
+        return size;
+    }
+
+    public override immutable(Type) getMemberType(ulong index) {
+        return index >= size ? null : componentType;
     }
 
     public override string toString() {
@@ -1049,8 +1038,8 @@ public immutable class AnyTypeLiteral : AnyType, LiteralType {
         if (super.convertibleTo(type, conversions)) {
             return true;
         }
-        // Can specialize to any another composite
-        if (cast(immutable CompositeType) type !is null) {
+        // Can specialize to any another reference type
+        if (cast(immutable ReferenceType) type !is null) {
             conversions.thenReferenceNarrowing();
             return true;
         }
@@ -1071,14 +1060,14 @@ public immutable class TupleLiteralType : TupleType, LiteralType {
         if (convertibleTo(type, conversions)) {
             return true;
         }
-        // Can specialize to another composite
-        auto compositeType = cast(immutable CompositeType) type;
-        if (compositeType is null) {
+        // Can specialize to another reference type
+        auto referenceType = cast(immutable ReferenceType) type;
+        if (referenceType is null) {
             return false;
         }
         // The members must be convertible to or specializable to that of the other
         foreach (i, memberType; memberTypes) {
-            auto otherMemberType = compositeType.getMemberType(i);
+            auto otherMemberType = referenceType.getMemberType(i);
             if (otherMemberType is null) {
                 continue;
             }
@@ -1293,7 +1282,7 @@ public immutable class StringLiteralType : SizedArrayType, LiteralType {
     }
 }
 
-public immutable struct CompositeInfo {
+public immutable struct TypeIdentity {
     public enum Kind {
         TUPLE, STRUCT, ARRAY, SIZED_ARRAY
     }
@@ -1301,26 +1290,26 @@ public immutable struct CompositeInfo {
     public size_t dataSize;
     public size_t[] memberOffsetByIndex;
     public size_t[string] memberOffsetByName;
-    public CompositeInfo.Kind kind;
+    public TypeIdentity.Kind kind;
 }
 
-public CompositeInfo compositeInfo(immutable CompositeType type) {
+public TypeIdentity identity(immutable ReferenceType type) {
     auto tuple = cast(immutable TupleType) type;
     if (tuple !is null) {
-        return tuple.tupleInfo();
+        return tuple.tupleIdentity();
     }
     auto array = cast(immutable ArrayType) type;
     if (array !is null) {
-        return array.arrayInfo();
+        return array.arrayIdentity();
     }
     auto any = cast(immutable AnyType) type;
     if (any !is null) {
-        return immutable CompositeInfo(0, [], null, CompositeInfo.Kind.TUPLE);
+        return immutable TypeIdentity(0, [], null, TypeIdentity.Kind.TUPLE);
     }
     assert (0);
 }
 
-private CompositeInfo tupleInfo(immutable TupleType type) {
+private TypeIdentity tupleIdentity(immutable TupleType type) {
     size_t dataSize = 0;
     auto offsets = new size_t[type.memberTypes.length];
     foreach (i, memberType; type.memberTypes) {
@@ -1329,35 +1318,35 @@ private CompositeInfo tupleInfo(immutable TupleType type) {
         offsets[i] = dataSize;
         dataSize += memberSize;
     }
-    CompositeInfo.Kind kind;
+    TypeIdentity.Kind kind;
     size_t[string] names;
     auto structType = cast(immutable StructureType) type;
     if (structType !is null) {
-        kind = CompositeInfo.Kind.STRUCT;
+        kind = TypeIdentity.Kind.STRUCT;
         foreach (i, name; structType.memberNames) {
             names[name] = offsets[i];
         }
     } else {
-        kind = CompositeInfo.Kind.TUPLE;
+        kind = TypeIdentity.Kind.TUPLE;
         names = null;
     }
-    return immutable CompositeInfo(dataSize, offsets.idup, names.assumeUnique(), kind);
+    return immutable TypeIdentity(dataSize, offsets.idup, names.assumeUnique(), kind);
 }
 
-private CompositeInfo arrayInfo(immutable ArrayType type) {
+private TypeIdentity arrayIdentity(immutable ArrayType type) {
     auto componentSize = type.componentType.getStorageSize();
     size_t dataSize;
-    CompositeInfo.Kind kind;
+    TypeIdentity.Kind kind;
     auto sizedArray = cast(immutable SizedArrayType) type;
     if (sizedArray !is null) {
         dataSize = componentSize * sizedArray.size;
-        kind = CompositeInfo.Kind.SIZED_ARRAY;
+        kind = TypeIdentity.Kind.SIZED_ARRAY;
     } else {
         // The data size if only that of the length field
         dataSize = size_t.sizeof;
-        kind = CompositeInfo.Kind.ARRAY;
+        kind = TypeIdentity.Kind.ARRAY;
     }
-    return immutable CompositeInfo(dataSize, [componentSize], null, kind);
+    return immutable TypeIdentity(dataSize, [componentSize], null, kind);
 }
 
 private size_t getStorageSize(immutable Type type) {
@@ -1371,9 +1360,9 @@ private size_t getStorageSize(immutable Type type) {
         }
         return size / 8;
     }
-    // For composite types, use the native word size
-    auto composite = cast(immutable CompositeType) type;
-    if (composite !is null) {
+    // For reference types, use the native word size
+    auto referenceType = cast(immutable ReferenceType) type;
+    if (referenceType !is null) {
         return size_t.sizeof;
     }
     assert (0);

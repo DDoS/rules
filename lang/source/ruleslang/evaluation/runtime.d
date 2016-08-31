@@ -8,19 +8,19 @@ import ruleslang.semantic.type;
 import ruleslang.semantic.symbol;
 import ruleslang.semantic.context;
 
-public alias CompositeHeader = size_t;
+public alias IdentityHeader = size_t;
 public alias FunctionImpl = void function(Stack);
 
 public abstract class Runtime {
     private Stack _stack;
     private Heap _heap;
-    private immutable(CompositeInfo)[] composites;
+    private immutable(TypeIdentity)[] identities;
 
     public this() {
         _stack = new Stack(4 * 1024);
         _heap = new Heap(8 * 1024);
-        composites = [];
-        composites.reserve(256);
+        identities = [];
+        identities.reserve(256);
     }
 
     @property public Stack stack() {
@@ -37,21 +37,21 @@ public abstract class Runtime {
 
     public abstract void call(string symbolicName);
 
-    public CompositeHeader registerCompositeInfo(immutable CompositeInfo info) {
+    public IdentityHeader registerTypeIdentity(immutable TypeIdentity identity) {
         // If it already exists in the list, return the index
-        foreach (CompositeHeader i, composite; composites) {
-            if (composite == info) {
+        foreach (IdentityHeader i, id; identities) {
+            if (id == identity) {
                 return i;
             }
         }
         // Otherwise append it
-        composites ~= info;
-        return cast(CompositeHeader) composites.length - 1;
+        identities ~= identity;
+        return cast(IdentityHeader) identities.length - 1;
     }
 
-    public immutable(CompositeInfo) getCompositeInfo(CompositeHeader index) {
-        assert (index < composites.length);
-        return composites[index];
+    public immutable(TypeIdentity) getTypeIdentity(IdentityHeader index) {
+        assert (index < identities.length);
+        return identities[index];
     }
 }
 
@@ -154,8 +154,8 @@ public class Stack {
     }
 
     public Variant pop(immutable Type type) {
-        auto composite = cast(immutable CompositeType) type;
-        if (composite !is null) {
+        auto reference = cast(immutable ReferenceType) type;
+        if (reference !is null) {
             return Variant(pop!(void*));
         }
         if (AtomicType.BOOL.opEquals(type)) {
@@ -202,8 +202,8 @@ public class Stack {
     }
 
     public void popTo(immutable Type type, void* to) {
-        auto composite = cast(immutable CompositeType) type;
-        if (composite !is null) {
+        auto reference = cast(immutable ReferenceType) type;
+        if (reference !is null) {
             popTo!(void*)(to);
         } else if (AtomicType.BOOL.opEquals(type)) {
             popTo!bool(to);
@@ -241,8 +241,8 @@ public class Stack {
     }
 
     public void* peek(immutable Type type) {
-        auto composite = cast(immutable CompositeType) type;
-        if (composite !is null) {
+        auto reference = cast(immutable ReferenceType) type;
+        if (reference !is null) {
             return peek!(void*);
         }
         if (AtomicType.BOOL.opEquals(type)) {

@@ -78,13 +78,13 @@ private string asString(Runtime runtime, immutable Type type, void* address) {
         return atomicType.asString(address);
     }
 
-    auto compositeAddress = *(cast(void**) address);
-    auto info = runtime.getCompositeInfo(*(cast(CompositeHeader*) compositeAddress));
-    auto dataSegment = compositeAddress + CompositeHeader.sizeof;
+    auto referenceAddress = *(cast(void**) address);
+    auto identity = runtime.getTypeIdentity(*(cast(IdentityHeader*) referenceAddress));
+    auto dataSegment = referenceAddress + IdentityHeader.sizeof;
 
     auto stringLiteral = cast(immutable StringLiteralType) type;
     if (stringLiteral !is null) {
-        dchar[] stringData = (cast(dchar*) dataSegment)[0 .. info.dataSize / dchar.sizeof];
+        dchar[] stringData = (cast(dchar*) dataSegment)[0 .. identity.dataSize / dchar.sizeof];
         return '"' ~ stringData.idup.to!string() ~ '"';
     }
 
@@ -99,7 +99,7 @@ private string asString(Runtime runtime, immutable Type type, void* address) {
         foreach (i, memberName; structType.memberNames) {
             auto memberType = structType.getMemberType(i);
             str ~= memberName ~ ": ";
-            str ~= runtime.asString(memberType, dataSegment + info.memberOffsetByName[memberName]);
+            str ~= runtime.asString(memberType, dataSegment + identity.memberOffsetByName[memberName]);
             if (i < structType.memberNames.length - 1) {
                 str ~= ", ";
             }
@@ -112,7 +112,7 @@ private string asString(Runtime runtime, immutable Type type, void* address) {
     if (tupleType !is null) {
         string str = "{";
         foreach (i, memberType; tupleType.memberTypes) {
-            str ~= runtime.asString(memberType, dataSegment + info.memberOffsetByIndex[i]);
+            str ~= runtime.asString(memberType, dataSegment + identity.memberOffsetByIndex[i]);
             if (i < tupleType.memberTypes.length - 1) {
                 str ~= ", ";
             }

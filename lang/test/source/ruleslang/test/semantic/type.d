@@ -224,19 +224,17 @@ unittest {
         new immutable StructureType([AtomicType.UINT8], ["a"]),
         TypeConversion.REFERENCE_WIDENING
     );
-    assertConvertible(
+    assertNotConvertible(
         new immutable TupleType([AtomicType.UINT8]),
         new immutable StructureType([AtomicType.UINT8], ["a"]),
-        TypeConversion.REFERENCE_WIDENING
     );
     assertNotConvertible(
         new immutable TupleType([AtomicType.UINT8]),
         new immutable StructureType([AtomicType.UINT8, AtomicType.BOOL], ["a", "b"]),
     );
-    assertConvertible(
+    assertNotConvertible(
         new immutable TupleType([AtomicType.UINT8, AtomicType.BOOL]),
         new immutable StructureType([AtomicType.UINT8], ["a"]),
-        TypeConversion.REFERENCE_WIDENING
     );
     assertConvertible(
         new immutable StructureType([AtomicType.UINT8], ["a"]),
@@ -265,43 +263,62 @@ unittest {
         new immutable TupleType([AtomicType.UINT8, AtomicType.BOOL]),
         new immutable ArrayType(AtomicType.UINT8),
     );
-    assertConvertible(
+    assertNotConvertible(
         new immutable TupleType([AtomicType.UINT8]),
         new immutable ArrayType(AtomicType.UINT8),
-        TypeConversion.REFERENCE_WIDENING
     );
-    assertConvertible(
+    assertNotConvertible(
         new immutable TupleType([AtomicType.UINT8, AtomicType.UINT8]),
         new immutable ArrayType(AtomicType.UINT8),
-        TypeConversion.REFERENCE_WIDENING
     );
-    assertConvertible(
+    assertNotConvertible(
         new immutable TupleType([AtomicType.UINT8, AtomicType.UINT8]),
         new immutable SizedArrayType(AtomicType.UINT8, 1),
-        TypeConversion.REFERENCE_WIDENING
     );
-    assertConvertible(
+    assertNotConvertible(
         new immutable TupleType([AtomicType.UINT8, AtomicType.UINT8]),
         new immutable SizedArrayType(AtomicType.UINT8, 2),
-        TypeConversion.REFERENCE_WIDENING
     );
     assertNotConvertible(
         new immutable TupleType([AtomicType.UINT8, AtomicType.UINT8]),
         new immutable SizedArrayType(AtomicType.UINT8, 3),
     );
-    assertConvertible(
+    assertNotConvertible(
         new immutable StructureType([AtomicType.UINT8], ["a"]),
         new immutable ArrayType(AtomicType.UINT8),
-        TypeConversion.REFERENCE_WIDENING
     );
-    assertConvertible(
+    assertNotConvertible(
         new immutable StructureType([AtomicType.UINT8], ["a"]),
         new immutable SizedArrayType(AtomicType.UINT8, 1),
-        TypeConversion.REFERENCE_WIDENING
     );
 }
 
 unittest {
+    assertSpecializable(
+        AnyTypeLiteral.INSTANCE,
+        AnyTypeLiteral.INSTANCE,
+        TypeConversion.IDENTITY
+    );
+    assertSpecializable(
+        AnyTypeLiteral.INSTANCE,
+        new immutable TupleType([AtomicType.UINT8]),
+        TypeConversion.REFERENCE_NARROWING
+    );
+    assertSpecializable(
+        AnyTypeLiteral.INSTANCE,
+        new immutable StructureType([AtomicType.UINT8], ["a"]),
+        TypeConversion.REFERENCE_NARROWING
+    );
+    assertSpecializable(
+        AnyTypeLiteral.INSTANCE,
+        new immutable SizedArrayType(AtomicType.UINT8, 3),
+        TypeConversion.REFERENCE_NARROWING
+    );
+    assertSpecializable(
+        AnyTypeLiteral.INSTANCE,
+        new immutable ArrayType(AtomicType.UINT8),
+        TypeConversion.REFERENCE_NARROWING
+    );
     assertSpecializable(
         new immutable TupleLiteralType([AtomicType.UINT8, AtomicType.UINT8]),
         new immutable TupleType([AtomicType.UINT8]),
@@ -504,10 +521,12 @@ unittest {
             new immutable StringLiteralType(""));
     assertLUB(new immutable ArrayType(AtomicType.SINT16), new immutable SizedArrayType(AtomicType.SINT16, 3),
             new immutable ArrayType(AtomicType.SINT16));
-    assertNoLUB(new immutable ArrayType(AtomicType.SINT16), new immutable SizedArrayType(AtomicType.SINT8, 3));
+    assertLUB(new immutable ArrayType(AtomicType.SINT16), new immutable SizedArrayType(AtomicType.SINT8, 3),
+            AnyType.INSTANCE);
     assertLUB(new immutable SizedArrayType(AtomicType.SINT16, 1), new immutable SizedArrayType(AtomicType.SINT16, 3),
             new immutable SizedArrayType(AtomicType.SINT16, 1));
-    assertNoLUB(new immutable SizedArrayType(AtomicType.SINT16, 1), new immutable SizedArrayType(AtomicType.SINT8, 3));
+    assertLUB(new immutable SizedArrayType(AtomicType.SINT16, 1), new immutable SizedArrayType(AtomicType.SINT8, 3),
+            AnyType.INSTANCE);
 }
 
 private void assertConvertible(immutable Type from, immutable Type to, TypeConversionChain by...) {
