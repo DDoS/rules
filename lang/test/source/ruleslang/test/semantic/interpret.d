@@ -147,124 +147,167 @@ unittest {
 unittest {
     assertInterpretFails("{0: true, 1: 0}");
     assertEqual(
-        "bool_lit(true)[2]",
-        type("{0: true, 1: true}")
+        "ArrayLiteral({0: BooleanLiteral(true), 1: BooleanLiteral(true)})"
+            ~ " | bool_lit(true)[2]",
+        interpret("{0: true, 1: true}")
     );
     assertEqual(
-        "bool[2]",
-        type("{0: true, 1: false}")
+        "ArrayLiteral({0: BooleanLiteral(true), 1: BooleanLiteral(false)})"
+            ~ " | bool[2]",
+        interpret("{0: true, 1: false}")
     );
     assertEqual(
-        "fp64[2]",
-        type("{0: 1, 1: 2.0}")
+        "ArrayLiteral({0: FloatLiteral(1), 1: FloatLiteral(2)})"
+            ~ " | fp64[2]",
+        interpret("{0: 1, 1: 2.0}")
     );
     assertEqual(
-        "fp_lit(1)[2]",
-        type("{0: 1, 1: 1.0}")
+        "ArrayLiteral({0: FloatLiteral(1), 1: FloatLiteral(1)})"
+            ~ " | fp_lit(1)[2]",
+        interpret("{0: 1, 1: 1.0}")
     );
     assertEqual(
-        "sint_lit(1)[2]",
-        type("{0: 1, 1: 1}")
+        "ArrayLiteral({0: SignedIntegerLiteral(1), 1: SignedIntegerLiteral(1)})"
+            ~ " | sint_lit(1)[2]",
+        interpret("{0: 1, 1: 1}")
     );
     assertEqual(
-        "sint64[2]",
-        type("{0: 1, 1: 2}")
+        "ArrayLiteral({0: SignedIntegerLiteral(1), 1: SignedIntegerLiteral(2)})"
+            ~ " | sint64[2]",
+        interpret("{0: 1, 1: 2}")
     );
     assertEqual(
-        "sint64[2]",
-        type("{0: 1, 1: -1}")
+        "ArrayLiteral({0: SignedIntegerLiteral(1), 1: SignedIntegerLiteral(-1)})"
+            ~ " | sint64[2]",
+        interpret("{0: 1, 1: -1}")
     );
     assertEqual(
-        "{sint_lit(1), sint_lit(2)}[2]",
-        type("{1: {1, 2}, 0: {1, 2, 3}}")
+        "ArrayLiteral({1: TupleLiteral({SignedIntegerLiteral(1), SignedIntegerLiteral(2)}),"
+            ~ " 0: TupleLiteral({SignedIntegerLiteral(1), SignedIntegerLiteral(2), SignedIntegerLiteral(3)})})"
+            ~ " | {sint_lit(1), sint_lit(2)}[2]",
+        interpret("{1: {1, 2}, 0: {1, 2, 3}}")
     );
     assertEqual(
-        "{sint_lit(1), sint_lit(2)}[2]",
-        type("{1: {1, 2, true}, 0: {1, 2, 3}}")
+        "ArrayLiteral({1: TupleLiteral({SignedIntegerLiteral(1), SignedIntegerLiteral(2), BooleanLiteral(true)}), "
+            ~ "0: TupleLiteral({SignedIntegerLiteral(1), SignedIntegerLiteral(2), SignedIntegerLiteral(3)})})"
+            ~ " | {sint_lit(1), sint_lit(2)}[2]",
+        interpret("{1: {1, 2, true}, 0: {1, 2, 3}}")
     );
     assertEqual(
-        "{sint_lit(1), sint_lit(2)}[2]",
-        type("{1: {1, 2}, 0: {a: 1, b: 2, c: 3}}")
+        "ArrayLiteral({1: TupleLiteral({SignedIntegerLiteral(1), SignedIntegerLiteral(2)}), "
+            ~ "0: StructLiteral({a: SignedIntegerLiteral(1), b: SignedIntegerLiteral(2), c: SignedIntegerLiteral(3)})})"
+            ~ " | {sint_lit(1), sint_lit(2)}[2]",
+        interpret("{1: {1, 2}, 0: {a: 1, b: 2, c: 3}}")
     );
     assertEqual(
-        "{}[2]",
-        type("{1: {1, 2}, 0: {0: 1, 1: 2, 2: 3}}")
+        "ArrayLiteral({1: TupleLiteral({SignedIntegerLiteral(1), SignedIntegerLiteral(2)}), "
+            ~ "0: ArrayLiteral({0: SignedIntegerLiteral(1), 1: SignedIntegerLiteral(2), 2: SignedIntegerLiteral(3)})})"
+            ~ " | {}[2]",
+        interpret("{1: {1, 2}, 0: {0: 1, 1: 2, 2: 3}}")
     );
     assertEqual(
-        "{}[2]",
-        type("{1: {1, 1, 2}, 0: {0: 1, 1: 1, 2: 1}}")
+        "ArrayLiteral({1: TupleLiteral({SignedIntegerLiteral(1), SignedIntegerLiteral(1), SignedIntegerLiteral(2)}), "
+            ~ "0: ArrayLiteral({0: SignedIntegerLiteral(1), 1: SignedIntegerLiteral(1), 2: SignedIntegerLiteral(1)})})"
+            ~ " | {}[2]",
+        interpret("{1: {1, 1, 2}, 0: {0: 1, 1: 1, 2: 1}}")
     );
     assertEqual(
-        "{}[2]",
-        type("{0: {a: 1, b: 2}, 1: {0: 1, 1: 2}}")
+        "ArrayLiteral({0: StructLiteral({a: SignedIntegerLiteral(1), b: SignedIntegerLiteral(2)}), "
+            ~ "1: ArrayLiteral({0: SignedIntegerLiteral(1), 1: SignedIntegerLiteral(2)})})"
+            ~ " | {}[2]",
+        interpret("{0: {a: 1, b: 2}, 1: {0: 1, 1: 2}}")
     );
     assertEqual(
-        "{sint_lit(1) a, sint_lit(1) b}[2]",
-        type("{0: {a: 1, b: 1, c: 1}, 1: {a: 1, b: 1}}")
+        "ArrayLiteral({0: StructLiteral({a: SignedIntegerLiteral(1), b: SignedIntegerLiteral(1), c: SignedIntegerLiteral(1)}), "
+            ~ "1: StructLiteral({a: SignedIntegerLiteral(1), b: SignedIntegerLiteral(1)})})"
+            ~ " | {sint_lit(1) a, sint_lit(1) b}[2]",
+        interpret("{0: {a: 1, b: 1, c: 1}, 1: {a: 1, b: 1}}")
     );
     assertEqual(
-        "{sint_lit(1) a, sint_lit(1) b, sint_lit(1) c}[2]",
-        type("{0: {a: 1, b: 1, c: 1}, 1: {a: 1, b: 1, c: 1}}")
+        "ArrayLiteral({0: StructLiteral({a: SignedIntegerLiteral(1), b: SignedIntegerLiteral(1), c: SignedIntegerLiteral(1)}), "
+            ~ "1: StructLiteral({a: SignedIntegerLiteral(1), b: SignedIntegerLiteral(1), c: SignedIntegerLiteral(1)})})"
+            ~ " | {sint_lit(1) a, sint_lit(1) b, sint_lit(1) c}[2]",
+        interpret("{0: {a: 1, b: 1, c: 1}, 1: {a: 1, b: 1, c: 1}}")
     );
     assertEqual(
-        "{sint_lit(1) a, sint_lit(1) b}[2]",
-        type("{0: {a: 1, b: 1, c: 2}, 1: {a: 1, b: 1, c: 1}}")
+        "ArrayLiteral({0: StructLiteral({a: SignedIntegerLiteral(1), b: SignedIntegerLiteral(1), c: SignedIntegerLiteral(2)}), "
+            ~ "1: StructLiteral({a: SignedIntegerLiteral(1), b: SignedIntegerLiteral(1), c: SignedIntegerLiteral(1)})})"
+            ~ " | {sint_lit(1) a, sint_lit(1) b}[2]",
+        interpret("{0: {a: 1, b: 1, c: 2}, 1: {a: 1, b: 1, c: 1}}")
     );
     assertEqual(
-        "{sint_lit(1) a, sint_lit(1) c}[2]",
-        type("{0: {a: 1, b: 2, c: 1}, 1: {a: 1, b: 1, c: 1}}")
+        "ArrayLiteral({0: StructLiteral({a: SignedIntegerLiteral(1), b: SignedIntegerLiteral(2), c: SignedIntegerLiteral(1)}), "
+            ~ "1: StructLiteral({a: SignedIntegerLiteral(1), b: SignedIntegerLiteral(1), c: SignedIntegerLiteral(1)})})"
+            ~ " | {sint_lit(1) a, sint_lit(1) c}[2]",
+        interpret("{0: {a: 1, b: 2, c: 1}, 1: {a: 1, b: 1, c: 1}}")
     );
     assertEqual(
-        "{sint_lit(1), sint_lit(2), sint_lit(3)}[2]",
-        type("{0: {a: 1, b: 2, c: 3}, 1: {1, 2, 3}}")
+        "ArrayLiteral({0: StructLiteral({a: SignedIntegerLiteral(1), b: SignedIntegerLiteral(2), c: SignedIntegerLiteral(3)}), "
+            ~ "1: TupleLiteral({SignedIntegerLiteral(1), SignedIntegerLiteral(2), SignedIntegerLiteral(3)})})"
+            ~ " | {sint_lit(1), sint_lit(2), sint_lit(3)}[2]",
+        interpret("{0: {a: 1, b: 2, c: 3}, 1: {1, 2, 3}}")
     );
     assertEqual(
-        "{sint_lit(1), sint_lit(2)}[2]",
-        type("{0: {a: 1, b: 2, c: 3}, 1: {1, 2}}")
+        "ArrayLiteral({0: StructLiteral({a: SignedIntegerLiteral(1), b: SignedIntegerLiteral(2), c: SignedIntegerLiteral(3)}), "
+            ~ "1: TupleLiteral({SignedIntegerLiteral(1), SignedIntegerLiteral(2)})})"
+            ~ " | {sint_lit(1), sint_lit(2)}[2]",
+        interpret("{0: {a: 1, b: 2, c: 3}, 1: {1, 2}}")
     );
     assertEqual(
-        "{sint_lit(1), sint_lit(2), sint_lit(3)}[2]",
-        type("{0: {a: 1, b: 1 + 1, c: 3}, 1: {1, 2, 3, 4}}")
+        "ArrayLiteral({0: StructLiteral({a: SignedIntegerLiteral(1), b: SignedIntegerLiteral(2), c: SignedIntegerLiteral(3)}), "
+            ~ "1: TupleLiteral({SignedIntegerLiteral(1), SignedIntegerLiteral(2), SignedIntegerLiteral(3), "
+            ~ "SignedIntegerLiteral(4)})})"
+            ~ " | {sint_lit(1), sint_lit(2), sint_lit(3)}[2]",
+        interpret("{0: {a: 1, b: 1 + 1, c: 3}, 1: {1, 2, 3, 4}}")
     );
     assertEqual(
-        "{}[2]",
-        type("{0: {}, 1: {true}}")
+        "ArrayLiteral({0: EmptyLiteralNode({}), 1: TupleLiteral({BooleanLiteral(true)})})"
+            ~ " | {}[2]",
+        interpret("{0: {}, 1: {true}}")
     );
     assertEqual(
-        "{}[2]",
-        type("{0: {}, 1: {b: true}}")
+        "ArrayLiteral({0: EmptyLiteralNode({}), 1: StructLiteral({b: BooleanLiteral(true)})})"
+            ~ " | {}[2]",
+        interpret("{0: {}, 1: {b: true}}")
     );
     assertEqual(
-        "{}[2]",
-        type("{0: {0: 1, 1: 2}, 1: {1, 2}}")
+        "ArrayLiteral({0: ArrayLiteral({0: SignedIntegerLiteral(1), 1: SignedIntegerLiteral(2)}), "
+            ~ "1: TupleLiteral({SignedIntegerLiteral(1), SignedIntegerLiteral(2)})})"
+            ~ " | {}[2]",
+        interpret("{0: {0: 1, 1: 2}, 1: {1, 2}}")
     );
     assertEqual(
-        "{}[2]",
-        type("{0: {0: 1, 1: 1}, 1: {1, 1}}")
+        "ArrayLiteral({0: ArrayLiteral({0: SignedIntegerLiteral(1), 1: SignedIntegerLiteral(1)}), "
+            ~ "1: TupleLiteral({SignedIntegerLiteral(1), SignedIntegerLiteral(1)})})"
+            ~ " | {}[2]",
+        interpret("{0: {0: 1, 1: 1}, 1: {1, 1}}")
     );
     assertEqual(
-        "string_lit(\"hello\")[2]",
-        type("{0: \"hello\", 1: \"hello\"}")
+        "ArrayLiteral({0: StringLiteral(\"hello\"), 1: StringLiteral(\"hello\")})"
+            ~ " | string_lit(\"hello\")[2]",
+        interpret("{0: \"hello\", 1: \"hello\"}")
     );
     assertEqual(
-        "string_lit(\"hell\")[2]",
-        type("{0: \"hello\", 1: \"hell\"}")
+        "ArrayLiteral({0: StringLiteral(\"hello\"), 1: StringLiteral(\"hell\")})"
+            ~ " | string_lit(\"hell\")[2]",
+        interpret("{0: \"hello\", 1: \"hell\"}")
     );
     assertEqual(
-        "string_lit(\"\")[2]",
-        type("{0: \"hello\", 1: \"allo\"}")
+        "ArrayLiteral({0: StringLiteral(\"hello\"), 1: StringLiteral(\"allo\")})"
+            ~ " | string_lit(\"\")[2]",
+        interpret("{0: \"hello\", 1: \"allo\"}")
     );
     assertEqual(
-        "string_lit(\"\")[2]",
-        type("{0: \"allo\", 1: \"hello\"}")
+        "ArrayLiteral({0: StringLiteral(\"allo\"), 1: StringLiteral(\"hello\")})"
+            ~ " | string_lit(\"\")[2]",
+        interpret("{0: \"allo\", 1: \"hello\"}")
     );
     assertEqual(
-        "{}[2]",
-        type("{0: \"hello\", 1: {1, 1}}")
+        "ArrayLiteral({0: StringLiteral(\"hello\"), 1: TupleLiteral({SignedIntegerLiteral(1), SignedIntegerLiteral(1)})})"
+            ~ " | {}[2]",
+        interpret("{0: \"hello\", 1: {1, 1}}")
     );
 }
-
-private alias type = interpret!getTypeInfo;
 
 private string interpret(alias info = getAllInfo)(string source) {
     auto tokenizer = new Tokenizer(new DCharReader(source));

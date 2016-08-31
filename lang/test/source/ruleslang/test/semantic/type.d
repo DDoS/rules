@@ -126,10 +126,10 @@ unittest {
     assertNotSpecializable(new immutable StringLiteralType("1"d), new immutable StringLiteralType("2"d));
     assertNotSpecializable(new immutable StringLiteralType("1"d), new immutable StringLiteralType("11"d));
     assertSpecializable(new immutable StringLiteralType("11"d), new immutable StringLiteralType("1"d),
-        TypeConversion.SIZED_ARRAY_SHORTEN);
+        TypeConversion.REFERENCE_WIDENING);
     assertNotSpecializable(new immutable StringLiteralType("21"d), new immutable StringLiteralType("1"d));
     assertSpecializable(new immutable StringLiteralType("12"d), new immutable StringLiteralType("1"d),
-        TypeConversion.SIZED_ARRAY_SHORTEN);
+        TypeConversion.REFERENCE_WIDENING);
     assertNotSpecializable(new immutable StringLiteralType("ç"d), AtomicType.UINT8);
     assertNotSpecializable(new immutable StringLiteralType("11"d), AtomicType.UINT8);
     assertNotSpecializable(new immutable StringLiteralType("Ʃ"d), AtomicType.UINT8);
@@ -143,7 +143,7 @@ unittest {
         TypeConversion.STRING_LITERAL_TO_UTF8, TypeConversion.IDENTITY);
     assertNotSpecializable(new immutable StringLiteralType("1"d), new immutable SizedArrayType(AtomicType.UINT8, 2));
     assertSpecializable(new immutable StringLiteralType("1"d), new immutable SizedArrayType(AtomicType.UINT32, 0),
-        TypeConversion.SIZED_ARRAY_SHORTEN);
+        TypeConversion.REFERENCE_WIDENING);
     assertNotSpecializable(new immutable StringLiteralType("1"d), new immutable SizedArrayType(AtomicType.UINT32, 2));
     assertSpecializable(new immutable StringLiteralType("11"d), new immutable SizedArrayType(AtomicType.UINT32, 2),
         TypeConversion.IDENTITY);
@@ -156,7 +156,7 @@ unittest {
     assertSpecializable(new immutable StringLiteralType("Ʃ"d), new immutable SizedArrayType(AtomicType.UINT16, 1),
         TypeConversion.STRING_LITERAL_TO_UTF16, TypeConversion.IDENTITY);
     assertSpecializable(new immutable StringLiteralType("Ʃ"d), new immutable SizedArrayType(AtomicType.UINT8, 1),
-        TypeConversion.STRING_LITERAL_TO_UTF8, TypeConversion.SIZED_ARRAY_SHORTEN);
+        TypeConversion.STRING_LITERAL_TO_UTF8, TypeConversion.REFERENCE_WIDENING);
     assertSpecializable(new immutable StringLiteralType("Ʃ"d), new immutable SizedArrayType(AtomicType.UINT8, 2),
         TypeConversion.STRING_LITERAL_TO_UTF8, TypeConversion.IDENTITY);
     assertNotSpecializable(new immutable StringLiteralType("Ʃ"d), new immutable SizedArrayType(AtomicType.UINT8, 3));
@@ -177,10 +177,10 @@ unittest {
         TypeConversion.IDENTITY);
     assertNotConvertible(new immutable SizedArrayType(AtomicType.UINT8, 1), new immutable SizedArrayType(AtomicType.SINT8, 1));
     assertConvertible(new immutable SizedArrayType(AtomicType.UINT8, 1), new immutable SizedArrayType(AtomicType.UINT8, 0),
-        TypeConversion.SIZED_ARRAY_SHORTEN);
+        TypeConversion.REFERENCE_WIDENING);
     assertNotConvertible(new immutable SizedArrayType(AtomicType.UINT8, 1), new immutable SizedArrayType(AtomicType.SINT8, 0));
     assertConvertible(new immutable SizedArrayType(AtomicType.UINT8, 1), new immutable ArrayType(AtomicType.UINT8),
-        TypeConversion.SIZED_ARRAY_TO_UNSIZED);
+        TypeConversion.REFERENCE_WIDENING);
     assertNotConvertible(new immutable SizedArrayType(AtomicType.UINT8, 1), new immutable ArrayType(AtomicType.SINT8));
     assertNotConvertible(new immutable SizedArrayType(AtomicType.UINT8, 0), AtomicType.UINT8);
     assertNotConvertible(new immutable SizedArrayType(AtomicType.UINT8, 2), AtomicType.UINT8);

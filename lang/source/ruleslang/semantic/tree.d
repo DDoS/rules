@@ -289,6 +289,10 @@ public immutable class EmptyLiteralNode : CompositeNode, LiteralNode {
     }
 
     public override immutable(LiteralNode) specializeTo(immutable Type specialType) {
+        auto ignored = new TypeConversionChain();
+        if (AnyType.INSTANCE.convertibleTo(specialType, ignored)) {
+            return this;
+        }
         return null;
     }
 
@@ -329,6 +333,10 @@ public immutable class TupleLiteralNode : CompositeNode, LiteralNode {
     }
 
     public override immutable(LiteralNode) specializeTo(immutable Type specialType) {
+        auto ignored = new TypeConversionChain();
+        if (type.convertibleTo(specialType, ignored)) {
+            return this;
+        }
         return null;
     }
 
@@ -373,6 +381,10 @@ public immutable class StructLiteralNode : CompositeNode, LiteralNode {
     }
 
     public override immutable(LiteralNode) specializeTo(immutable Type specialType) {
+        auto ignored = new TypeConversionChain();
+        if (type.convertibleTo(specialType, ignored)) {
+            return this;
+        }
         return null;
     }
 
@@ -421,7 +433,6 @@ public immutable class ArrayLiteralNode : LiteralNode {
     public this(immutable(TypedNode)[] values, immutable(ArrayLabel)[] labels) {
         assert(values.length > 0);
         assert(values.length == labels.length);
-        this.values = values.reduceLiterals();
         this.labels = labels;
         // The array size if the max index label plus one
         ulong maxIndex = 0;
@@ -430,7 +441,14 @@ public immutable class ArrayLiteralNode : LiteralNode {
                 maxIndex = label.index;
             }
         }
-        type = new immutable SizedArrayLiteralType(this.values.getTypes(), maxIndex + 1);
+        auto reducedValues = values.reduceLiterals();
+        type = new immutable SizedArrayLiteralType(reducedValues.getTypes(), maxIndex + 1);
+        // Add casts to the component types on the values
+        immutable(TypedNode)[] castValues = [];
+        foreach (value; reducedValues) {
+            castValues ~= value.addCastNode(type.componentType);
+        }
+        this.values = castValues;
     }
 
     public override immutable(TypedNode)[] getChildren() {
@@ -442,6 +460,10 @@ public immutable class ArrayLiteralNode : LiteralNode {
     }
 
     public override immutable(LiteralNode) specializeTo(immutable Type specialType) {
+        auto ignored = new TypeConversionChain();
+        if (type.convertibleTo(specialType, ignored)) {
+            return this;
+        }
         return null;
     }
 
@@ -647,12 +669,12 @@ private immutable(TypedNode) addCastNode(immutable TypedNode fromNode, immutable
         assert (castFunc !is null);
         return new immutable FunctionCallNode(castFunc, [fromNode]);
     }
-    if (conversions.isNumericNarrowing()) {
+    if (conversions.isNumericNarrowing() || conversions.isReferenceNarrowing()) {
         // Must use specialization instead of a cast
         assert (fromLiteralNode !is null);
         return specializeNode(fromLiteralNode, toType);
     }
-    // TODO: other cast types
+    // TODO: other conversion kinds
     throw new Exception(format("Unknown conversion chain from type %s to %s: %s",
             fromNode.getType().toString(), toType.toString(), conversions.toString()));
 }
@@ -710,4 +732,39 @@ public immutable(TypedNode)[] reduceLiterals(immutable(TypedNode)[] nodes) {
         reduced ~= node.reduceLiterals();
     }
     return reduced;
+}
+
+public immutable(TypedNode) defaultValue(immutable Type type) {
+    // For an atomic type, simply zero-initialize
+    auto atomicType = cast(immutable AtomicType) type;
+    if (atomicType !is null) {
+        if (atomicType.isBoolean()) {
+            return new immutable BooleanLiteralNode(false);
+        }
+        if (atomicType.isFloat()) {
+            return new immutable FloatLiteralNode(atomicType, 0);
+        }
+        if (atomicType.isInteger()) {
+            if (atomicType.isSigned()) {
+                return new immutable SignedIntegerLiteralNode(atomicType, 0);
+            }
+            return new immutable UnsignedIntegerLiteralNode(atomicType, 0);
+        }
+    }
+    // For a tuple type, apply recursively on each members
+    auto tupleType = cast(immutable TupleType) type;
+    if (tupleType !is null) {
+        immutable(TypedNode)[] values = [];
+        foreach (memberType; tupleType.memberTypes) {
+            values ~= defaultValue(memberType);
+        }
+        // For a structure type, use the same labels are the type
+        auto structType = cast(immutable StructureType) tupleType;
+        if (structType !is null) {
+            return new immutable StructLiteralNode(values, structType.memberNames);
+        }
+        return new immutable TupleLiteralNode(values);
+    }
+
+    throw new Exception(format("No default value for type %s"), type.toString());
 }

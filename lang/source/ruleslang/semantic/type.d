@@ -22,8 +22,6 @@ public enum TypeConversion {
     FLOAT_WIDEN,
     INTEGER_LITERAL_NARROW,
     FLOAT_LITERAL_NARROW,
-    SIZED_ARRAY_SHORTEN,
-    SIZED_ARRAY_TO_UNSIZED,
     STRING_LITERAL_TO_UTF8,
     STRING_LITERAL_TO_UTF16,
     REFERENCE_WIDENING,
@@ -36,8 +34,6 @@ public ConversionKind getKind(TypeConversion conversion) {
         case INTEGER_WIDEN:
         case INTEGER_TO_FLOAT:
         case FLOAT_WIDEN:
-        case SIZED_ARRAY_SHORTEN:
-        case SIZED_ARRAY_TO_UNSIZED:
         case REFERENCE_WIDENING:
             return ConversionKind.WIDENING;
         case INTEGER_LITERAL_NARROW:
@@ -95,9 +91,10 @@ public class TypeConversionChain {
         return chain.length == 1 && chain[0] == TypeConversion.IDENTITY;
     }
 
-    public alias isReferenceWidening = checkConversions!"IDENTITY REFERENCE_WIDENING";
-    public alias isNumericWidening = checkConversions!"IDENTITY INTEGER_WIDEN INTEGER_TO_FLOAT FLOAT_WIDEN";
-    public alias isNumericNarrowing = checkConversions!"IDENTITY INTEGER_LITERAL_NARROW FLOAT_LITERAL_NARROW";
+    public alias isNumericWidening = checkConversions!"INTEGER_WIDEN INTEGER_TO_FLOAT FLOAT_WIDEN";
+    public alias isNumericNarrowing = checkConversions!"INTEGER_LITERAL_NARROW FLOAT_LITERAL_NARROW";
+    public alias isReferenceWidening = checkConversions!"REFERENCE_WIDENING";
+    public alias isReferenceNarrowing = checkConversions!"REFERENCE_NARROWING";
 
     private bool checkConversions(string cases)() {
         if (chain.length <= 0 || isIdentity()) {
@@ -105,6 +102,7 @@ public class TypeConversionChain {
         }
         foreach (conversion; chain) {
             switch (conversion) with (TypeConversion) {
+                case IDENTITY:
                 mixin ("case " ~ cases.split().join!":\ncase "() ~ ":\n");
                     continue;
                 default:
@@ -731,7 +729,7 @@ public immutable class AnyType : CompositeType {
     }
 
     public override bool opEquals(immutable Type type) {
-        return type.exactCastImmutable!AnyType() !is null;
+        return cast(immutable AnyType) type !is null;
     }
 }
 
@@ -999,14 +997,14 @@ public immutable class SizedArrayType : ArrayType, CompositeType {
         // If the array is sized then the length must be smaller or equal
         auto sizedArrayType = cast(immutable SizedArrayType) arrayType;
         if (sizedArrayType is null) {
-            conversions.thenSizedArrayToUnsized();
+            conversions.thenReferenceWidening();
             return true;
         }
         if (size == sizedArrayType.size) {
             conversions.thenIdentity();
             return true;
         } else if (size > sizedArrayType.size) {
-            conversions.thenSizedArrayShorten();
+            conversions.thenReferenceWidening();
             return true;
         }
         return false;
@@ -1047,7 +1045,7 @@ public immutable class AnyTypeLiteral : AnyType, LiteralType {
     }
 
     public override bool opEquals(immutable Type type) {
-        return type.exactCastImmutable!AnyTypeLiteral() !is null;
+        return cast(immutable AnyType) type !is null;
     }
 }
 
@@ -1223,7 +1221,7 @@ public immutable class StringLiteralType : SizedArrayType, LiteralType {
             }
             auto literalLength = literalType.value.length;
             if (literalLength < value.length && value[0 .. literalLength] == literalType.value[0 .. literalLength]) {
-                conversions.thenSizedArrayShorten();
+                conversions.thenReferenceWidening();
                 return true;
             }
             return false;
