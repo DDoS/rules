@@ -1140,7 +1140,7 @@ public immutable class SizedArrayLiteralType : SizedArrayType, LiteralType {
 
     public this(immutable(Type)[] memberTypes, ulong size) {
         assert (memberTypes.length > 0);
-        assert (size > 0 && memberTypes.length <= size);
+        assert (size > 0 && memberTypes.length <= size + 1);
         _memberTypes = memberTypes;
         // The component type is the lowest upper bound of the components
         auto firstType = memberTypes[0];
@@ -1282,12 +1282,13 @@ public immutable class StringLiteralType : SizedArrayType, LiteralType {
 
 public immutable struct TypeIdentity {
     public enum Kind {
-        TUPLE, STRUCT, ARRAY, SIZED_ARRAY
+        TUPLE, STRUCT, ARRAY
     }
 
     public size_t dataSize;
     public size_t[] memberOffsetByIndex;
     public size_t[string] memberOffsetByName;
+    public size_t componentSize;
     public TypeIdentity.Kind kind;
 }
 
@@ -1302,7 +1303,7 @@ public TypeIdentity identity(immutable ReferenceType type) {
     }
     auto any = cast(immutable AnyType) type;
     if (any !is null) {
-        return immutable TypeIdentity(0, [], null, TypeIdentity.Kind.TUPLE);
+        return immutable TypeIdentity(0, [], null, 0, TypeIdentity.Kind.TUPLE);
     }
     assert (0);
 }
@@ -1328,23 +1329,14 @@ private TypeIdentity tupleIdentity(immutable TupleType type) {
         kind = TypeIdentity.Kind.TUPLE;
         names = null;
     }
-    return immutable TypeIdentity(dataSize, offsets.idup, names.assumeUnique(), kind);
+    return immutable TypeIdentity(dataSize, offsets.idup, names.assumeUnique(), 0, kind);
 }
 
 private TypeIdentity arrayIdentity(immutable ArrayType type) {
-    auto componentSize = type.componentType.getStorageSize();
-    size_t dataSize;
-    TypeIdentity.Kind kind;
-    auto sizedArray = cast(immutable SizedArrayType) type;
-    if (sizedArray !is null) {
-        dataSize = componentSize * sizedArray.size;
-        kind = TypeIdentity.Kind.SIZED_ARRAY;
-    } else {
-        // The data size if only that of the length field
-        dataSize = size_t.sizeof;
-        kind = TypeIdentity.Kind.ARRAY;
-    }
-    return immutable TypeIdentity(dataSize, [componentSize], null, kind);
+    // Since arrays are dynamically allocated, only the size of the length field is known
+    enum lengthFieldSize = size_t.sizeof;
+    return immutable TypeIdentity(lengthFieldSize, [0, lengthFieldSize], null,
+            type.componentType.getStorageSize(), TypeIdentity.Kind.ARRAY);
 }
 
 private size_t getStorageSize(immutable Type type) {

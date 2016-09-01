@@ -79,13 +79,35 @@ private string asString(Runtime runtime, immutable Type type, void* address) {
     }
 
     auto referenceAddress = *(cast(void**) address);
+    if (referenceAddress is null) {
+        return "null";
+    }
+
     auto identity = runtime.getTypeIdentity(*(cast(IdentityHeader*) referenceAddress));
     auto dataSegment = referenceAddress + IdentityHeader.sizeof;
 
     auto stringLiteral = cast(immutable StringLiteralType) type;
     if (stringLiteral !is null) {
-        dchar[] stringData = (cast(dchar*) dataSegment)[0 .. identity.dataSize / dchar.sizeof];
+        auto length = *(cast(size_t*) dataSegment);
+        dataSegment += size_t.sizeof;
+        dchar[] stringData = (cast(dchar*) dataSegment)[0 .. length];
         return '"' ~ stringData.idup.to!string() ~ '"';
+    }
+
+    auto arrayType = cast(immutable ArrayType) type;
+    if (arrayType !is null) {
+        auto length = *(cast(size_t*) dataSegment);
+        dataSegment += size_t.sizeof;
+        string str = "{";
+        foreach (i; 0 .. length) {
+            str ~= runtime.asString(arrayType.componentType, dataSegment);
+            dataSegment += identity.componentSize;
+            if (i < length - 1) {
+                str ~= ", ";
+            }
+        }
+        str ~= "}";
+        return str;
     }
 
     auto anyType = cast(immutable AnyType) type;
@@ -105,7 +127,7 @@ private string asString(Runtime runtime, immutable Type type, void* address) {
             }
         }
         str ~= "}";
-        return str.idup;
+        return str;
     }
 
     auto tupleType = cast(immutable TupleType) type;
@@ -118,7 +140,7 @@ private string asString(Runtime runtime, immutable Type type, void* address) {
             }
         }
         str ~= "}";
-        return str.idup;
+        return str;
     }
 
     assert (0);

@@ -1,7 +1,7 @@
 module ruleslang.semantic.tree;
 
 import std.conv : to;
-import std.algorithm.searching;
+import std.algorithm.searching : all;
 import std.format : format;
 
 import ruleslang.semantic.type;
@@ -28,7 +28,7 @@ public immutable interface LiteralNode : TypedNode {
     public immutable(LiteralNode) specializeTo(immutable Type type);
 }
 
-public immutable interface CompositeNode : TypedNode {
+public immutable interface ReferenceNode : TypedNode {
     public immutable(TypeIdentity) getTypeIdentity();
 }
 
@@ -94,13 +94,13 @@ public immutable class BooleanLiteralNode : LiteralNode {
     }
 }
 
-public immutable class StringLiteralNode : CompositeNode, LiteralNode {
+public immutable class StringLiteralNode : ReferenceNode, LiteralNode {
     private StringLiteralType type;
-    private TypeIdentity info;
+    private TypeIdentity identity;
 
     public this(dstring value) {
         type = new immutable StringLiteralType(value);
-        info = type.identity();
+        identity = type.identity();
     }
 
     public override immutable(TypedNode)[] getChildren() {
@@ -112,7 +112,7 @@ public immutable class StringLiteralNode : CompositeNode, LiteralNode {
     }
 
     public override immutable(TypeIdentity) getTypeIdentity() {
-        return info;
+        return identity;
     }
 
     public override immutable(LiteralNode) specializeTo(immutable Type specialType) {
@@ -270,7 +270,7 @@ public immutable class FloatLiteralNode : LiteralNode {
     }
 }
 
-public immutable class EmptyLiteralNode : CompositeNode, LiteralNode {
+public immutable class EmptyLiteralNode : ReferenceNode, LiteralNode {
     public static immutable EmptyLiteralNode INSTANCE = new immutable EmptyLiteralNode();
 
     private this() {
@@ -309,15 +309,15 @@ public immutable class EmptyLiteralNode : CompositeNode, LiteralNode {
     }
 }
 
-public immutable class TupleLiteralNode : CompositeNode, LiteralNode {
+public immutable class TupleLiteralNode : ReferenceNode, LiteralNode {
     public TypedNode[] values;
     private TupleLiteralType type;
-    private TypeIdentity info;
+    private TypeIdentity identity;
 
     public this(immutable(TypedNode)[] values) {
         this.values = values.reduceLiterals();
         this.type = new immutable TupleLiteralType(this.values.getTypes());
-        info = type.identity();
+        identity = type.identity();
     }
 
     public override immutable(TypedNode)[] getChildren() {
@@ -329,7 +329,7 @@ public immutable class TupleLiteralNode : CompositeNode, LiteralNode {
     }
 
     public override immutable(TypeIdentity) getTypeIdentity() {
-        return info;
+        return identity;
     }
 
     public override immutable(LiteralNode) specializeTo(immutable Type specialType) {
@@ -353,11 +353,11 @@ public immutable class TupleLiteralNode : CompositeNode, LiteralNode {
     }
 }
 
-public immutable class StructLiteralNode : CompositeNode, LiteralNode {
+public immutable class StructLiteralNode : ReferenceNode, LiteralNode {
     public TypedNode[] values;
     private string[] labels;
     private StructureLiteralType type;
-    private TypeIdentity info;
+    private TypeIdentity identity;
 
     public this(immutable(TypedNode)[] values, immutable(string)[] labels) {
         assert(values.length > 0);
@@ -365,7 +365,7 @@ public immutable class StructLiteralNode : CompositeNode, LiteralNode {
         this.values = values.reduceLiterals();
         this.labels = labels;
         type = new immutable StructureLiteralType(this.values.getTypes(), labels);
-        info = type.identity();
+        identity = type.identity();
     }
 
     public override immutable(TypedNode)[] getChildren() {
@@ -377,7 +377,7 @@ public immutable class StructLiteralNode : CompositeNode, LiteralNode {
     }
 
     public override immutable(TypeIdentity) getTypeIdentity() {
-        return info;
+        return identity;
     }
 
     public override immutable(LiteralNode) specializeTo(immutable Type specialType) {
@@ -405,6 +405,7 @@ public immutable struct ArrayLabel {
     public static immutable ArrayLabel OTHER = immutable ArrayLabel(0, true);
     private ulong _index;
     public bool other;
+    private size_t valueIndex;
 
     public this(ulong index) {
         this(index, false);
@@ -425,24 +426,37 @@ public immutable struct ArrayLabel {
     }
 }
 
-public immutable class ArrayLiteralNode : LiteralNode {
-    private TypedNode[] values;
-    private ArrayLabel[] labels;
+public immutable class ArrayLiteralNode : LiteralNode, ReferenceNode {
+    public TypedNode[] values;
+    public ArrayLabel[] labels;
     private SizedArrayLiteralType type;
+    private TypeIdentity identity;
 
     public this(immutable(TypedNode)[] values, immutable(ArrayLabel)[] labels) {
         assert(values.length > 0);
         assert(values.length == labels.length);
+        // Ensure the array labels are unique
+        foreach (i, labelA; labels) {
+            foreach (j, labelB; labels) {
+                if (i == j) {
+                    continue;
+                }
+                if (labelA == labelB) {
+                    throw new Exception(format("Label %s is not unique", labels[i].toString()));
+                }
+            }
+        }
         this.labels = labels;
         // The array size if the max index label plus one
         ulong maxIndex = 0;
-        foreach (label; labels) {
+        foreach (label; this.labels) {
             if (!label.other && label.index > maxIndex) {
                 maxIndex = label.index;
             }
         }
         auto reducedValues = values.reduceLiterals();
         type = new immutable SizedArrayLiteralType(reducedValues.getTypes(), maxIndex + 1);
+        identity = type.identity();
         // Add casts to the component types on the values
         immutable(TypedNode)[] castValues = [];
         foreach (value; reducedValues) {
@@ -459,10 +473,30 @@ public immutable class ArrayLiteralNode : LiteralNode {
         return type;
     }
 
+    public override immutable(TypeIdentity) getTypeIdentity() {
+        return identity;
+    }
+
     public override immutable(LiteralNode) specializeTo(immutable Type specialType) {
         auto ignored = new TypeConversionChain();
         if (type.convertibleTo(specialType, ignored)) {
             return this;
+        }
+        return null;
+    }
+
+    public immutable(TypedNode) getValueAt(ulong index) {
+        // Search for a label with the index
+        foreach (i, label; labels) {
+            if (!label.other && label.index == index) {
+                return values[i];
+            }
+        }
+        // Otherwise, if a label is "other", return the corresponding value
+        foreach (i, label; labels) {
+            if (label.other) {
+                return values[i];
+            }
         }
         return null;
     }

@@ -16,10 +16,10 @@ public immutable class Evaluator {
 
     public void evaluateStringLiteral(Runtime runtime, immutable StringLiteralNode stringLiteral) {
         // Allocate the string
-        auto address = runtime.allocate(stringLiteral.getTypeIdentity());
-        // Then place the string data
-        auto dataSegment = cast(dchar*) (address + IdentityHeader.sizeof);
         auto value = stringLiteral.getType().value;
+        auto address = runtime.allocateArray(stringLiteral.getTypeIdentity(), value.length);
+        // Then place the string data
+        auto dataSegment = cast(dchar*) (address + IdentityHeader.sizeof + size_t.sizeof);
         dataSegment[0 .. value.length] = value;
         // Finally push the address to the stack
         runtime.stack.push(address);
@@ -39,7 +39,7 @@ public immutable class Evaluator {
 
     public void evaluateEmptyLiteral(Runtime runtime, immutable EmptyLiteralNode emptyLiteral) {
         // Allocate the empty literal
-        auto address = runtime.allocate(emptyLiteral.getTypeIdentity());
+        auto address = runtime.allocateComposite(emptyLiteral.getTypeIdentity());
         // It doesn't have any data, so just push the address to the stack
         runtime.stack.push(address);
     }
@@ -56,7 +56,7 @@ public immutable class Evaluator {
     private static void evaluateTupleLiteral(Runtime runtime, immutable TupleType type, immutable TypeIdentity info,
             immutable(TypedNode)[] values) {
         // Allocate the literal
-        auto address = runtime.allocate(info);
+        auto address = runtime.allocateComposite(info);
         // Place the literal data
         auto dataSegment = address + IdentityHeader.sizeof;
         foreach (i, memberType; type.memberTypes) {
@@ -72,7 +72,27 @@ public immutable class Evaluator {
     }
 
     public void evaluateArrayLiteral(Runtime runtime, immutable ArrayLiteralNode arrayLiteral) {
-        throw new NotImplementedException();
+        auto type = arrayLiteral.getType();
+        // Allocate the string
+        auto identity = arrayLiteral.getTypeIdentity();
+        auto length = type.size;
+        auto address = runtime.allocateArray(identity, length);
+        // Then place the array data
+        auto dataSegment = address + IdentityHeader.sizeof + size_t.sizeof;
+        foreach (i; 0 .. length) {
+            // Get the value for the array index
+            auto value = arrayLiteral.getValueAt(i);
+            if (value !is null) {
+                // Evaluate the data to place the value on the stack
+                value.evaluate(runtime);
+                // Pop the stack data to the data segment
+                runtime.stack.popTo(type.componentType, dataSegment);
+            }
+            // Increment the data address
+            dataSegment += identity.componentSize;
+        }
+        // Finally push the address to the stack
+        runtime.stack.push(address);
     }
 
     public void evaluateFieldAccess(Runtime runtime, immutable FieldAccessNode fieldAccess) {
@@ -97,14 +117,30 @@ public immutable class Evaluator {
     }
 }
 
-private void* allocate(Runtime runtime, immutable TypeIdentity identity) {
+private void* allocateComposite(Runtime runtime, immutable TypeIdentity identity) {
+    assert (identity.kind == TypeIdentity.Kind.TUPLE || identity.kind == TypeIdentity.Kind.STRUCT);
     // Register the type identity
     auto infoIndex = runtime.registerTypeIdentity(identity);
-    // Calculate the size of the string (header + data) and allocate the memory
+    // Calculate the size of the composite (header + data) and allocate the memory
     auto size = IdentityHeader.sizeof + identity.dataSize;
+    auto address = runtime.heap.allocateScanned(size);
+    // Next set the header
+    *(cast (IdentityHeader*) address) = infoIndex;
+    return address;
+}
+
+private void* allocateArray(Runtime runtime, immutable TypeIdentity identity, size_t length) {
+    assert (identity.kind == TypeIdentity.Kind.ARRAY);
+    // Register the type identity
+    auto infoIndex = runtime.registerTypeIdentity(identity);
+    // Calculate the size of the array (header + length field + data) and allocate the memory
+    auto size = IdentityHeader.sizeof + size_t.sizeof + identity.componentSize * length;
+    // TODO: reference arrays need to be scanned
     auto address = runtime.heap.allocateNotScanned(size);
     // Next set the header
     *(cast (IdentityHeader*) address) = infoIndex;
+    // Finally set the length field
+    *(cast (size_t*) (address + IdentityHeader.sizeof)) = length;
     return address;
 }
 
