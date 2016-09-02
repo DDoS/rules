@@ -128,7 +128,12 @@ public immutable class Interpreter {
             }
             labels ~= label.getSource();
         }
-        return new immutable StructLiteralNode(valueNodes, labels);
+        string exceptionMessage;
+        auto node = collectExceptionMessage(new immutable StructLiteralNode(valueNodes, labels), exceptionMessage);
+        if (exceptionMessage !is null) {
+            throw new SourceException(exceptionMessage, compositeLiteral);
+        }
+        return node;
     }
 
     private static immutable(TypedNode) interpretArrayLiteral(Context context, CompositeLiteral compositeLiteral) {

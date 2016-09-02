@@ -96,6 +96,7 @@ unittest {
     assertInterpretFails("1.opAdd()");
     assertInterpretFails("{0: 0, 0: 1}");
     assertInterpretFails("{0: 0, 1: 1, other: 2, other: 4}");
+    assertInterpretFails("{s: 0, s: 1}");
 }
 
 unittest {

@@ -363,6 +363,17 @@ public immutable class StructLiteralNode : ReferenceNode, LiteralNode {
         assert(values.length > 0);
         assert(values.length == labels.length);
         this.values = values.reduceLiterals();
+        // Ensure the struct labels are unique
+        foreach (i, labelA; labels) {
+            foreach (j, labelB; labels) {
+                if (i == j) {
+                    continue;
+                }
+                if (labelA == labelB) {
+                    throw new Exception(format("Label %s is not unique", labels[i]));
+                }
+            }
+        }
         this.labels = labels;
         type = new immutable StructureLiteralType(this.values.getTypes(), labels);
         identity = type.identity();
