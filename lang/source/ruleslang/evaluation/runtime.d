@@ -233,7 +233,7 @@ public class Stack {
     }
 
     public void* peek(T)() if (isValidDataType!T()) {
-        auto offset = byteIndex - T.sizeof;
+        auto offset = byteIndex - alignedSize!(T, size_t);
         if (offset < 0) {
             throw new Exception("Stack underflow");
         }
