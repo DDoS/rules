@@ -488,7 +488,7 @@ public immutable class StructLiteralNode : ReferenceNode, LiteralNode {
                     continue;
                 }
                 if (labelA.name == labelB.name) {
-                    throw new Exception(format("Label %s is not unique", labels[i]));
+                    throw new SourceException(format("Label %s is not unique", labelA), labelA);
                 }
             }
         }
@@ -597,7 +597,7 @@ public immutable class ArrayLiteralNode : LiteralNode, ReferenceNode {
                     continue;
                 }
                 if (labelA.sameIndex(labelB)) {
-                    throw new Exception(format("Label %s is not unique", labels[i].toString()));
+                    throw new SourceException(format("Label %s is not unique", labelA.toString()), labelA);
                 }
             }
         }
@@ -609,8 +609,15 @@ public immutable class ArrayLiteralNode : LiteralNode, ReferenceNode {
                 maxIndex = label.index;
             }
         }
+        // Reduce the array member literals
         auto reducedValues = values.reduceLiterals();
-        type = new immutable SizedArrayLiteralType(reducedValues.getTypes(), maxIndex + 1);
+        // Try to create the sized array type (can fail if there is no upper bound)
+        string exceptionMessage;
+        type = collectExceptionMessage(new immutable SizedArrayLiteralType(reducedValues.getTypes(), maxIndex + 1),
+                exceptionMessage);
+        if (exceptionMessage !is null) {
+            throw new SourceException(exceptionMessage, start, end);
+        }
         identity = type.identity();
         // Add casts to the component types on the values
         immutable(TypedNode)[] castValues = [];
@@ -792,7 +799,10 @@ public immutable class IndexAccessNode : TypedNode {
             type = referenceType.getMemberType(index);
             // If the reference type is also a composite type, this method can return null for out-of-bounds
             if (type is null) {
-                throw new Exception(format("Index %d is out of range of composite %s", index, referenceType.toString()));
+                throw new SourceException(
+                    format("Index %d is out of range of composite %s", index, referenceType.toString()),
+                    indexNode
+                );
             }
             return;
         }
@@ -802,7 +812,10 @@ public immutable class IndexAccessNode : TypedNode {
             type = arrayType.componentType;
             return;
         }
-        throw new Exception(format("Index must be known at compile time for type %s", referenceType.toString()));
+        throw new SourceException(
+            format("Index must be known at compile time for type %s", referenceType.toString()),
+            indexNode
+        );
     }
 
     @property public override size_t start() {
@@ -923,15 +936,20 @@ private immutable(TypedNode) addCastNode(immutable TypedNode fromNode, immutable
         return specializeNode(fromLiteralNode, toType);
     }
     // TODO: other conversion kinds
-    throw new Exception(format("Unknown conversion chain from type %s to %s: %s",
-            fromNode.getType().toString(), toType.toString(), conversions.toString()));
+    throw new SourceException(
+        format("Unknown conversion chain from type %s to %s: %s",
+            fromNode.getType().toString(), toType.toString(), conversions.toString()),
+        fromNode
+    );
 }
 
 private immutable(LiteralNode) specializeNode(immutable LiteralNode fromNode, immutable Type toType) {
     auto specialized = fromNode.specializeTo(toType);
     if (specialized is null) {
-        throw new Exception(format("Specialization of node %s to type %s is not implemented",
-                fromNode.toString(), toType.toString()));
+        throw new SourceException(
+            format("Specialization of node %s to type %s is not implemented", fromNode.toString(), toType.toString()),
+            fromNode
+        );
     }
     return specialized;
 }

@@ -129,15 +129,7 @@ public immutable class Interpreter {
             }
             labels ~= immutable StructLabel(label.getSource(), label.start, label.end);
         }
-        string exceptionMessage;
-        auto node = collectExceptionMessage(
-            new immutable StructLiteralNode(valueNodes, labels, compositeLiteral.start, compositeLiteral.end),
-            exceptionMessage
-        );
-        if (exceptionMessage !is null) {
-            throw new SourceException(exceptionMessage, compositeLiteral);
-        }
-        return node;
+        return new immutable StructLiteralNode(valueNodes, labels, compositeLiteral.start, compositeLiteral.end);
     }
 
     private static immutable(TypedNode) interpretArrayLiteral(Context context, CompositeLiteral compositeLiteral) {
@@ -147,15 +139,7 @@ public immutable class Interpreter {
             valueNodes ~= value.expression.interpret(context);
             labels ~= checkArrayLabel(value);
         }
-        string exceptionMessage;
-        auto node = collectExceptionMessage(
-            new immutable ArrayLiteralNode(valueNodes, labels, compositeLiteral.start, compositeLiteral.end),
-            exceptionMessage
-        );
-        if (exceptionMessage !is null) {
-            throw new SourceException(exceptionMessage, compositeLiteral);
-        }
-        return node;
+        return new immutable ArrayLiteralNode(valueNodes, labels, compositeLiteral.start, compositeLiteral.end);
     }
 
     private static immutable(ArrayLabel) checkArrayLabel(LabeledExpression labeledExpression) {
@@ -250,15 +234,7 @@ public immutable class Interpreter {
                     indexAccess.index);
         }
         // Attempt to create the node. This can fail if the index is out of range (determined through literal types)
-        string exceptionMessage;
-        auto node = collectExceptionMessage(
-            new immutable IndexAccessNode(valueNode, indexNode, indexAccess.start, indexAccess.end),
-            exceptionMessage
-        );
-        if (exceptionMessage !is null) {
-            throw new SourceException(exceptionMessage, indexAccess);
-        }
-        return node;
+        return new immutable IndexAccessNode(valueNode, indexNode, indexAccess.start, indexAccess.end);
     }
 
     public immutable(TypedNode) interpretFunctionCall(Context context, FunctionCall call) {
@@ -308,7 +284,7 @@ public immutable class Interpreter {
         auto name = nameReference.name[0];
         auto nameSource = name.getSource();
         auto field = context.resolveField(nameSource);
-        auto func = resolveFunction(context, call, name, argumentTypes);
+        auto func = context.resolveFunction(name.getSource(), argumentTypes);
         // It should not resolve to both a field and a function
         if (field !is null && func !is null) {
             throw new SourceException(format("Found a field and a function for the name %s", nameSource), nameReference);
@@ -346,21 +322,11 @@ public immutable class Interpreter {
         // Example: a.b.c(d, e) -> c(a.b, d, e)
         auto argumentNodes = valueNode ~ interpretArgumentNodes(context, call);
         auto argumentTypes = argumentNodes.getTypes();
-        auto func = resolveFunction(context, call, name, argumentTypes);
+        auto func = context.resolveFunction(name.getSource(), argumentTypes);
         if (func is null) {
             functionNotFound(call, name, argumentTypes);
         }
         return new immutable FunctionCallNode(func, argumentNodes, call.start, call.end);
-    }
-
-    private static immutable(Function) resolveFunction(Context context, FunctionCall call, Identifier name,
-            immutable(Type)[] argumentTypes) {
-        string exceptionMessage;
-        auto func = collectExceptionMessage(context.resolveFunction(name.getSource(), argumentTypes), exceptionMessage);
-        if (exceptionMessage !is null) {
-            throw new SourceException(exceptionMessage, call.start, call.end);
-        }
-        return func;
     }
 
     private static immutable(TypedNode) interpretValueCall(Expression value, immutable(TypedNode) valueNode) {
