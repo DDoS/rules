@@ -86,6 +86,11 @@ public interface SourceIndexed {
     @property public size_t end();
 }
 
+public immutable interface SourceIndexedImmutable {
+    @property public immutable(size_t) start();
+    @property public immutable(size_t) end();
+}
+
 public class SourceException : Exception, SourceIndexed {
     private string offender = null;
     private size_t _start;
@@ -99,6 +104,10 @@ public class SourceException : Exception, SourceIndexed {
     }
 
     public this(string message, SourceIndexed problem) {
+        this(message, problem.start, problem.end);
+    }
+
+    public this(string message, immutable SourceIndexedImmutable problem) {
         this(message, problem.start, problem.end);
     }
 

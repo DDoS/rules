@@ -18,16 +18,17 @@ public immutable class Interpreter {
     }
 
     public immutable(BooleanLiteralNode) interpretBooleanLiteral(Context context, BooleanLiteral boolean) {
-        return new immutable BooleanLiteralNode(boolean.getValue());
+        return new immutable BooleanLiteralNode(boolean.getValue(), boolean.start, boolean.end);
     }
 
-    public immutable(StringLiteralNode) interpretStringLiteral(Context context, StringLiteral expression) {
-        return new immutable StringLiteralNode(expression.getValue());
+    public immutable(StringLiteralNode) interpretStringLiteral(Context context, StringLiteral _string) {
+        return new immutable StringLiteralNode(_string.getValue(), _string.start, _string.end);
     }
 
     public immutable(UnsignedIntegerLiteralNode) interpretCharacterLiteral(Context context,
-            CharacterLiteral expression) {
-        return new immutable UnsignedIntegerLiteralNode(cast(ulong) expression.getValue());
+            CharacterLiteral character) {
+        return new immutable UnsignedIntegerLiteralNode(cast(ulong) character.getValue(),
+                character.start, character.end);
     }
 
     public immutable(SignedIntegerLiteralNode) interpretSignedIntegerLiteral(Context context,
@@ -37,7 +38,7 @@ public immutable class Interpreter {
         if (overflow) {
             throw new SourceException("Signed integer overflow", integer);
         }
-        return new immutable SignedIntegerLiteralNode(value);
+        return new immutable SignedIntegerLiteralNode(value, integer.start, integer.end);
     }
 
     public immutable(UnsignedIntegerLiteralNode) interpretUnsignedIntegerLiteral(Context context,
@@ -47,7 +48,7 @@ public immutable class Interpreter {
         if (overflow) {
             throw new SourceException("Unsigned integer overflow", integer);
         }
-        return new immutable UnsignedIntegerLiteralNode(value);
+        return new immutable UnsignedIntegerLiteralNode(value, integer.start, integer.end);
     }
 
     public immutable(FloatLiteralNode) interpretFloatLiteral(Context context, FloatLiteral floating) {
@@ -56,7 +57,7 @@ public immutable class Interpreter {
         if (overflow) {
             throw new SourceException("Floating point overflow/underflow", floating);
         }
-        return new immutable FloatLiteralNode(value);
+        return new immutable FloatLiteralNode(value, floating.start, floating.end);
     }
 
     public immutable(TypedNode) interpretNameReference(Context context, NameReference nameReference) {
@@ -67,7 +68,7 @@ public immutable class Interpreter {
         if (field is null) {
             throw new SourceException(format("No field found for name %s", firstPart.getSource()), firstPart);
         }
-        immutable(TypedNode) fieldAccess = new immutable FieldAccessNode(field);
+        immutable(TypedNode) fieldAccess = new immutable FieldAccessNode(field, firstPart.start, firstPart.end);
         // If the name has more parts, treat the next as a structure member accesses
         immutable(TypedNode)* lastAccess = &fieldAccess;
         foreach (i, part; name[1 .. $]) {
@@ -81,7 +82,7 @@ public immutable class Interpreter {
         auto values = compositeLiteral.values;
         if (values.length == 0) {
             // This is the any type. It has no members
-            return EmptyLiteralNode.INSTANCE;
+            return new immutable EmptyLiteralNode(compositeLiteral.start, compositeLiteral.end);
         }
         // Determine the type from the first label
         // Un-labeled is tuple, integer labeled is array and identifier labeled is struct
@@ -110,12 +111,12 @@ public immutable class Interpreter {
                 throw new SourceException("Did not expect a label since the other members are not labeled", label);
             }
         }
-        return new immutable TupleLiteralNode(valueNodes);
+        return new immutable TupleLiteralNode(valueNodes, compositeLiteral.start, compositeLiteral.end);
     }
 
     private static immutable(TypedNode) interpretStructLiteral(Context context, CompositeLiteral compositeLiteral) {
         immutable(TypedNode)[] valueNodes = [];
-        immutable(string)[] labels;
+        immutable(StructLabel)[] labels;
         foreach (LabeledExpression value; compositeLiteral.values) {
             valueNodes ~= value.expression.interpret(context);
             auto label = value.label;
@@ -126,10 +127,13 @@ public immutable class Interpreter {
             if (label.getKind() != Kind.IDENTIFIER) {
                 throw new SourceException("Struct label must be an identifier", label);
             }
-            labels ~= label.getSource();
+            labels ~= immutable StructLabel(label.getSource(), label.start, label.end);
         }
         string exceptionMessage;
-        auto node = collectExceptionMessage(new immutable StructLiteralNode(valueNodes, labels), exceptionMessage);
+        auto node = collectExceptionMessage(
+            new immutable StructLiteralNode(valueNodes, labels, compositeLiteral.start, compositeLiteral.end),
+            exceptionMessage
+        );
         if (exceptionMessage !is null) {
             throw new SourceException(exceptionMessage, compositeLiteral);
         }
@@ -144,7 +148,10 @@ public immutable class Interpreter {
             labels ~= checkArrayLabel(value);
         }
         string exceptionMessage;
-        auto node = collectExceptionMessage(new immutable ArrayLiteralNode(valueNodes, labels), exceptionMessage);
+        auto node = collectExceptionMessage(
+            new immutable ArrayLiteralNode(valueNodes, labels, compositeLiteral.start, compositeLiteral.end),
+            exceptionMessage
+        );
         if (exceptionMessage !is null) {
             throw new SourceException(exceptionMessage, compositeLiteral);
         }
@@ -168,7 +175,7 @@ public immutable class Interpreter {
             if (index < 0) {
                 throw new SourceException("Index cannot be negative", signedIntegerLabel);
             }
-            return immutable ArrayLabel(cast(ulong) index);
+            return immutable ArrayLabel(cast(ulong) index, signedIntegerLabel.start, signedIntegerLabel.end);
         }
         // It can be an unsigned integer
         auto unsignedIntegerLabel = cast(UnsignedIntegerLiteral) label;
@@ -178,7 +185,7 @@ public immutable class Interpreter {
             if (overflow) {
                 throw new SourceException("Unsigned integer overflow", unsignedIntegerLabel);
             }
-            return immutable ArrayLabel(index);
+            return immutable ArrayLabel(index, unsignedIntegerLabel.start, unsignedIntegerLabel.end);
         }
         // It can be the identifier "other"
         auto identifierLabel = cast(Identifier) label;
@@ -186,7 +193,7 @@ public immutable class Interpreter {
             if (identifierLabel.getSource() != "other") {
                 throw new SourceException("The only valid identifier for an array label is \"other\"", identifierLabel);
             }
-            return ArrayLabel.OTHER;
+            return ArrayLabel.asOther(identifierLabel.start, identifierLabel.end);
         }
         throw new SourceException(format("Not a valid array label %s", label.getSource()), label);
     }
@@ -215,7 +222,7 @@ public immutable class Interpreter {
         if (memberType is null) {
             throw new SourceException(format("No member named %s in type %s", memberName, structureType.toString()), name);
         }
-        return new immutable MemberAccessNode(valueNode, memberName);
+        return new immutable MemberAccessNode(valueNode, memberName, name.start, name.end);
     }
 
     public immutable(TypedNode) interpretIndexAccess(Context context, IndexAccess indexAccess) {
@@ -244,7 +251,10 @@ public immutable class Interpreter {
         }
         // Attempt to create the node. This can fail if the index is out of range (determined through literal types)
         string exceptionMessage;
-        auto node = collectExceptionMessage(new immutable IndexAccessNode(valueNode, indexNode), exceptionMessage);
+        auto node = collectExceptionMessage(
+            new immutable IndexAccessNode(valueNode, indexNode, indexAccess.start, indexAccess.end),
+            exceptionMessage
+        );
         if (exceptionMessage !is null) {
             throw new SourceException(exceptionMessage, indexAccess);
         }
@@ -264,7 +274,6 @@ public immutable class Interpreter {
         }
         // Now figure out if the call value is the name of a function or an actual value
         auto value = call.value;
-        auto end = call.end;
         auto nameReference = cast(NameReference) value;
         if (nameReference is null) {
             // If the value isn't a name reference, we might have a member access
@@ -272,52 +281,53 @@ public immutable class Interpreter {
             auto memberAccess = cast(MemberAccess) value;
             if (memberAccess is null) {
                 // No member, this is just a value call (no function name is given)
-                return interpretValueCall(value, value.interpret(context), argumentNodes, argumentTypes, end);
+                return interpretValueCall(value, value.interpret(context));
             }
             // Otherwise the value is being called with the member name as the function name
             auto lastName = memberAccess.name;
             auto memberValue = memberAccess.value;
-            auto valueNode = memberValue.interpret(context);
-            return interpretValueFunctionCall(context, memberValue, lastName, valueNode, argumentNodes, argumentTypes, end);
+            return interpretValueFunctionCall(context, call, memberValue, lastName);
         }
         // We treat simple and multi-part name references separately
         auto name = nameReference.name;
         if (name.length == 1) {
             // Simple name references require disambiguation between field and functions
-            return interpretSimpleFunctionCall(context, nameReference, argumentNodes, argumentTypes, end);
+            return interpretSimpleFunctionCall(context, call, nameReference);
         }
         // Multi-part name references require disambiguation between members and functions
         auto firstPart = new NameReference(name[0 .. $ - 1]);
-        auto valueNode = interpretNameReference(context, firstPart);
-        return interpretValueFunctionCall(context, firstPart, name[$ - 1], valueNode, argumentNodes, argumentTypes, end);
+        return interpretValueFunctionCall(context, call, firstPart, name[$ - 1]);
     }
 
-    private static immutable(TypedNode) interpretSimpleFunctionCall(Context context, NameReference nameReference,
-            immutable(TypedNode)[] argumentNodes, immutable(Type)[] argumentTypes, size_t end) {
+    private static immutable(TypedNode) interpretSimpleFunctionCall(Context context, FunctionCall call,
+            NameReference nameReference) {
+        auto argumentNodes = interpretArgumentNodes(context, call);
+        auto argumentTypes = argumentNodes.getTypes();
         // If the value is a single part name, then it is either a field or a function
         assert (nameReference.name.length == 1);
         auto name = nameReference.name[0];
         auto nameSource = name.getSource();
         auto field = context.resolveField(nameSource);
-        auto func = resolveFunction(context, name, argumentTypes, end);
+        auto func = resolveFunction(context, call, name, argumentTypes);
         // It should not resolve to both a field and a function
         if (field !is null && func !is null) {
             throw new SourceException(format("Found a field and a function for the name %s", nameSource), nameReference);
         }
         // Treat a field like a value
         if (field !is null) {
-            auto valueCallNode = new immutable FieldAccessNode(field);
-            return interpretValueCall(nameReference, valueCallNode, argumentNodes, argumentTypes, end);
+            auto valueCallNode = new immutable FieldAccessNode(field, name.start, name.end);
+            return interpretValueCall(nameReference, valueCallNode);
         }
         // Otherwise use the function
         if (func is null) {
-            functionNotFound(name, argumentTypes, end);
+            functionNotFound(call, name, argumentTypes);
         }
-        return new immutable FunctionCallNode(func, argumentNodes);
+        return new immutable FunctionCallNode(func, argumentNodes, call.start, call.end);
     }
 
-    private static immutable(TypedNode) interpretValueFunctionCall(Context context, Expression value, Identifier name,
-            immutable TypedNode valueNode, immutable(TypedNode)[] argumentNodes, immutable(Type)[] argumentTypes, size_t end) {
+    private static immutable(TypedNode) interpretValueFunctionCall(Context context, FunctionCall call, Expression value,
+            Identifier name) {
+        auto valueNode = value.interpret(context);
         // If the value is a multi-part name, then all but the last part should
         // resolve to some value. The last name is either a structure member or
         // the name of a function (when using UFCS). The member has priority
@@ -327,34 +337,33 @@ public immutable class Interpreter {
             auto nameSource = name.getSource();
             auto memberType = structureType.getMemberType(nameSource);
             if (memberType !is null) {
-                auto valueCallNode = new immutable MemberAccessNode(valueNode, nameSource);
-                return interpretValueCall(value, valueCallNode, argumentNodes, argumentTypes, end);
+                auto valueCallNode = new immutable MemberAccessNode(valueNode, nameSource, name.start, name.end);
+                return interpretValueCall(value, valueCallNode);
             }
         }
         // Otherwise apply the UFCS transformation: the last part becomes the function name
         // and value of the previous parts become the first argument of the call
         // Example: a.b.c(d, e) -> c(a.b, d, e)
-        argumentNodes = valueNode ~ argumentNodes;
-        argumentTypes = valueNode.getType() ~ argumentTypes;
-        auto func = resolveFunction(context, name, argumentTypes, end);
+        auto argumentNodes = valueNode ~ interpretArgumentNodes(context, call);
+        auto argumentTypes = argumentNodes.getTypes();
+        auto func = resolveFunction(context, call, name, argumentTypes);
         if (func is null) {
-            functionNotFound(name, argumentTypes, end);
+            functionNotFound(call, name, argumentTypes);
         }
-        return new immutable FunctionCallNode(func, argumentNodes);
+        return new immutable FunctionCallNode(func, argumentNodes, call.start, call.end);
     }
 
-    private static immutable(Function) resolveFunction(Context context, Identifier name, immutable(Type)[] argumentTypes,
-                size_t end) {
+    private static immutable(Function) resolveFunction(Context context, FunctionCall call, Identifier name,
+            immutable(Type)[] argumentTypes) {
         string exceptionMessage;
         auto func = collectExceptionMessage(context.resolveFunction(name.getSource(), argumentTypes), exceptionMessage);
         if (exceptionMessage !is null) {
-            throw new SourceException(exceptionMessage, name.start, end);
+            throw new SourceException(exceptionMessage, call.start, call.end);
         }
         return func;
     }
 
-    private static immutable(TypedNode) interpretValueCall(Expression value, immutable(TypedNode) valueNode,
-            immutable(TypedNode)[] argumentNodes, immutable(Type)[] argumentTypes, size_t end) {
+    private static immutable(TypedNode) interpretValueCall(Expression value, immutable(TypedNode) valueNode) {
         /*
             TODO: when function type are added, check if value is one and call it, instead of doing UFCS immediately
             auto functionType = cast(immutable FunctionType) valueNode.getType();
@@ -370,9 +379,19 @@ public immutable class Interpreter {
         throw new SourceException(format("Type %s is not callable", valueNode.getType()), value);
     }
 
-    private static immutable(FunctionCallNode) functionNotFound(Identifier name, immutable(Type)[] argumentTypes, size_t end) {
+    private static immutable(FunctionCallNode) functionNotFound(FunctionCall call, Identifier name,
+            immutable(Type)[] argumentTypes) {
         throw new SourceException(format("No function found for call %s(%s)", name.getSource(), argumentTypes.join!", "()),
-                name.start, end);
+                call.start, call.end);
+    }
+
+    private static immutable(TypedNode)[] interpretArgumentNodes(Context context, FunctionCall call) {
+        immutable(TypedNode)[] argumentNodes;
+        argumentNodes.reserve(call.arguments.length);
+        foreach (argument; call.arguments) {
+            argumentNodes ~= argument.interpret(context);
+        }
+        return argumentNodes;
     }
 
     public immutable(TypedNode) interpretSign(Context context, Sign sign) {
@@ -383,7 +402,7 @@ public immutable class Interpreter {
             if (overflow) {
                 throw new SourceException("Signed integer overflow", sign);
             }
-            return new immutable SignedIntegerLiteralNode(value);
+            return new immutable SignedIntegerLiteralNode(value, integer.start, integer.end);
         }
         assert (0);
     }
