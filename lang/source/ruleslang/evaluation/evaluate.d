@@ -100,7 +100,18 @@ public immutable class Evaluator {
     }
 
     public void evaluateMemberAccess(Runtime runtime, immutable MemberAccessNode memberAccess) {
-        throw new NotImplementedException();
+        // Evaluate the member access value to place it on the stack
+        memberAccess.value.evaluate(runtime);
+        // Now get its address from the stack
+        auto address = runtime.stack.pop!(void*);
+        // Get the type identity from the header
+        auto identity = runtime.getTypeIdentity(*(cast(IdentityHeader*) address));
+        // From the identity, get the member offset
+        auto memberOffset = identity.memberOffsetByName[memberAccess.name];
+        // Get the member address
+        auto memberAddress = address + IdentityHeader.sizeof + memberOffset;
+        // Finally push the member's data onto the stack
+        runtime.stack.pushFrom(memberAccess.getType(), memberAddress);
     }
 
     public void evaluateIndexAccess(Runtime runtime, immutable IndexAccessNode indexAccess) {

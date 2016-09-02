@@ -727,8 +727,8 @@ public immutable class FieldAccessNode : TypedNode {
 }
 
 public immutable class MemberAccessNode : TypedNode {
-    private TypedNode value;
-    private string name;
+    public TypedNode value;
+    public string name;
     private Type type;
     private size_t _start;
     private size_t _end;
@@ -989,7 +989,8 @@ public immutable(TypedNode) reduceLiterals(immutable TypedNode node) {
             return new immutable UnsignedIntegerLiteralNode(atomicType, value.get!ulong(), node.start, node.end);
         }
     }
-    assert (0);
+    // TODO: other literal types
+    return node;
 }
 
 public immutable(TypedNode)[] reduceLiterals(immutable(TypedNode)[] nodes) {

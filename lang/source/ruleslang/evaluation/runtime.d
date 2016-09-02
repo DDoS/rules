@@ -103,8 +103,10 @@ public class Stack {
         byteIndex += dataByteSize;
     }
 
-    public void push(T)(immutable AtomicType type, T data) {
-        if (AtomicType.BOOL.opEquals(type)) {
+    public void push(T)(immutable Type type, T data) {
+        if (cast(immutable ReferenceType) type !is null) {
+            push!(void*)(cast(void*) data);
+        } else if (AtomicType.BOOL.opEquals(type)) {
             push!bool(cast(bool) data);
         } else if (AtomicType.SINT8.opEquals(type)) {
             push!byte(cast(byte) data);
@@ -126,6 +128,43 @@ public class Stack {
             push!float(cast(float) data);
         } else if (AtomicType.FP64.opEquals(type)) {
             push!double(cast(double) data);
+        } else {
+            assert (0);
+        }
+    }
+
+    public void pushFrom(T)(void* from) {
+        // Copy the data from the given location
+        T t = *(cast(T*) from);
+        // Push the data onto the stack
+        push!T(t);
+    }
+
+    public void pushFrom(immutable Type type, void* from) {
+        if (cast(immutable ReferenceType) type !is null) {
+            pushFrom!(void*)(from);
+        } else if (AtomicType.BOOL.opEquals(type)) {
+            pushFrom!bool(from);
+        } else if (AtomicType.SINT8.opEquals(type)) {
+            pushFrom!byte(from);
+        } else if (AtomicType.UINT8.opEquals(type)) {
+            pushFrom!ubyte(from);
+        } else if (AtomicType.SINT16.opEquals(type)) {
+            pushFrom!short(from);
+        } else if (AtomicType.UINT16.opEquals(type)) {
+            pushFrom!ushort(from);
+        } else if (AtomicType.SINT32.opEquals(type)) {
+            pushFrom!int(from);
+        } else if (AtomicType.UINT32.opEquals(type)) {
+            pushFrom!uint(from);
+        } else if (AtomicType.SINT64.opEquals(type)) {
+            pushFrom!long(from);
+        } else if (AtomicType.UINT64.opEquals(type)) {
+            pushFrom!ulong(from);
+        } else if (AtomicType.FP32.opEquals(type)) {
+            pushFrom!float(from);
+        } else if (AtomicType.FP64.opEquals(type)) {
+            pushFrom!double(from);
         } else {
             assert (0);
         }
@@ -154,8 +193,7 @@ public class Stack {
     }
 
     public Variant pop(immutable Type type) {
-        auto reference = cast(immutable ReferenceType) type;
-        if (reference !is null) {
+        if (cast(immutable ReferenceType) type !is null) {
             return Variant(pop!(void*));
         }
         if (AtomicType.BOOL.opEquals(type)) {
@@ -202,8 +240,7 @@ public class Stack {
     }
 
     public void popTo(immutable Type type, void* to) {
-        auto reference = cast(immutable ReferenceType) type;
-        if (reference !is null) {
+        if (cast(immutable ReferenceType) type !is null) {
             popTo!(void*)(to);
         } else if (AtomicType.BOOL.opEquals(type)) {
             popTo!bool(to);
