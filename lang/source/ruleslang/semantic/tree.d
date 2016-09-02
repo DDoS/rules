@@ -12,7 +12,9 @@ import ruleslang.evaluation.evaluate;
 import ruleslang.evaluation.runtime;
 import ruleslang.util;
 
-public immutable interface Node : SourceIndexedImmutable {
+public immutable interface Node {
+    @property public size_t start();
+    @property public size_t end();
     public immutable(Node)[] getChildren();
     public void evaluate(Runtime runtime);
     public string toString();

@@ -81,17 +81,7 @@ unittest {
     assert(!combining.has());
 }
 
-public interface SourceIndexed {
-    @property public size_t start();
-    @property public size_t end();
-}
-
-public immutable interface SourceIndexedImmutable {
-    @property public immutable(size_t) start();
-    @property public immutable(size_t) end();
-}
-
-public class SourceException : Exception, SourceIndexed {
+public class SourceException : Exception {
     private string offender = null;
     private size_t _start;
     private size_t _end;
@@ -103,13 +93,22 @@ public class SourceException : Exception, SourceIndexed {
         _end = index;
     }
 
-    public this(string message, SourceIndexed problem) {
+    public this(SourceIndexed)(string message, SourceIndexed problem) if (isSourceIndexed!SourceIndexed){
         this(message, problem.start, problem.end);
     }
 
-    public this(string message, immutable SourceIndexedImmutable problem) {
-        this(message, problem.start, problem.end);
-    }
+    // This is a duck typing trick: "is(type)" only returns true if the type is valid.
+    // The type can be that of a lambda, so we declare one and get the type using typeof(lambda).
+    // Since typeof doesn't actually evaluate the expression, all that matters is that it compiles.
+    // This is where duck typing comes in, the lambda body defines the operations we want on S
+    // and only compiles if the operations are valid
+    private enum bool isSourceIndexed(S) = is(typeof(
+        (inout int = 0) {
+            S s = S.init;
+            auto start = s.start;
+            auto end = s.end;
+        }
+    ));
 
     public this(string message, size_t start, size_t end) {
         super(message);
@@ -118,11 +117,11 @@ public class SourceException : Exception, SourceIndexed {
         _end = end;
     }
 
-    @property public override size_t start() {
+    @property public size_t start() {
         return _start;
     }
 
-    @property public override size_t end() {
+    @property public size_t end() {
         return _start;
     }
 

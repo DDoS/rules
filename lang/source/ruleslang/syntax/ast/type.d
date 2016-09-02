@@ -9,7 +9,9 @@ import ruleslang.syntax.ast.mapper;
 
 import ruleslang.util;
 
-public interface Type : SourceIndexed {
+public interface Type {
+    @property public size_t start();
+    @property public size_t end();
     public Type map(ExpressionMapper mapper);
     public string toString();
 }

@@ -8,7 +8,9 @@ import ruleslang.syntax.ast.expression;
 import ruleslang.syntax.ast.mapper;
 import ruleslang.util;
 
-public interface Statement : SourceIndexed {
+public interface Statement {
+    @property public size_t start();
+    @property public size_t end();
     public Statement map(StatementMapper mapper);
     public string toString();
 }

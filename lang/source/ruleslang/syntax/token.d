@@ -46,7 +46,9 @@ public enum Kind {
     EOF
 }
 
-public interface Token : SourceIndexed {
+public interface Token {
+    @property public size_t start();
+    @property public size_t end();
     public string getSource();
     public Kind getKind();
     public bool opEquals(const string source);

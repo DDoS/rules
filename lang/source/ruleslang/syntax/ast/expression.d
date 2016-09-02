@@ -13,7 +13,9 @@ import ruleslang.semantic.context;
 import ruleslang.semantic.interpret;
 import ruleslang.util;
 
-public interface Expression : SourceIndexed {
+public interface Expression {
+    @property public size_t start();
+    @property public size_t end();
     public Expression map(ExpressionMapper mapper);
     public immutable(TypedNode) interpret(Context context);
     public string toString();
