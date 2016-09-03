@@ -1,5 +1,8 @@
 module ruleslang.evaluation.evaluate;
 
+import std.format : format;
+
+import ruleslang.syntax.source;
 import ruleslang.semantic.type;
 import ruleslang.semantic.tree;
 import ruleslang.evaluation.runtime;
@@ -115,7 +118,61 @@ public immutable class Evaluator {
     }
 
     public void evaluateIndexAccess(Runtime runtime, immutable IndexAccessNode indexAccess) {
-        throw new NotImplementedException();
+        // Evaluate the index access value to place it on the stack
+        indexAccess.value.evaluate(runtime);
+        // Now get its address from the stack
+        auto address = runtime.stack.pop!(void*);
+        // Now do the same for the index value
+        indexAccess.index.evaluate(runtime);
+        auto index = runtime.stack.pop!ulong();
+        // Get the type identity from the header
+        auto identity = runtime.getTypeIdentity(*(cast(IdentityHeader*) address));
+        // Get the data segment
+        auto dataSegment = address + IdentityHeader.sizeof;
+        // Getting the member offset needs to be handled differently according to the kind
+        size_t memberOffset;
+        final switch (identity.kind) with (TypeIdentity.Kind) {
+            case TUPLE: {
+                // From the identity, get the member offset from the index
+                memberOffset = identity.memberOffsetByIndex[index];
+                break;
+            }
+            case STRUCT: {
+                auto type = indexAccess.value.getType();
+                // Accessing for a tuple or struct type works differently
+                auto tupleType = cast(immutable TupleType) type;
+                if (tupleType !is null) {
+                    // From the identity, get the member offset from the index
+                    memberOffset = identity.memberOffsetByIndex[index];
+                    break;
+                }
+                // Since struct members can be reorderd by reference widening, we need to use the name
+                auto structType = cast(immutable StructureType) type;
+                if (structType !is null) {
+                    // From the type, get the name at the index
+                    auto memberName = structType.memberNames[index];
+                    // From the identity, get the member offset from the name
+                    memberOffset = identity.memberOffsetByName[memberName];
+                    break;
+                }
+                assert (0);
+            }
+            case ARRAY: {
+                // First do a bounds check
+                auto length = *(cast(size_t*) dataSegment);
+                if (index >= length) {
+                    throw new SourceException(format("Index %d is out of bounds of [0 .. %d]", index, length),
+                            indexAccess.index);
+                }
+                // Calculate the offset as the length field size plus the component size times the index
+                memberOffset = size_t.sizeof + identity.componentSize * index;
+                break;
+            }
+        }
+        // Get the member address
+        auto memberAddress = dataSegment + memberOffset;
+        // Finally push the member's data onto the stack
+        runtime.stack.pushFrom(indexAccess.getType(), memberAddress);
     }
 
     public void evaluateFunctionCall(Runtime runtime, immutable FunctionCallNode functionCall) {

@@ -772,36 +772,36 @@ public immutable class MemberAccessNode : TypedNode {
 }
 
 public immutable class IndexAccessNode : TypedNode {
-    private TypedNode valueNode;
-    private TypedNode indexNode;
+    public TypedNode value;
+    public TypedNode index;
     private Type type;
     private size_t _start;
     private size_t _end;
 
-    public this(immutable TypedNode valueNode, immutable TypedNode indexNode, size_t start, size_t end) {
-        this.valueNode = valueNode.reduceLiterals();
-        this.indexNode = indexNode.reduceLiterals().addCastNode(AtomicType.UINT64);
+    public this(immutable TypedNode value, immutable TypedNode index, size_t start, size_t end) {
+        this.value = value.reduceLiterals();
+        this.index = index.reduceLiterals().addCastNode(AtomicType.UINT64);
         _start = start;
         _end = end;
         // Next find the acess type
-        auto referenceType = cast(immutable ReferenceType) this.valueNode.getType();
+        auto referenceType = cast(immutable ReferenceType) this.value.getType();
         assert (referenceType !is null);
         // First check if we can know the index, for that it must be an integer literal type
-        ulong index;
+        ulong indexValue;
         bool indexKnown = false;
-        auto integerLiteralIndex = cast(immutable IntegerLiteralType) this.indexNode.getType();
+        auto integerLiteralIndex = cast(immutable IntegerLiteralType) this.index.getType();
         if (integerLiteralIndex !is null) {
-            index = integerLiteralIndex.unsignedValue();
+            indexValue = integerLiteralIndex.unsignedValue();
             indexKnown = true;
         }
         // If the index is know, get the member type at the index
         if (indexKnown) {
-            type = referenceType.getMemberType(index);
+            type = referenceType.getMemberType(indexValue);
             // If the reference type is also a composite type, this method can return null for out-of-bounds
             if (type is null) {
                 throw new SourceException(
-                    format("Index %d is out of range of composite %s", index, referenceType.toString()),
-                    indexNode
+                    format("Index %d is out of range of composite %s", indexValue, referenceType.toString()),
+                    index
                 );
             }
             return;
@@ -812,10 +812,7 @@ public immutable class IndexAccessNode : TypedNode {
             type = arrayType.componentType;
             return;
         }
-        throw new SourceException(
-            format("Index must be known at compile time for type %s", referenceType.toString()),
-            indexNode
-        );
+        throw new SourceException(format("Index must be known at compile time for type %s", referenceType.toString()), index);
     }
 
     @property public override size_t start() {
@@ -827,7 +824,7 @@ public immutable class IndexAccessNode : TypedNode {
     }
 
     public override immutable(TypedNode)[] getChildren() {
-        return [valueNode, indexNode];
+        return [value, index];
     }
 
     public override immutable(Type) getType() {
@@ -835,7 +832,7 @@ public immutable class IndexAccessNode : TypedNode {
     }
 
     public override bool isIntrinsicEvaluable() {
-        return valueNode.isIntrinsicEvaluable() && indexNode.isIntrinsicEvaluable();
+        return value.isIntrinsicEvaluable() && index.isIntrinsicEvaluable();
     }
 
     public override void evaluate(Runtime runtime) {
@@ -843,7 +840,7 @@ public immutable class IndexAccessNode : TypedNode {
     }
 
     public override string toString() {
-        return format("IndexAccess(%s[%s]))", valueNode.toString(), indexNode.toString());
+        return format("IndexAccess(%s[%s]))", value.toString(), index.toString());
     }
 }
 
