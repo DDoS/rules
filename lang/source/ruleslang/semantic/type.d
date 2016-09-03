@@ -1146,10 +1146,11 @@ public immutable class SizedArrayLiteralType : SizedArrayType, LiteralType {
         auto firstType = memberTypes[0];
         immutable(Type)* componentType = &firstType;
         foreach (memberType; memberTypes[1 .. $]) {
-            auto lub = (*componentType).lowestUpperBound(memberType);
+            auto currentLub = *componentType;
+            auto lub = currentLub.lowestUpperBound(memberType);
             if (lub is null) {
                 throw new Exception(format("No common supertype for %s and %s",
-                        (*componentType).toString(), memberType.toString()));
+                        currentLub.toString(), memberType.toString()));
             }
             componentType = &lub;
         }

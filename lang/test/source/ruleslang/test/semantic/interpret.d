@@ -204,6 +204,7 @@ unittest {
         interpret("{0: 1, 1: 2.2}[0u + 0u]")
     );
     assertInterpretFails("{}[0]");
+    assertInterpretFails("{0: 1, 2: 3.0, 6: \"yesy\", other: {true}}");
 }
 
 unittest {
