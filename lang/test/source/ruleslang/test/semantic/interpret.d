@@ -86,6 +86,54 @@ unittest {
         "FunctionCall(fp32(SignedIntegerLiteral(-2))) | fp32",
         interpret("fp32(-2)")
     );
+    assertEqual(
+        "Conditional(BooleanLiteral(false), BooleanLiteral(false), BooleanLiteral(false)) | bool_lit(false)",
+        interpret("false && false")
+    );
+    assertEqual(
+        "Conditional(BooleanLiteral(false), BooleanLiteral(true), BooleanLiteral(false)) | bool",
+        interpret("false && true")
+    );
+    assertEqual(
+        "Conditional(BooleanLiteral(true), BooleanLiteral(false), BooleanLiteral(false)) | bool_lit(false)",
+        interpret("true && false")
+    );
+    assertEqual(
+        "Conditional(BooleanLiteral(true), BooleanLiteral(true), BooleanLiteral(false)) | bool",
+        interpret("true && true")
+    );
+    assertEqual(
+        "Conditional(BooleanLiteral(false), BooleanLiteral(true), BooleanLiteral(false)) | bool",
+        interpret("false || false")
+    );
+    assertEqual(
+        "Conditional(BooleanLiteral(false), BooleanLiteral(true), BooleanLiteral(true)) | bool_lit(true)",
+        interpret("false || true")
+    );
+    assertEqual(
+        "Conditional(BooleanLiteral(true), BooleanLiteral(true), BooleanLiteral(false)) | bool",
+        interpret("true || false")
+    );
+    assertEqual(
+        "Conditional(BooleanLiteral(true), BooleanLiteral(true), BooleanLiteral(true)) | bool_lit(true)",
+        interpret("true || true")
+    );
+    assertEqual(
+        "FunctionCall(opLogicalXor(BooleanLiteral(false), BooleanLiteral(false))) | bool",
+        interpret("false ^^ false")
+    );
+    assertEqual(
+        "FunctionCall(opLogicalXor(BooleanLiteral(false), BooleanLiteral(true))) | bool",
+        interpret("false ^^ true")
+    );
+    assertEqual(
+        "FunctionCall(opLogicalXor(BooleanLiteral(true), BooleanLiteral(false))) | bool",
+        interpret("true ^^ false")
+    );
+    assertEqual(
+        "FunctionCall(opLogicalXor(BooleanLiteral(true), BooleanLiteral(true))) | bool",
+        interpret("true ^^ true")
+    );
     assertInterpretFails("!1");
     assertInterpretFails("~true");
     assertInterpretFails("~1.");
@@ -94,6 +142,12 @@ unittest {
     assertInterpretFails("1.lol");
     assertInterpretFails("1.lol()");
     assertInterpretFails("1.opAdd()");
+    assertInterpretFails("1 && true");
+    assertInterpretFails("true && 1");
+    assertInterpretFails("1 || true");
+    assertInterpretFails("true || 1");
+    assertInterpretFails("1 ^^ true");
+    assertInterpretFails("true ^^ 1");
     assertInterpretFails("{0: 0, 0: 1}");
     assertInterpretFails("{0: 0, 1: 1, other: 2, other: 4}");
     assertInterpretFails("{s: 0, s: 1}");

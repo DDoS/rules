@@ -204,9 +204,7 @@ public enum OperatorFunction : string {
     BITWISE_AND_FUNCTION = "opBitwiseAnd",
     BITWISE_XOR_FUNCTION = "opBitwiseXor",
     BITWISE_OR_FUNCTION = "opBitwiseOr",
-    LOGICAL_AND_FUNCTION = "opLogicalAnd",
     LOGICAL_XOR_FUNCTION = "opLogicalXor",
-    LOGICAL_OR_FUNCTION = "opLogicalOr",
     CONCATENATE_FUNCTION = "opConcatenate",
     RANGE_FUNCTION = "opRange",
 }
@@ -276,9 +274,7 @@ public class IntrinsicNameSpace : NameSpace {
         binaryFunctions ~= genBinaryFunctions!(OperatorFunction.BITWISE_XOR_FUNCTION, Same, Same, IntegerTypes)();
         binaryFunctions ~= genBinaryFunctions!(OperatorFunction.BITWISE_OR_FUNCTION, Same, Same, IntegerTypes)();
         // Operators binary &&, ^^, ||
-        binaryFunctions ~= genBinaryFunctions!(OperatorFunction.LOGICAL_AND_FUNCTION, Same, Same, bool)();
-        binaryFunctions ~= genBinaryFunctions!(OperatorFunction.LOGICAL_XOR_FUNCTION, Same, Same, bool)();
-        binaryFunctions ~= genBinaryFunctions!(OperatorFunction.LOGICAL_OR_FUNCTION, Same, Same, bool)();
+       binaryFunctions ~= genBinaryFunctions!(OperatorFunction.LOGICAL_XOR_FUNCTION, Same, Same, bool)();
         // TODO: operators ~, ..
         auto assocBinaryFunctions = binaryFunctions.associateArrays!getName();
         binaryOperators = assocBinaryFunctions.assumeUnique();
@@ -482,9 +478,7 @@ private enum string[string] FUNCTION_TO_DLANG_OPERATOR = [
     "opBitwiseAnd": "$0 & $1",
     "opBitwiseXor": "$0 ^ $1",
     "opBitwiseOr": "$0 | $1",
-    "opLogicalAnd": "$0 && $1",
     "opLogicalXor": "$0 ^ $1",
-    "opLogicalOr": "$0 || $1",
     "opConcatenate": "$0 ~ $1",
     "opRange": "$0.p_range($1)",
 ];

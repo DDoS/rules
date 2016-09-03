@@ -425,16 +425,38 @@ public immutable class Interpreter {
         assert (0);
     }
 
-    public immutable(TypedNode) interpretLogicalAnd(Context context, LogicalAnd expression) {
-        assert (0);
+    public immutable(TypedNode) interpretLogicalAnd(Context context, LogicalAnd logicalAnd) {
+        // Both the left and right nodes must be bools
+        auto leftNode = logicalAnd.left.interpret(context);
+        if (!AtomicType.BOOL.opEquals(leftNode.getType())) {
+            throw new SourceException(format("Left type must be bool, not %s", leftNode.getType()), logicalAnd.left);
+        }
+        auto rightNode = logicalAnd.right.interpret(context);
+        if (!AtomicType.BOOL.opEquals(rightNode.getType())) {
+            throw new SourceException(format("Right type must be bool, not %s", rightNode.getType()), logicalAnd.right);
+        }
+        // Implement "logical and" as a conditional to support short-circuiting
+        auto shortCircuit = new immutable BooleanLiteralNode(false, rightNode.start, rightNode.end);
+        return new immutable ConditionalNode(leftNode, rightNode, shortCircuit, logicalAnd.start, logicalAnd.end);
     }
 
     public immutable(TypedNode) interpretLogicalXor(Context context, LogicalXor expression) {
         assert (0);
     }
 
-    public immutable(TypedNode) interpretLogicalOr(Context context, LogicalOr expression) {
-        assert (0);
+    public immutable(TypedNode) interpretLogicalOr(Context context, LogicalOr logicalOr) {
+        // Both the left and right nodes must be bools
+        auto leftNode = logicalOr.left.interpret(context);
+        if (!AtomicType.BOOL.opEquals(leftNode.getType())) {
+            throw new SourceException(format("Left type must be bool, not %s", leftNode.getType()), logicalOr.left);
+        }
+        auto rightNode = logicalOr.right.interpret(context);
+        if (!AtomicType.BOOL.opEquals(rightNode.getType())) {
+            throw new SourceException(format("Right type must be bool, not %s", rightNode.getType()), logicalOr.right);
+        }
+        // Implement "logical or" as a conditional to support short-circuiting
+        auto shortCircuit = new immutable BooleanLiteralNode(true, leftNode.start, leftNode.end);
+        return new immutable ConditionalNode(leftNode, shortCircuit, rightNode, logicalOr.start, logicalOr.end);
     }
 
     public immutable(TypedNode) interpretConcatenate(Context context, Concatenate expression) {
@@ -449,10 +471,8 @@ public immutable class Interpreter {
         // Get the condition node and make sure it is a bool type
         auto conditionNode = conditional.condition.interpret(context);
         if (!AtomicType.BOOL.opEquals(conditionNode.getType())) {
-            throw new SourceException(
-                format("Condition type must be bool, not %s", conditionNode.getType()),
-                conditional.condition
-            );
+            throw new SourceException(format("Condition type must be bool, not %s", conditionNode.getType()),
+                    conditional.condition);
         }
         // Get the value nodes
         auto trueNode = conditional.trueValue().interpret(context);

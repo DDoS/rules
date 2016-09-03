@@ -90,11 +90,11 @@ unittest {
         parseAndExpand("a ^= b")
     );
     assertEqual(
-        "Assignment(a = FunctionCall(opLogicalAnd(a, b)))",
+        "Assignment(a = LogicalAnd(a && b))",
         parseAndExpand("a &&= b")
     );
     assertEqual(
-        "Assignment(a = FunctionCall(opLogicalOr(a, b)))",
+        "Assignment(a = LogicalOr(a || b))",
         parseAndExpand("a ||= b")
     );
     assertEqual(
@@ -117,8 +117,8 @@ unittest {
         parseAndExpand("a = 1 > 2")
     );
     assertEqual(
-        "Assignment(a = FunctionCall(opLogicalAnd(FunctionCall(opLogicalAnd(FunctionCall(opEquals(c, b)), "
-            ~ "FunctionCall(opNotEquals(b, m)))), FunctionCall(opLesserThan(m, j)))))",
+        "Assignment(a = LogicalAnd(LogicalAnd(FunctionCall(opEquals(c, b)) && "
+            ~ "FunctionCall(opNotEquals(b, m))) && FunctionCall(opLesserThan(m, j))))",
         parseAndExpand("a = c == b != m < j")
     );
     assertEqual(
@@ -126,7 +126,7 @@ unittest {
         parseAndExpand("a = a :: b")
     );
     assertEqual(
-        "Assignment(a = FunctionCall(opLogicalAnd(ValueCompare(m === b), TypeCompare(b !: o))))",
+        "Assignment(a = LogicalAnd(ValueCompare(m === b) && TypeCompare(b !: o)))",
         parseAndExpand("a = m === b !: o")
     );
 }

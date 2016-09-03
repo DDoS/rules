@@ -175,21 +175,9 @@ private class OperatorConverter : StatementMapper {
         assert(0);
     }
 
-    public override Expression mapLogicalAnd(LogicalAnd expression) {
-        auto op = expression.operator;
-        mixin(genConversionBinary!"&&");
-        assert(0);
-    }
-
     public override Expression mapLogicalXor(LogicalXor expression) {
         auto op = expression.operator;
         mixin(genConversionBinary!"^^");
-        assert(0);
-    }
-
-    public override Expression mapLogicalOr(LogicalOr expression) {
-        auto op = expression.operator;
-        mixin(genConversionBinary!"||");
         assert(0);
     }
 

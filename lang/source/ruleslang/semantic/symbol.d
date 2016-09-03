@@ -151,9 +151,7 @@ public static this() {
         "&": "opBitwiseAnd",
         "^": "opBitwiseXor",
         "|": "opBitwiseOr",
-        "&&": "opLogicalAnd",
         "^^": "opLogicalXor",
-        "||": "opLogicalOr",
         "~": "opConcatenate",
         "..": "opRange"
     ];
