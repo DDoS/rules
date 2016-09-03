@@ -209,7 +209,6 @@ public enum OperatorFunction : string {
     LOGICAL_OR_FUNCTION = "opLogicalOr",
     CONCATENATE_FUNCTION = "opConcatenate",
     RANGE_FUNCTION = "opRange",
-    CONDITIONAL_FUNCTION = "opConditional"
 }
 
 public immutable struct IntrinsicFunction {
@@ -226,7 +225,6 @@ public class IntrinsicNameSpace : NameSpace {
     private alias IntrinsicFunctions = immutable IntrinsicFunction[];
     private static immutable IntrinsicFunctions[string] unaryOperators;
     private static immutable IntrinsicFunctions[string] binaryOperators;
-    private static immutable IntrinsicFunctions[string] ternaryOperators;
     public static immutable FunctionImpl[string] FUNCTION_IMPLEMENTATIONS;
 
     public static this() {
@@ -284,12 +282,6 @@ public class IntrinsicNameSpace : NameSpace {
         // TODO: operators ~, ..
         auto assocBinaryFunctions = binaryFunctions.associateArrays!getName();
         binaryOperators = assocBinaryFunctions.assumeUnique();
-        // Build the intrinsic unary function list
-        immutable(IntrinsicFunction)[] ternaryFunctions = [];
-        // Operators ternary ... if ... else ...
-        ternaryFunctions ~= genTernaryFunctions!(OperatorFunction.CONDITIONAL_FUNCTION, Constant!bool, Same, Same, AllTypes)();
-        auto assocTernaryFunctions = ternaryFunctions.associateArrays!getName();
-        ternaryOperators = assocTernaryFunctions.assumeUnique();
         // Create the function implementation lookup table
         void addNoReplace(ref FunctionImpl[string] array, IntrinsicFunction intrinsic) {
             auto name = intrinsic.func.symbolicName;
@@ -302,9 +294,6 @@ public class IntrinsicNameSpace : NameSpace {
             addNoReplace(functionImpls, intrinsic);
         }
         foreach (intrinsic; binaryFunctions) {
-            addNoReplace(functionImpls, intrinsic);
-        }
-        foreach (intrinsic; ternaryFunctions) {
             addNoReplace(functionImpls, intrinsic);
         }
         FUNCTION_IMPLEMENTATIONS = functionImpls.assumeUnique();
@@ -353,9 +342,6 @@ public class IntrinsicNameSpace : NameSpace {
                 break;
             case 2:
                 searchFunctions = name in binaryOperators;
-                break;
-            case 3:
-                searchFunctions = name in ternaryOperators;
                 break;
             default:
                 searchFunctions = null;
@@ -445,24 +431,6 @@ private immutable(IntrinsicFunction)[] genBinaryFunctions(OperatorFunction op,
     return funcs;
 }
 
-private immutable(IntrinsicFunction)[] genTernaryFunctions(OperatorFunction op,
-        alias LeftFromMiddle, alias RightFromMiddle, alias ReturnFromMiddle, Middle, Middles...)() {
-    alias Left = LeftFromMiddle!Middle;
-    alias Right = RightFromMiddle!Middle;
-    alias Return = ReturnFromMiddle!Middle;
-    auto leftType = atomicTypeFor!Left();
-    auto middleType = atomicTypeFor!Middle();
-    auto rightType = atomicTypeFor!Right();
-    auto returnType = atomicTypeFor!Return();
-    auto func = new immutable Function(op, [leftType, middleType, rightType], returnType);
-    auto impl = genTernaryOperatorImpl!(op, Left, Middle, Right, Return);
-    auto funcs = [immutable IntrinsicFunction(func, impl)];
-    static if (Middles.length > 0) {
-        funcs ~= genTernaryFunctions!(op, LeftFromMiddle, RightFromMiddle, ReturnFromMiddle, Middles)();
-    }
-    return funcs;
-}
-
 private immutable(AtomicType) atomicTypeFor(T)() {
     static if (is(T == bool)) {
         return AtomicType.BOOL;
@@ -519,7 +487,6 @@ private enum string[string] FUNCTION_TO_DLANG_OPERATOR = [
     "opLogicalOr": "$0 || $1",
     "opConcatenate": "$0 ~ $1",
     "opRange": "$0.p_range($1)",
-    "opConditional": "$0 ? $1 : $2"
 ];
 
 private FunctionImpl genUnaryOperatorImpl(OperatorFunction func, Inner, Return)() {
@@ -541,15 +508,6 @@ private FunctionImpl genBinaryOperatorImpl(OperatorFunction func, Left, Right, R
     FunctionImpl implementation = (stack) {
         enum op = FUNCTION_TO_DLANG_OPERATOR[func].positionalReplace("stack.pop!Left()", "stack.pop!Right()");
         mixin("stack.push!Return(cast(Return) (" ~ op ~ "));");
-    };
-    return implementation;
-}
-
-private FunctionImpl genTernaryOperatorImpl(OperatorFunction func, Left, Middle, Right, Return)() {
-    FunctionImpl implementation = (stack) {
-        enum op = FUNCTION_TO_DLANG_OPERATOR[func].positionalReplace("stack.pop!Left()", "stack.pop!Middle()",
-                "stack.pop!Right()");
-                mixin("stack.push!Return(cast(Return) (" ~ op ~ "));");
     };
     return implementation;
 }

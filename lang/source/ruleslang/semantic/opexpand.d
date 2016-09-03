@@ -205,13 +205,6 @@ private class OperatorConverter : StatementMapper {
         assert(0);
     }
 
-    public override Expression mapConditional(Conditional expression) {
-        return new FunctionCall(
-            new NameReference([new Identifier("opConditional", expression.start, expression.end)]),
-            [expression.condition, expression.trueValue, expression.falseValue], expression.start, expression.end
-        );
-    }
-
     private alias genConversionUnary(string op) = genConversion!(op, false);
 
     private alias genConversionBinary(string op) = genConversion!(op, true);

@@ -126,6 +126,19 @@ public immutable class Evaluator {
         // Then call the function, which will pop the arguments from the stack
         runtime.call(functionCall.func);
     }
+
+    public void evaluateConditional(Runtime runtime, immutable ConditionalNode conditional) {
+        // First evaluate the condition node
+        conditional.condition.evaluate(runtime);
+        // Branch on the value, which is on the top of the stack
+        if (runtime.stack.pop!bool()) {
+            // Evaluate the true value and leave it on the top of the stack
+            conditional.whenTrue.evaluate(runtime);
+        } else {
+            // Evaluate the false value and leave it on the top of the stack
+            conditional.whenFalse.evaluate(runtime);
+        }
+    }
 }
 
 private void* allocateComposite(Runtime runtime, immutable TypeIdentity identity) {

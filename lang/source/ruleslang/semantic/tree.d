@@ -780,7 +780,7 @@ public immutable class IndexAccessNode : TypedNode {
 
     public this(immutable TypedNode valueNode, immutable TypedNode indexNode, size_t start, size_t end) {
         this.valueNode = valueNode.reduceLiterals();
-        this.indexNode = addCastNode(indexNode.reduceLiterals(), AtomicType.UINT64);
+        this.indexNode = indexNode.reduceLiterals().addCastNode(AtomicType.UINT64);
         _start = start;
         _end = end;
         // Next find the acess type
@@ -859,7 +859,7 @@ public immutable class FunctionCallNode : TypedNode {
         // Perform literal reduction then wrap the argument nodes in casts to make the conversions explicit
         immutable(TypedNode)[] castArguments = [];
         foreach (i, arg; arguments) {
-            castArguments ~= addCastNode(arg.reduceLiterals(), func.parameterTypes[i]);
+            castArguments ~= arg.reduceLiterals().addCastNode(func.parameterTypes[i]);
         }
         this.arguments = castArguments;
         _start = start;
@@ -892,6 +892,64 @@ public immutable class FunctionCallNode : TypedNode {
 
     public override string toString() {
         return format("FunctionCall(%s(%s))", func.name(), arguments.join!", "());
+    }
+}
+
+public immutable class ConditionalNode : TypedNode {
+    public TypedNode condition;
+    public TypedNode whenTrue;
+    public TypedNode whenFalse;
+    private Type type;
+    private size_t _start;
+    private size_t _end;
+
+    public this(immutable TypedNode condition, immutable TypedNode whenTrue, immutable TypedNode whenFalse,
+            size_t start, size_t end) {
+        this.condition = condition.reduceLiterals();
+        // Reduce the literals of the possible values
+        auto reducedTrue = whenTrue.reduceLiterals();
+        auto reducedFalse = whenFalse.reduceLiterals();
+        // The type is the LUB of the two possible values
+        type = reducedTrue.getType().lowestUpperBound(reducedFalse.getType());
+        if (type is null) {
+            throw new SourceException(
+                format("No lowest upper bound for types %s and %s", reducedTrue.getType(), reducedFalse.getType()),
+                start, end
+            );
+        }
+        // Add the cast nodes to make the conversions explicit
+        this.whenTrue = reducedTrue.addCastNode(type);
+        this.whenFalse = reducedFalse.addCastNode(type);
+        _start = start;
+        _end = end;
+    }
+
+    @property public override size_t start() {
+        return _start;
+    }
+
+    @property public override size_t end() {
+        return _end;
+    }
+
+    public override immutable(TypedNode)[] getChildren() {
+        return [condition, whenTrue, whenFalse];
+    }
+
+    public override immutable(Type) getType() {
+        return type;
+    }
+
+    public override bool isIntrinsicEvaluable() {
+        return condition.isIntrinsicEvaluable() && whenTrue.isIntrinsicEvaluable() && whenFalse.isIntrinsicEvaluable();
+    }
+
+    public override void evaluate(Runtime runtime) {
+        Evaluator.INSTANCE.evaluateConditional(runtime, this);
+    }
+
+    public override string toString() {
+        return format("Conditional(%s, %s, %s)", condition.toString(), whenTrue.toString, whenFalse.toString());
     }
 }
 

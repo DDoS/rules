@@ -445,7 +445,18 @@ public immutable class Interpreter {
         assert (0);
     }
 
-    public immutable(TypedNode) interpretConditional(Context context, Conditional expression) {
-        assert (0);
+    public immutable(TypedNode) interpretConditional(Context context, Conditional conditional) {
+        // Get the condition node and make sure it is a bool type
+        auto conditionNode = conditional.condition.interpret(context);
+        if (!AtomicType.BOOL.opEquals(conditionNode.getType())) {
+            throw new SourceException(
+                format("Condition type must be bool, not %s", conditionNode.getType()),
+                conditional.condition
+            );
+        }
+        // Get the value nodes
+        auto trueNode = conditional.trueValue().interpret(context);
+        auto falseNode = conditional.falseValue().interpret(context);
+        return new immutable ConditionalNode(conditionNode, trueNode, falseNode, conditional.start, conditional.end);
     }
 }

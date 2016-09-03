@@ -106,7 +106,7 @@ unittest {
         parseAndExpand("a ~= b")
     );
     assertEqual(
-        "Assignment(a = FunctionCall(opConditional(b, c, d)))",
+        "Assignment(a = Conditional(c if b else d))",
         parseAndExpand("a = c if b else d")
     );
 }

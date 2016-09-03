@@ -312,6 +312,43 @@ unittest {
     );
 }
 
+unittest {
+    assertEqual(
+        "Conditional(BooleanLiteral(true), FloatLiteral(1), FloatLiteral(1)) | fp_lit(1)",
+        interpret("1 if true else 1.0")
+    );
+    assertEqual(
+        "Conditional(BooleanLiteral(true), FloatLiteral(1), FloatLiteral(-1)) | fp64",
+        interpret("1 if true else -1.0")
+    );
+    assertEqual(
+        "Conditional(BooleanLiteral(false), FloatLiteral(2), FloatLiteral(2)) | fp64",
+        interpret("2 if false else 2u")
+    );
+    assertEqual(
+        "Conditional(BooleanLiteral(false), FloatLiteral(-2), FloatLiteral(2)) | fp64",
+        interpret("-2 if false else 2u")
+    );
+    assertEqual(
+        "Conditional(BooleanLiteral(false), StringLiteral(\"hello\"), StringLiteral(\"hell\")) | string_lit(\"hell\")",
+        interpret("\"hello\" if false else \"hell\"")
+    );
+    assertEqual(
+        "Conditional(BooleanLiteral(false), StringLiteral(\"allo\"), StringLiteral(\"hello\")) | string_lit(\"\")",
+        interpret("\"allo\" if false else \"hello\"")
+    );
+    assertEqual(
+        "Conditional(BooleanLiteral(false), "
+            ~ "TupleLiteral({SignedIntegerLiteral(1), SignedIntegerLiteral(2), BooleanLiteral(true)}), "
+            ~ "TupleLiteral({SignedIntegerLiteral(1), SignedIntegerLiteral(2), SignedIntegerLiteral(3)})) "
+            ~ "| {sint_lit(1), sint_lit(2)}",
+        interpret("{1, 2, true} if false else {1, 2, 3}")
+    );
+    assertInterpretFails("false if true else 2");
+    assertInterpretFails("{} if true else 2");
+    assertInterpretFails("2 if \"lol\" else 2");
+}
+
 private string interpret(alias info = getAllInfo)(string source) {
     auto tokenizer = new Tokenizer(new DCharReader(source));
     if (tokenizer.head().getKind() == Kind.INDENTATION) {
