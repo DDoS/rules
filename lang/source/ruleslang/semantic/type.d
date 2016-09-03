@@ -1184,10 +1184,6 @@ public immutable class SizedArrayLiteralType : SizedArrayType, LiteralType {
         return true;
     }
 
-    public override immutable(Type) getMemberType(ulong index) {
-        return index >= _memberTypes.length ? null : _memberTypes[index];
-    }
-
     public override bool opEquals(immutable Type type) {
         auto sizedArrayType = type.exactCastImmutable!SizedArrayLiteralType();
         return sizedArrayType !is null && sizedArrayType.componentType.opEquals(componentType);
