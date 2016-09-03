@@ -105,8 +105,8 @@ public class SourceException : Exception {
     private enum bool isSourceIndexed(S) = is(typeof(
         (inout int = 0) {
             S s = S.init;
-            auto start = s.start;
-            auto end = s.end;
+            size_t start = s.start;
+            size_t end = s.end;
         }
     ));
 
