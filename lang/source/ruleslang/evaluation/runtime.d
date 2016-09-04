@@ -18,7 +18,7 @@ public abstract class Runtime {
 
     public this() {
         _stack = new Stack(4 * 1024);
-        _heap = new Heap(8 * 1024);
+        _heap = new Heap();
         identities = [];
         identities.reserve(256);
     }
@@ -66,6 +66,7 @@ public class IntrinsicRuntime : Runtime {
 }
 
 public class Stack {
+    private static enum bool isValidDataType(T) = is(T : long) || is(T : double) || is(T == void*);
     private void* memory;
     private size_t byteSize;
     private size_t byteIndex;
@@ -88,7 +89,7 @@ public class Stack {
         return byteIndex <= 0;
     }
 
-    public void push(T)(T data) if (isValidDataType!T()) {
+    public void push(T)(T data) if (isValidDataType!T) {
         // Get the data type size
         enum dataByteSize = alignedSize!(T, size_t);
         // Check for a stack overflow
@@ -170,7 +171,7 @@ public class Stack {
         }
     }
 
-    public T pop(T)() if (isValidDataType!T()) {
+    public T pop(T)() if (isValidDataType!T) {
         // Get the data type size
         enum dataByteSize = alignedSize!(T, size_t);
         // Check for a stack underflow
@@ -269,7 +270,7 @@ public class Stack {
         }
     }
 
-    public void* peek(T)() if (isValidDataType!T()) {
+    public void* peekAddress(T)() if (isValidDataType!T) {
         auto offset = byteIndex - alignedSize!(T, size_t);
         if (offset < 0) {
             throw new Exception("Stack underflow");
@@ -277,53 +278,89 @@ public class Stack {
         return memory + offset;
     }
 
-    public void* peek(immutable Type type) {
+    public void* peekAddress(immutable Type type) {
         auto reference = cast(immutable ReferenceType) type;
         if (reference !is null) {
-            return peek!(void*);
+            return peekAddress!(void*);
         }
         if (AtomicType.BOOL.opEquals(type)) {
-            return peek!bool();
+            return peekAddress!bool();
         }
         if (AtomicType.SINT8.opEquals(type)) {
-            return peek!byte();
+            return peekAddress!byte();
         }
         if (AtomicType.UINT8.opEquals(type)) {
-            return peek!ubyte();
+            return peekAddress!ubyte();
         }
         if (AtomicType.SINT16.opEquals(type)) {
-            return peek!short();
+            return peekAddress!short();
         }
         if (AtomicType.UINT16.opEquals(type)) {
-            return peek!ushort();
+            return peekAddress!ushort();
         }
         if (AtomicType.SINT32.opEquals(type)) {
-            return peek!int();
+            return peekAddress!int();
         }
         if (AtomicType.UINT32.opEquals(type)) {
-            return peek!uint();
+            return peekAddress!uint();
         }
         if (AtomicType.SINT64.opEquals(type)) {
-            return peek!long();
+            return peekAddress!long();
         }
         if (AtomicType.UINT64.opEquals(type)) {
-            return peek!ulong();
+            return peekAddress!ulong();
         }
         if (AtomicType.FP32.opEquals(type)) {
-            return peek!float();
+            return peekAddress!float();
         }
         if (AtomicType.FP64.opEquals(type)) {
-            return peek!double();
+            return peekAddress!double();
         }
         assert (0);
     }
 
-    private static bool isValidDataType(T)() {
-        static if (is(T : long) || is(T : double) || is(T == void*)) {
-            return true;
-        } else {
-            return false;
+    public T peek(T)() if (isValidDataType!T) {
+        return *(cast(T*) peekAddress!T());
+    }
+
+    public Variant peek(immutable Type type) {
+        if (cast(immutable ReferenceType) type !is null) {
+            return Variant(peek!(void*));
         }
+        if (AtomicType.BOOL.opEquals(type)) {
+            return Variant(peek!bool());
+        }
+        if (AtomicType.SINT8.opEquals(type)) {
+            return Variant(peek!byte());
+        }
+        if (AtomicType.UINT8.opEquals(type)) {
+            return Variant(peek!ubyte());
+        }
+        if (AtomicType.SINT16.opEquals(type)) {
+            return Variant(peek!short());
+        }
+        if (AtomicType.UINT16.opEquals(type)) {
+            return Variant(peek!ushort());
+        }
+        if (AtomicType.SINT32.opEquals(type)) {
+            return Variant(peek!int());
+        }
+        if (AtomicType.UINT32.opEquals(type)) {
+            return Variant(peek!uint());
+        }
+        if (AtomicType.SINT64.opEquals(type)) {
+            return Variant(peek!long());
+        }
+        if (AtomicType.UINT64.opEquals(type)) {
+            return Variant(peek!ulong());
+        }
+        if (AtomicType.FP32.opEquals(type)) {
+            return Variant(peek!float());
+        }
+        if (AtomicType.FP64.opEquals(type)) {
+            return Variant(peek!double());
+        }
+        assert (0);
     }
 
     unittest {
@@ -373,14 +410,6 @@ public class Stack {
 }
 
 public class Heap {
-    private void* memory;
-    private size_t byteSize;
-
-    public this(size_t byteSize) {
-        this.byteSize = byteSize;
-        memory = .allocateScanned(byteSize);
-    }
-
     public void* allocateScanned(size_t byteSize) {
         return .allocateScanned(byteSize);
     }
@@ -388,6 +417,36 @@ public class Heap {
     public void* allocateNotScanned(size_t byteSize) {
         // Memory cannot be moved and is not scanned
         return GC.calloc(byteSize, GC.BlkAttr.NO_MOVE | GC.BlkAttr.NO_SCAN);
+    }
+}
+
+public void writeVariant(Variant variant, void* to) {
+    if (variant.type == typeid(void*)) {
+        *(cast(void**) to) = variant.get!(void*);
+    } else if (variant.type == typeid(bool)) {
+        *(cast(bool*) to) = variant.get!bool();
+    } else if (variant.type == typeid(byte)) {
+        *(cast(byte*) to) = variant.get!byte();
+    } else if (variant.type == typeid(ubyte)) {
+        *(cast(ubyte*) to) = variant.get!ubyte();
+    } else if (variant.type == typeid(short)) {
+        *(cast(short*) to) = variant.get!short();
+    } else if (variant.type == typeid(ushort)) {
+        *(cast(ushort*) to) = variant.get!ushort();
+    } else if (variant.type == typeid(int)) {
+        *(cast(int*) to) = variant.get!int();
+    } else if (variant.type == typeid(uint)) {
+        *(cast(uint*) to) = variant.get!uint();
+    } else if (variant.type == typeid(long)) {
+        *(cast(long*) to) = variant.get!long();
+    } else if (variant.type == typeid(ulong)) {
+        *(cast(ulong*) to) = variant.get!ulong();
+    } else if (variant.type == typeid(float)) {
+        *(cast(float*) to) = variant.get!float();
+    } else if (variant.type == typeid(double)) {
+        *(cast(double*) to) = variant.get!double();
+    } else {
+        assert (0);
     }
 }
 

@@ -657,19 +657,22 @@ public immutable class ArrayLiteralNode : LiteralNode, ReferenceNode {
         return null;
     }
 
-    public immutable(TypedNode) getValueAt(ulong index) {
+    public immutable(TypedNode) getValueAt(ulong index, out bool isOther) {
         // Search for a label with the index
         foreach (i, label; labels) {
             if (!label.other && label.index == index) {
+                isOther = false;
                 return values[i];
             }
         }
         // Otherwise, if a label is "other", return the corresponding value
         foreach (i, label; labels) {
             if (label.other) {
+                isOther = true;
                 return values[i];
             }
         }
+        isOther = false;
         return null;
     }
 

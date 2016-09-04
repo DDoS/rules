@@ -69,7 +69,7 @@ private void printInfo(Expression expression, Context context, Runtime runtime) 
 }
 
 private string getStackTop(Runtime runtime, immutable Type type) {
-    return runtime.asString(type, runtime.stack.peek(type));
+    return runtime.asString(type, runtime.stack.peekAddress(type));
 }
 
 private string asString(Runtime runtime, immutable Type type, void* address) {

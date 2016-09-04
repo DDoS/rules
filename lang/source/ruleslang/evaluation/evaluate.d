@@ -1,6 +1,7 @@
 module ruleslang.evaluation.evaluate;
 
 import std.format : format;
+import std.variant : Variant;
 
 import ruleslang.syntax.source;
 import ruleslang.semantic.type;
@@ -82,17 +83,29 @@ public immutable class Evaluator {
         auto address = runtime.allocateArray(identity, length);
         // Then place the array data
         auto dataSegment = address + IdentityHeader.sizeof + size_t.sizeof;
-        foreach (i; 0 .. length) {
+        bool foundOther = false;
+        Variant otherCache;
+        for (size_t i = 0; i < length; i += 1, dataSegment += identity.componentSize) {
             // Get the value for the array index
-            auto value = arrayLiteral.getValueAt(i);
-            if (value !is null) {
-                // Evaluate the data to place the value on the stack
-                value.evaluate(runtime);
-                // Pop the stack data to the data segment
-                runtime.stack.popTo(type.componentType, dataSegment);
+            bool isOther;
+            auto value = arrayLiteral.getValueAt(i, isOther);
+            if (value is null) {
+                continue;
             }
-            // Increment the data address
-            dataSegment += identity.componentSize;
+            // If the value has the "other" label then we must only evaluate it a single time
+            if (isOther && foundOther) {
+                otherCache.writeVariant(dataSegment);
+                continue;
+            }
+            // Evaluate the data to place the value on the stack
+            value.evaluate(runtime);
+            if (isOther && !foundOther) {
+                // If it is the first labeled with "other" cache it for reuse
+                otherCache = runtime.stack.peek(type.componentType);
+                foundOther = true;
+            }
+            // Pop the stack data to the data segment
+            runtime.stack.popTo(type.componentType, dataSegment);
         }
         // Finally push the address to the stack
         runtime.stack.push(address);
