@@ -1188,7 +1188,6 @@ public immutable class SizedArrayLiteralType : SizedArrayType, LiteralType {
     public override bool opEquals(immutable Type type) {
         auto sizedArrayType = type.exactCastImmutable!SizedArrayLiteralType();
         return sizedArrayType !is null && sizedArrayType.componentType.opEquals(componentType);
-
     }
 }
 

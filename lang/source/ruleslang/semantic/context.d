@@ -224,7 +224,7 @@ public class IntrinsicNameSpace : NameSpace {
     private static immutable IntrinsicFunctions[string] unaryOperators;
     private static immutable IntrinsicFunctions[string] binaryOperators;
     private static enum string LENGTH_NAME = "len";
-    private static enum string LENGTH_SYMBOLIC_NAME = LENGTH_NAME ~ "({})" ~ getWordType();
+    private static enum string LENGTH_SYMBOLIC_NAME = LENGTH_NAME ~ "({})" ~ getWordType().toString();
     private static immutable FunctionImpl LENGTH_IMPLEMENTATION;
     public static immutable FunctionImpl[string] FUNCTION_IMPLEMENTATIONS;
 
@@ -359,22 +359,24 @@ public class IntrinsicNameSpace : NameSpace {
 
     private static IntrinsicFunctions getGeneratedFunctions(string name, immutable(Type)[] argumentTypes) {
         if (name == LENGTH_NAME && argumentTypes.length == 1) {
+            // The argument type should be an array
             auto arrayType = cast(immutable ArrayType) argumentTypes[0];
             if (arrayType is null) {
                 return [];
             }
-            auto func = new immutable Function(LENGTH_NAME, LENGTH_SYMBOLIC_NAME, argumentTypes, AtomicType.UINT64);
+            // Generate a function that takes that argument type and returns the length as the word type
+            auto func = new immutable Function(LENGTH_NAME, LENGTH_SYMBOLIC_NAME, argumentTypes, getWordType());
             return [immutable IntrinsicFunction(func, LENGTH_IMPLEMENTATION)];
         }
         return [];
     }
 }
 
-private string getWordType()() {
+private immutable(AtomicType) getWordType()() {
     static if (size_t.sizeof == 4) {
-        return "uint32";
+        return AtomicType.UINT32;
     } else static if (size_t.sizeof == 8) {
-        return "uint64";
+        return AtomicType.UINT64;
     } else {
         static assert (0);
     }
