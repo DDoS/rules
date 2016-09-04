@@ -44,8 +44,12 @@ public immutable class Function : Symbol {
     public Type returnType;
 
     public this(string name, immutable(Type)[] parameterTypes, immutable Type returnType) {
+        this(name, genSymbolicName(name, parameterTypes, returnType), parameterTypes, returnType);
+    }
+
+    public this(string name, string symbolicName, immutable(Type)[] parameterTypes, immutable Type returnType) {
         _name = name;
-        _symbolicName = genSymbolicName(name, parameterTypes, returnType);
+        _symbolicName = symbolicName;
         this.returnType = returnType;
         this.parameterTypes = parameterTypes;
     }

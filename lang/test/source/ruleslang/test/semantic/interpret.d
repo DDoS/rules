@@ -134,6 +134,27 @@ unittest {
         "FunctionCall(opLogicalXor(BooleanLiteral(true), BooleanLiteral(true))) | bool",
         interpret("true ^^ true")
     );
+    assertEqual(
+        "FunctionCall(len(ArrayLiteral({0: SignedIntegerLiteral(1)}))) | uint64",
+        interpret("{0: 1}.len()")
+    );
+    assertEqual(
+        "FunctionCall(len(ArrayLiteral({0: SignedIntegerLiteral(1)}))) | uint64",
+        interpret("len({0: 1})")
+    );
+    assertEqual(
+        "FunctionCall(len(ArrayLiteral({123: FloatLiteral(1), other: FloatLiteral(-2)}))) | uint64",
+        interpret("len({123: 1, other: -2.0})")
+    );
+    assertEqual(
+        "FunctionCall(len(StringLiteral(\"this is a test\"))) | uint64",
+        interpret("\"this is a test\".len()")
+    );
+    assertEqual(
+        "FunctionCall(len(ArrayLiteral({32: TupleLiteral({StringLiteral(\"no\")}), "
+            ~ "other: TupleLiteral({StringLiteral(\"yes\")})}))) | uint64",
+        interpret("len({32: {\"no\"}, other: {\"yes\"}})")
+    );
     assertInterpretFails("!1");
     assertInterpretFails("~true");
     assertInterpretFails("~1.");
@@ -148,6 +169,9 @@ unittest {
     assertInterpretFails("true || 1");
     assertInterpretFails("1 ^^ true");
     assertInterpretFails("true ^^ 1");
+    assertInterpretFails("1.len()");
+    assertInterpretFails("{}.len()");
+    assertInterpretFails("true.len()");
     assertInterpretFails("{0: 0, 0: 1}");
     assertInterpretFails("{0: 0, 1: 1, other: 2, other: 4}");
     assertInterpretFails("{s: 0, s: 1}");

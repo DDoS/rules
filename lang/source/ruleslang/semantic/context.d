@@ -223,6 +223,9 @@ public class IntrinsicNameSpace : NameSpace {
     private alias IntrinsicFunctions = immutable IntrinsicFunction[];
     private static immutable IntrinsicFunctions[string] unaryOperators;
     private static immutable IntrinsicFunctions[string] binaryOperators;
+    private static enum string LENGTH_NAME = "len";
+    private static enum string LENGTH_SYMBOLIC_NAME = LENGTH_NAME ~ "({})" ~ getWordType();
+    private static immutable FunctionImpl LENGTH_IMPLEMENTATION;
     public static immutable FunctionImpl[string] FUNCTION_IMPLEMENTATIONS;
 
     public static this() {
@@ -275,23 +278,28 @@ public class IntrinsicNameSpace : NameSpace {
         binaryFunctions ~= genBinaryFunctions!(OperatorFunction.BITWISE_OR_FUNCTION, Same, Same, IntegerTypes)();
         // Operators binary &&, ^^, ||
        binaryFunctions ~= genBinaryFunctions!(OperatorFunction.LOGICAL_XOR_FUNCTION, Same, Same, bool)();
-        // TODO: operators ~, ..
         auto assocBinaryFunctions = binaryFunctions.associateArrays!getName();
         binaryOperators = assocBinaryFunctions.assumeUnique();
+        // Implementation of the geneated functions
+        LENGTH_IMPLEMENTATION = (stack) {
+            auto dataSegment = stack.pop!(void*) + IdentityHeader.sizeof;
+            auto length = *(cast(size_t*) dataSegment);
+            stack.push!size_t(length);
+        };
         // Create the function implementation lookup table
-        void addNoReplace(ref FunctionImpl[string] array, IntrinsicFunction intrinsic) {
-            auto name = intrinsic.func.symbolicName;
-            auto already = name in array;
+        void addNoReplace(ref FunctionImpl[string] array, string symbolicName, FunctionImpl impl) {
+            auto already = symbolicName in array;
             assert (already is null);
-            array[name] = intrinsic.impl;
+            array[symbolicName] = impl;
         }
         FunctionImpl[string] functionImpls;
         foreach (intrinsic; unaryFunctions) {
-            addNoReplace(functionImpls, intrinsic);
+            addNoReplace(functionImpls, intrinsic.func.symbolicName, intrinsic.impl);
         }
         foreach (intrinsic; binaryFunctions) {
-            addNoReplace(functionImpls, intrinsic);
+            addNoReplace(functionImpls, intrinsic.func.symbolicName, intrinsic.impl);
         }
+        addNoReplace(functionImpls, LENGTH_SYMBOLIC_NAME, LENGTH_IMPLEMENTATION);
         FUNCTION_IMPLEMENTATIONS = functionImpls.assumeUnique();
     }
 
@@ -307,7 +315,7 @@ public class IntrinsicNameSpace : NameSpace {
             return [];
         }
         // Search for functions that can be applied to the argument types
-        IntrinsicFunctions searchFunctions = getFunctions(name, argumentTypes.length);
+        IntrinsicFunctions searchFunctions = getPossibleFunctions(name, argumentTypes);
         immutable(ApplicableFunction)[] functions = [];
         foreach (intrinsic; searchFunctions) {
             auto func = intrinsic.func;
@@ -320,7 +328,7 @@ public class IntrinsicNameSpace : NameSpace {
     }
 
     public static immutable(Function) getExactFunction(string name, immutable(Type)[] parameterTypes) {
-        IntrinsicFunctions searchFunctions = getFunctions(name, parameterTypes.length);
+        IntrinsicFunctions searchFunctions = getPossibleFunctions(name, parameterTypes);
         foreach (intrinsic; searchFunctions) {
             auto func = intrinsic.func;
             if (func.isExactly(name, parameterTypes)) {
@@ -330,9 +338,9 @@ public class IntrinsicNameSpace : NameSpace {
         return null;
     }
 
-    private static IntrinsicFunctions getFunctions(string name, size_t argumentCount) {
+    private static IntrinsicFunctions getPossibleFunctions(string name, immutable(Type)[] argumentTypes) {
         IntrinsicFunctions* searchFunctions;
-        switch (argumentCount) {
+        switch (argumentTypes.length) {
             case 1:
                 searchFunctions = name in unaryOperators;
                 break;
@@ -342,10 +350,33 @@ public class IntrinsicNameSpace : NameSpace {
             default:
                 searchFunctions = null;
         }
+        IntrinsicFunctions generatedFunctions = getGeneratedFunctions(name, argumentTypes);
         if (searchFunctions == null) {
-            return [];
+            return generatedFunctions;
         }
-        return *searchFunctions;
+        return *searchFunctions ~ generatedFunctions;
+    }
+
+    private static IntrinsicFunctions getGeneratedFunctions(string name, immutable(Type)[] argumentTypes) {
+        if (name == LENGTH_NAME && argumentTypes.length == 1) {
+            auto arrayType = cast(immutable ArrayType) argumentTypes[0];
+            if (arrayType is null) {
+                return [];
+            }
+            auto func = new immutable Function(LENGTH_NAME, LENGTH_SYMBOLIC_NAME, argumentTypes, AtomicType.UINT64);
+            return [immutable IntrinsicFunction(func, LENGTH_IMPLEMENTATION)];
+        }
+        return [];
+    }
+}
+
+private string getWordType()() {
+    static if (size_t.sizeof == 4) {
+        return "uint32";
+    } else static if (size_t.sizeof == 8) {
+        return "uint64";
+    } else {
+        static assert (0);
     }
 }
 
