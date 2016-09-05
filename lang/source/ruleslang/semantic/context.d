@@ -244,6 +244,9 @@ public class IntrinsicNameSpace : NameSpace {
     private static enum string LENGTH_NAME = "len";
     private static enum string LENGTH_SYMBOLIC_NAME = LENGTH_NAME ~ "({})" ~ getWordType().toString();
     private static immutable FunctionImpl LENGTH_IMPLEMENTATION;
+    private static enum string CONCATENATE_NAME = OperatorFunction.CONCATENATE_FUNCTION;
+    private static enum string CONCATENATE_SYMBOLIC_NAME = CONCATENATE_NAME ~ "({}, {}){}";
+    private static immutable FunctionImpl CONCATENATE_IMPLEMENTATION;
     public static immutable FunctionImpl[string] FUNCTION_IMPLEMENTATIONS;
 
     public static this() {
@@ -304,6 +307,37 @@ public class IntrinsicNameSpace : NameSpace {
             auto length = *(cast(size_t*) dataSegment);
             runtime.stack.push!size_t(length);
         };
+        CONCATENATE_IMPLEMENTATION = (runtime) {
+            // Get the array addresses
+            auto addressA = runtime.stack.pop!(void*);
+            auto addressB = runtime.stack.pop!(void*);
+            // Get the array data segments
+            auto dataSegmentA = addressA + IdentityHeader.sizeof;
+            auto dataSegmentB = addressB + IdentityHeader.sizeof;
+            // Get the array length
+            auto lengthA = *(cast(size_t*) dataSegmentA);
+            auto lengthB = *(cast(size_t*) dataSegmentB);
+            // Allocate the new array from the common identity and the summed length
+            auto identity = runtime.getTypeIdentity(*(cast(IdentityHeader*) addressA));
+            auto lengthC = lengthA + lengthB;
+            auto addressC = runtime.allocateArray(identity, lengthC);
+            // Get the new array data segment
+            auto dataSegmentC = addressC + IdentityHeader.sizeof;
+            // Get the container part of all three arrays
+            auto containerA = dataSegmentA + size_t.sizeof;
+            auto containerB = dataSegmentB + size_t.sizeof;
+            auto containerC = dataSegmentC + size_t.sizeof;
+            // Convert the lengths to byte size
+            auto componentSize = identity.componentSize;
+            lengthA *= componentSize;
+            lengthB *= componentSize;
+            lengthC *= componentSize;
+            // Copy the data
+            containerC[0 .. lengthA] = containerA[0 .. lengthA];
+            containerC[lengthA .. lengthC] = containerB[0 .. lengthB];
+            // Push the new array to the stack
+            runtime.stack.push!(void*)(addressC);
+        };
         // Create the function implementation lookup table
         void addNoReplace(ref FunctionImpl[string] array, string symbolicName, FunctionImpl impl) {
             auto already = symbolicName in array;
@@ -318,6 +352,7 @@ public class IntrinsicNameSpace : NameSpace {
             addNoReplace(functionImpls, intrinsic.func.symbolicName, intrinsic.impl);
         }
         addNoReplace(functionImpls, LENGTH_SYMBOLIC_NAME, LENGTH_IMPLEMENTATION);
+        addNoReplace(functionImpls, CONCATENATE_SYMBOLIC_NAME, CONCATENATE_IMPLEMENTATION);
         FUNCTION_IMPLEMENTATIONS = functionImpls.assumeUnique();
     }
 
@@ -383,8 +418,30 @@ public class IntrinsicNameSpace : NameSpace {
                 return [];
             }
             // Generate a function that takes that argument type and returns the length as the word type
-            auto func = new immutable Function(LENGTH_NAME, LENGTH_SYMBOLIC_NAME, argumentTypes, getWordType());
+            auto paramType = arrayType.withoutLiteral().withoutSize();
+            auto func = new immutable Function(LENGTH_NAME, LENGTH_SYMBOLIC_NAME, [paramType], getWordType());
             return [immutable IntrinsicFunction(func, LENGTH_IMPLEMENTATION)];
+        }
+        if (name == CONCATENATE_NAME && argumentTypes.length == 2) {
+            //  Both argument types should be an array
+            auto arrayTypeA = cast(immutable ArrayType) argumentTypes[0];
+            auto arrayTypeB = cast(immutable ArrayType) argumentTypes[1];
+            if (arrayTypeA is null || arrayTypeB is null) {
+                return [];
+            }
+            // Generate a first function that uses type A as the parameter type
+            auto paramTypeA = arrayTypeA.withoutLiteral().withoutSize();
+            auto funcA = new immutable Function(CONCATENATE_NAME, CONCATENATE_SYMBOLIC_NAME, [paramTypeA, paramTypeA],
+                    paramTypeA);
+            auto funcs = [immutable IntrinsicFunction(funcA, CONCATENATE_IMPLEMENTATION)];
+            // If the array types are not equal, generate a second function using type B
+            auto paramTypeB = arrayTypeB.withoutLiteral().withoutSize();
+            if (!paramTypeA.opEquals(paramTypeB)) {
+                auto funcB = new immutable Function(CONCATENATE_NAME, CONCATENATE_SYMBOLIC_NAME, [paramTypeB, paramTypeB],
+                        paramTypeB);
+                funcs ~= immutable IntrinsicFunction(funcB, CONCATENATE_IMPLEMENTATION);
+            }
+            return funcs;
         }
         return [];
     }
