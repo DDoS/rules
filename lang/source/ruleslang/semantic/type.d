@@ -460,8 +460,11 @@ public immutable class BooleanLiteralType : AtomicType, AtomicLiteralType {
     }
 
     public override bool opEquals(immutable Type type) {
+        if (!super.opEquals(type)) {
+            return false;
+        }
         auto literalType = type.exactCastImmutable!BooleanLiteralType();
-        return literalType !is null && value == literalType.value;
+        return literalType is null || value == literalType.value;
     }
 }
 
@@ -596,8 +599,11 @@ private template IntegerLiteralTypeTemplate(T) {
         }
 
         public override bool opEquals(immutable Type type) {
+            if (!super.opEquals(type)) {
+                return false;
+            }
             auto literalType = type.exactCastImmutable!(IntegerLiteralTypeTemplate!T)();
-            return literalType !is null && info == literalType.info && value == literalType.value;
+            return literalType is null || value == literalType.value;
         }
     }
 }
@@ -678,8 +684,11 @@ public immutable class FloatLiteralType : AtomicType, AtomicLiteralType {
     }
 
     public override bool opEquals(immutable Type type) {
+        if (!super.opEquals(type)) {
+            return false;
+        }
         auto literalType = type.exactCastImmutable!FloatLiteralType();
-        return literalType !is null && info == literalType.info && value == literalType.value;
+        return literalType is null || value == literalType.value;
     }
 }
 
@@ -729,7 +738,7 @@ public immutable class AnyType : CompositeType {
     }
 
     public override bool opEquals(immutable Type type) {
-        return cast(immutable AnyType) type !is null;
+        return type.exactCastImmutable!AnyType() !is null || cast(immutable AnyTypeLiteral) type !is null;
     }
 }
 
@@ -818,7 +827,8 @@ public immutable class TupleType : CompositeType {
     }
 
     public override bool opEquals(immutable Type type) {
-        auto tupleType = type.exactCastImmutable!TupleType();
+        auto tupleLiteralType = cast(immutable TupleLiteralType) type;
+        auto tupleType = tupleLiteralType is null ? type.exactCastImmutable!TupleType() : tupleLiteralType;
         return tupleType !is null && tupleType.memberTypes.typesEqual(memberTypes);
     }
 }
@@ -901,9 +911,9 @@ public immutable class StructureType : TupleType {
     }
 
     public override bool opEquals(immutable Type type) {
-        auto structureType = type.exactCastImmutable!StructureType();
-        return structureType !is null && structureType.memberNames == memberNames
-                && structureType.memberTypes.typesEqual(memberTypes);
+        auto structLiteralType = cast (immutable StructureLiteralType) type;
+        auto structType = structLiteralType is null ? type.exactCastImmutable!StructureType() : structLiteralType;
+        return structType !is null && structType.memberNames == memberNames && structType.memberTypes.typesEqual(memberTypes);
     }
 }
 
@@ -1023,7 +1033,8 @@ public immutable class SizedArrayType : ArrayType, CompositeType {
     }
 
     public override bool opEquals(immutable Type type) {
-        auto arrayType = type.exactCastImmutable!SizedArrayType();
+        auto arrayLiteralType = cast(immutable SizedArrayLiteralType) type;
+        auto arrayType = arrayLiteralType is null ? type.exactCastImmutable!SizedArrayType() : arrayLiteralType;
         return arrayType !is null && arrayType.totalDepth == totalDepth
                 && arrayType.componentType.opEquals(componentType) && arrayType.size == size;
     }
@@ -1042,10 +1053,6 @@ public immutable class AnyTypeLiteral : AnyType, LiteralType {
             return true;
         }
         return false;
-    }
-
-    public override bool opEquals(immutable Type type) {
-        return cast(immutable AnyType) type !is null;
     }
 }
 
@@ -1083,11 +1090,6 @@ public immutable class TupleLiteralType : TupleType, LiteralType {
         }
         conversions.thenReferenceNarrowing();
         return true;
-    }
-
-    public override bool opEquals(immutable Type type) {
-        auto tupleType = type.exactCastImmutable!TupleLiteralType();
-        return tupleType !is null && tupleType.memberTypes.typesEqual(memberTypes);
     }
 }
 
@@ -1127,12 +1129,6 @@ public immutable class StructureLiteralType : StructureType, LiteralType {
         conversions.thenReferenceNarrowing();
         return true;
     }
-
-    public override bool opEquals(immutable Type type) {
-        auto structureType = type.exactCastImmutable!StructureLiteralType();
-        return structureType !is null && structureType.memberNames == memberNames
-                && structureType.memberTypes.typesEqual(memberTypes);
-    }
 }
 
 public immutable class SizedArrayLiteralType : SizedArrayType, LiteralType {
@@ -1140,7 +1136,8 @@ public immutable class SizedArrayLiteralType : SizedArrayType, LiteralType {
 
     public this(immutable(Type)[] memberTypes, ulong size) {
         assert (memberTypes.length > 0);
-        assert (size > 0 && memberTypes.length <= size + 1);
+        assert (size >= 0);
+        assert (memberTypes.length <= size + 1);
         _memberTypes = memberTypes;
         // The component type is the lowest upper bound of the components
         auto firstType = memberTypes[0];
@@ -1184,20 +1181,15 @@ public immutable class SizedArrayLiteralType : SizedArrayType, LiteralType {
         conversions.thenReferenceNarrowing();
         return true;
     }
-
-    public override bool opEquals(immutable Type type) {
-        auto sizedArrayType = type.exactCastImmutable!SizedArrayLiteralType();
-        return sizedArrayType !is null && sizedArrayType.componentType.opEquals(componentType);
-    }
 }
 
-public immutable class StringLiteralType : SizedArrayType, LiteralType {
+public immutable class StringLiteralType : SizedArrayLiteralType, LiteralType {
     public dstring value;
     private ulong utf8Length;
     private ulong utf16Length;
 
     public this(dstring value) {
-        super(AtomicType.UINT32, value.length);
+        super([AtomicType.UINT32], value.length);
         this.value = value;
         utf8Length = value.codeLength!char;
         utf16Length = value.codeLength!wchar;
@@ -1271,8 +1263,11 @@ public immutable class StringLiteralType : SizedArrayType, LiteralType {
     }
 
     public override bool opEquals(immutable Type type) {
+        if (!super.opEquals(type)) {
+            return false;
+        }
         auto literalType = type.exactCastImmutable!StringLiteralType();
-        return literalType !is null && value == literalType.value;
+        return literalType is null || value == literalType.value;
     }
 }
 
