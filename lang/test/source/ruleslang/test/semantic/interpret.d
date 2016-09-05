@@ -180,14 +180,14 @@ unittest {
 unittest {
     assertInterpretFails("1[0]");
     assertEqual(
-        "IndexAccess(StringLiteral(\"1\")[UnsignedIntegerLiteral(0)])) | uint_lit(49)",
+        "IndexAccess(StringLiteral(\"1\")[UnsignedIntegerLiteral(0)])) | uint32",
         interpret("\"1\"[0]")
     );
     assertInterpretFails("\"1\"[-1]");
     assertInterpretFails("\"1\"[2]");
     assertInterpretFails("\"1\"[0 + 0]");
     assertEqual(
-        "IndexAccess(StringLiteral(\"1\")[UnsignedIntegerLiteral(0)])) | uint_lit(49)",
+        "IndexAccess(StringLiteral(\"1\")[UnsignedIntegerLiteral(0)])) | uint32",
         interpret("\"1\"[0u + 0u]")
     );
     assertEqual(

@@ -1254,10 +1254,6 @@ public immutable class StringLiteralType : SizedArrayLiteralType, LiteralType {
         return new immutable StringLiteralType(value[0 .. longest]);
     }
 
-    public override immutable(Type) getMemberType(ulong index) {
-        return index >= value.length ? null : new immutable UnsignedIntegerLiteralType(value[index]);
-    }
-
     public override string toString() {
         return format("string_lit(\"%s\")", value);
     }
