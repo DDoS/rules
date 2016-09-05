@@ -284,7 +284,7 @@ public immutable class Interpreter {
         auto name = nameReference.name[0];
         auto nameSource = name.getSource();
         auto field = context.resolveField(nameSource);
-        auto func = context.resolveFunction(name.getSource(), argumentTypes);
+        auto func = resolveFunction(context, call, name, argumentTypes);
         // It should not resolve to both a field and a function
         if (field !is null && func !is null) {
             throw new SourceException(format("Found a field and a function for the name %s", nameSource), nameReference);
@@ -322,7 +322,7 @@ public immutable class Interpreter {
         // Example: a.b.c(d, e) -> c(a.b, d, e)
         auto argumentNodes = valueNode ~ interpretArgumentNodes(context, call);
         auto argumentTypes = argumentNodes.getTypes();
-        auto func = context.resolveFunction(name.getSource(), argumentTypes);
+        auto func = resolveFunction(context, call, name, argumentTypes);
         if (func is null) {
             functionNotFound(call, name, argumentTypes);
         }
@@ -343,6 +343,16 @@ public immutable class Interpreter {
             return new immutable ValueCallNode(valueNode, argumentNodes);
         */
         throw new SourceException(format("Type %s is not callable", valueNode.getType()), value);
+    }
+
+    private static immutable(Function) resolveFunction(Context context, FunctionCall call, Identifier name,
+            immutable(Type)[] argumentTypes) {
+        string exceptionMessage;
+        auto func = collectExceptionMessage(context.resolveFunction(name.getSource(), argumentTypes), exceptionMessage);
+        if (exceptionMessage !is null) {
+            throw new SourceException(exceptionMessage, call);
+        }
+        return func;
     }
 
     private static immutable(FunctionCallNode) functionNotFound(FunctionCall call, Identifier name,
