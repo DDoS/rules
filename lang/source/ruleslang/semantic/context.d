@@ -53,19 +53,19 @@ public class Context {
 }
 
 public immutable(Function) resolveOverloads(immutable(ApplicableFunction)[] applicables) {
-    auto wideningOnly = applicables.removeLesser!false();
+    auto reduced = applicables.removeLesser!false();
     // Only one function should remain
-    if (wideningOnly.length == 1) {
-        return wideningOnly[0].func;
+    if (reduced.length == 1) {
+        return reduced[0].func;
     }
-    // Otherwise retry, but allow narrowing too
-    auto withNarrowing = applicables.removeLesser!true();
-    if (withNarrowing.length == 1) {
-        return withNarrowing[0].func;
+    // Otherwise retry, but allow narrowing this time
+    reduced = applicables.removeLesser!true();
+    if (reduced.length == 1) {
+        return reduced[0].func;
     }
     // Otherwise the overloads cannot be resolved
     throw new Exception(format("Cannot resolve overloads, any of the following functions are applicable:\n    %s\n",
-            withNarrowing.join!("\n    ", "a.func.toString()")));
+            reduced.join!("\n    ", "a.func.toString()")));
 }
 
 private immutable(ApplicableFunction)[] removeLesser(bool narrowing)(immutable(ApplicableFunction)[] applicables) {
@@ -74,10 +74,22 @@ private immutable(ApplicableFunction)[] removeLesser(bool narrowing)(immutable(A
     auto parameterCount = applicables[0].func.parameterCount;
     for (size_t a = 0; a < applicables.length; a++) {
         auto applicableA = applicables[a];
+        // If narrowing isn't allowed and the conversions require narrowing then remove it immediately
+        static if (!narrowing) {
+            if (applicableA.isNarrowing()) {
+                applicables = applicables[0 .. a] ~ applicables[a + 1 .. $];
+                a -= 1;
+                continue;
+            }
+        }
         for (size_t b = 0; b < applicables.length; b++) {
+            // Don't compare against itself
+            if (a == b) {
+                continue;
+            }
             auto applicableB = applicables[b];
             // Remove B if A is more applicable
-            if (applicableA.isMoreApplicable!narrowing(applicableB)) {
+            if (applicableA.isMoreApplicable(applicableB)) {
                 applicables = applicables[0 .. b] ~ applicables[b + 1 .. $];
                 if (a >= b) {
                     a -= 1;
@@ -89,6 +101,48 @@ private immutable(ApplicableFunction)[] removeLesser(bool narrowing)(immutable(A
     return applicables;
 }
 
+private bool isMoreApplicable(immutable ApplicableFunction a, immutable ApplicableFunction b) {
+    assert (a.func.parameterCount == b.func.parameterCount);
+    // Function B must be lesser for any parameter pair
+    bool lesserB = false;
+    foreach (i; 0 .. b.func.parameterCount) {
+        if (isLesser(b.func.parameterTypes[i], b.argumentConversions[i],
+                a.func.parameterTypes[i], a.argumentConversions[i])) {
+            lesserB = true;
+            break;
+        }
+    }
+    // Function A must not be lesser for any parameter pair
+    bool lesserA = false;
+    foreach (i; 0 .. a.func.parameterCount) {
+        if (isLesser(a.func.parameterTypes[i], a.argumentConversions[i],
+                b.func.parameterTypes[i], b.argumentConversions[i])) {
+            lesserA = true;
+            break;
+        }
+    }
+    return lesserB && !lesserA;
+}
+
+private bool isLesser(immutable Type paramA, ConversionKind convA, immutable Type paramB, ConversionKind convB) {
+    // Parameter A is less applicable than B for an argument:
+    // If A requires narrowing and B does not
+    bool narrowingA = convA is ConversionKind.NARROWING;
+    bool narrowingB = convB is ConversionKind.NARROWING;
+    if (narrowingA && !narrowingB) {
+        return true;
+    }
+    // If A and B require narrowing and A is more specific
+    auto ignored = new TypeConversionChain();
+    auto argSmallerA = paramA.convertibleTo(paramB, ignored);
+    auto argSmallerB = paramB.convertibleTo(paramA, ignored);
+    if (narrowingA && narrowingB && argSmallerA && !argSmallerB) {
+        return true;
+    }
+    // If A and B require widening and B is more specific
+    return !narrowingA && !narrowingB && !argSmallerA && argSmallerB;
+}
+
 public immutable struct ApplicableFunction {
     public Function func;
     public ConversionKind[] argumentConversions;
@@ -98,49 +152,13 @@ public immutable struct ApplicableFunction {
         this.argumentConversions = argumentConversions;
     }
 
-    public ConversionKind conversionKind() {
+    public bool isNarrowing() {
         foreach (conversion; argumentConversions) {
             if (conversion is ConversionKind.NARROWING) {
-                return ConversionKind.NARROWING;
-            }
-        }
-        return ConversionKind.WIDENING;
-    }
-
-    public bool isMoreApplicable(bool narrowing)(immutable ApplicableFunction other) {
-        assert (func.parameterCount == other.func.parameterCount);
-        static if (!narrowing) {
-            if (conversionKind() is ConversionKind.NARROWING) {
-                return false;
-            }
-        }
-        // This function is more applicable if any of the other parameters is lesser
-        foreach (i; 0 .. func.parameterCount) {
-            if (isLesser(other.func.parameterTypes[i], other.argumentConversions[i],
-                    func.parameterTypes[i], argumentConversions[i])) {
                 return true;
             }
         }
         return false;
-    }
-
-    private static bool isLesser(immutable Type paramA, ConversionKind convA, immutable Type paramB, ConversionKind convB) {
-        // Parameter A is less applicable than B for an argument:
-        // If A requires narrowing and B does not
-        bool narrowingA = convA is ConversionKind.NARROWING;
-        bool narrowingB = convB is ConversionKind.NARROWING;
-        if (narrowingA && !narrowingB) {
-            return true;
-        }
-        // If A and B require narrowing and A is more specific
-        auto ignored = new TypeConversionChain();
-        auto argSmallerA = paramA.convertibleTo(paramB, ignored);
-        auto argSmallerB = paramB.convertibleTo(paramA, ignored);
-        if (narrowingA && narrowingB && argSmallerA && !argSmallerB) {
-            return true;
-        }
-        // If A and B require widening and B is more specific
-        return !narrowingA && !narrowingB && !argSmallerA && argSmallerB;
     }
 }
 
