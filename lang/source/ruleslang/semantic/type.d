@@ -149,6 +149,7 @@ public bool typesEqual(immutable(Type)[] as, immutable(Type)[] bs) {
 public immutable interface Type {
     public bool convertibleTo(immutable Type type, TypeConversionChain conversions);
     public immutable(Type) lowestUpperBound(immutable Type other);
+    public immutable(Type) withoutLiteral();
     public string toString();
     public bool opEquals(immutable Type type);
 }
@@ -383,6 +384,10 @@ public immutable class AtomicType : Type {
         }
         // It's possible that no LUB exists
         return candidate == null ? null : *candidate;
+    }
+
+    public override immutable(AtomicType) withoutLiteral() {
+        return this;
     }
 
     public immutable(AtomicType)[] getSupertypes() {
@@ -725,6 +730,10 @@ public immutable class AnyType : CompositeType {
         return null;
     }
 
+    public override immutable(AnyType) withoutLiteral() {
+        return this;
+    }
+
     public override ulong getMemberCount() {
         return 0;
     }
@@ -812,6 +821,10 @@ public immutable class TupleType : CompositeType {
             return AnyType.INSTANCE;
         }
         return null;
+    }
+
+    public override immutable(TupleType) withoutLiteral() {
+        return this;
     }
 
     public override ulong getMemberCount() {
@@ -906,6 +919,10 @@ public immutable class StructureType : TupleType {
         return new immutable StructureType(memberTypeIntersection, memberNameIntersection);
     }
 
+    public override immutable(StructureType) withoutLiteral() {
+        return this;
+    }
+
     public override string toString() {
         return format("{%s}", stringZip!" "(memberTypes, memberNames).join!", "());
     }
@@ -966,8 +983,16 @@ public immutable class ArrayType : ReferenceType {
         return null;
     }
 
+    public override immutable(ArrayType) withoutLiteral() {
+        return this;
+    }
+
     public override immutable(Type) getMemberType(ulong index) {
         return componentType;
+    }
+
+    public immutable(ArrayType) withoutSize() {
+        return this;
     }
 
     public override string toString() {
@@ -1020,6 +1045,10 @@ public immutable class SizedArrayType : ArrayType, CompositeType {
         return false;
     }
 
+    public override immutable(SizedArrayType) withoutLiteral() {
+        return this;
+    }
+
     public override ulong getMemberCount() {
         return size;
     }
@@ -1030,6 +1059,10 @@ public immutable class SizedArrayType : ArrayType, CompositeType {
 
     public override string toString() {
         return format("%s[%d]", componentType.toString(), size);
+    }
+
+    public override immutable(ArrayType) withoutSize() {
+        return new immutable ArrayType(componentType);
     }
 
     public override bool opEquals(immutable Type type) {
@@ -1053,6 +1086,10 @@ public immutable class AnyTypeLiteral : AnyType, LiteralType {
             return true;
         }
         return false;
+    }
+
+    public override immutable(AnyType) withoutLiteral() {
+        return AnyType.INSTANCE;
     }
 }
 
@@ -1091,6 +1128,14 @@ public immutable class TupleLiteralType : TupleType, LiteralType {
         conversions.thenReferenceNarrowing();
         return true;
     }
+
+    public override immutable(TupleType) withoutLiteral() {
+        immutable(Type)[] membersWithoutLiteral = [];
+        foreach (memberType; memberTypes) {
+            membersWithoutLiteral ~= memberType.withoutLiteral();
+        }
+        return new immutable TupleType(membersWithoutLiteral);
+    }
 }
 
 public immutable class StructureLiteralType : StructureType, LiteralType {
@@ -1128,6 +1173,14 @@ public immutable class StructureLiteralType : StructureType, LiteralType {
         }
         conversions.thenReferenceNarrowing();
         return true;
+    }
+
+    public override immutable(StructureType) withoutLiteral() {
+        immutable(Type)[] membersWithoutLiteral = [];
+        foreach (memberType; memberTypes) {
+            membersWithoutLiteral ~= memberType.withoutLiteral();
+        }
+        return new immutable StructureType(membersWithoutLiteral, memberNames);
     }
 }
 
@@ -1181,9 +1234,13 @@ public immutable class SizedArrayLiteralType : SizedArrayType, LiteralType {
         conversions.thenReferenceNarrowing();
         return true;
     }
+
+    public override immutable(SizedArrayType) withoutLiteral() {
+        return new immutable SizedArrayType(componentType.withoutLiteral(), size);
+    }
 }
 
-public immutable class StringLiteralType : SizedArrayLiteralType, LiteralType {
+public immutable class StringLiteralType : SizedArrayLiteralType {
     public dstring value;
     private ulong utf8Length;
     private ulong utf16Length;
