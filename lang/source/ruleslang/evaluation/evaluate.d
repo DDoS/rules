@@ -211,33 +211,6 @@ public immutable class Evaluator {
     }
 }
 
-private void* allocateComposite(Runtime runtime, immutable TypeIdentity identity) {
-    assert (identity.kind == TypeIdentity.Kind.TUPLE || identity.kind == TypeIdentity.Kind.STRUCT);
-    // Register the type identity
-    auto infoIndex = runtime.registerTypeIdentity(identity);
-    // Calculate the size of the composite (header + data) and allocate the memory
-    auto size = IdentityHeader.sizeof + identity.dataSize;
-    auto address = runtime.heap.allocateScanned(size);
-    // Next set the header
-    *(cast (IdentityHeader*) address) = infoIndex;
-    return address;
-}
-
-private void* allocateArray(Runtime runtime, immutable TypeIdentity identity, size_t length) {
-    assert (identity.kind == TypeIdentity.Kind.ARRAY);
-    // Register the type identity
-    auto infoIndex = runtime.registerTypeIdentity(identity);
-    // Calculate the size of the array (header + length field + data) and allocate the memory
-    auto size = IdentityHeader.sizeof + size_t.sizeof + identity.componentSize * length;
-    // TODO: reference arrays need to be scanned
-    auto address = runtime.heap.allocateNotScanned(size);
-    // Next set the header
-    *(cast (IdentityHeader*) address) = infoIndex;
-    // Finally set the length field
-    *(cast (size_t*) (address + IdentityHeader.sizeof)) = length;
-    return address;
-}
-
 public class NotImplementedException : Exception {
     public this(string func = __FUNCTION__) {
         super(func);
