@@ -135,7 +135,7 @@ public immutable class StringLiteralNode : ReferenceNode, LiteralNode {
     }
 
     @property public override size_t end() {
-        return _start;
+        return _end;
     }
 
     public override immutable(TypedNode)[] getChildren() {
