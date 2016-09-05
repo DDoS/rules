@@ -281,10 +281,10 @@ public class IntrinsicNameSpace : NameSpace {
         auto assocBinaryFunctions = binaryFunctions.associateArrays!getName();
         binaryOperators = assocBinaryFunctions.assumeUnique();
         // Implementation of the geneated functions
-        LENGTH_IMPLEMENTATION = (stack) {
-            auto dataSegment = stack.pop!(void*) + IdentityHeader.sizeof;
+        LENGTH_IMPLEMENTATION = (runtime) {
+            auto dataSegment = runtime.stack.pop!(void*) + IdentityHeader.sizeof;
             auto length = *(cast(size_t*) dataSegment);
-            stack.push!size_t(length);
+            runtime.stack.push!size_t(length);
         };
         // Create the function implementation lookup table
         void addNoReplace(ref FunctionImpl[string] array, string symbolicName, FunctionImpl impl) {
@@ -517,24 +517,24 @@ private enum string[string] FUNCTION_TO_DLANG_OPERATOR = [
 ];
 
 private FunctionImpl genUnaryOperatorImpl(OperatorFunction func, Inner, Return)() {
-    FunctionImpl implementation = (stack) {
-        enum op = FUNCTION_TO_DLANG_OPERATOR[func].positionalReplace("stack.pop!Inner()");
-        mixin("stack.push!Return(cast(Return) (" ~ op ~ "));");
+    FunctionImpl implementation = (runtime) {
+        enum op = FUNCTION_TO_DLANG_OPERATOR[func].positionalReplace("runtime.stack.pop!Inner()");
+        mixin("runtime.stack.push!Return(cast(Return) (" ~ op ~ "));");
     };
     return implementation;
 }
 
 private FunctionImpl genCastImpl(From, To)() {
-    FunctionImpl implementation = (stack) {
-        mixin("stack.push!To(cast(To) stack.pop!From());");
+    FunctionImpl implementation = (runtime) {
+        mixin("runtime.stack.push!To(cast(To) runtime.stack.pop!From());");
     };
     return implementation;
 }
 
 private FunctionImpl genBinaryOperatorImpl(OperatorFunction func, Left, Right, Return)() {
-    FunctionImpl implementation = (stack) {
-        enum op = FUNCTION_TO_DLANG_OPERATOR[func].positionalReplace("stack.pop!Left()", "stack.pop!Right()");
-        mixin("stack.push!Return(cast(Return) (" ~ op ~ "));");
+    FunctionImpl implementation = (runtime) {
+        enum op = FUNCTION_TO_DLANG_OPERATOR[func].positionalReplace("runtime.stack.pop!Left()", "runtime.stack.pop!Right()");
+        mixin("runtime.stack.push!Return(cast(Return) (" ~ op ~ "));");
     };
     return implementation;
 }

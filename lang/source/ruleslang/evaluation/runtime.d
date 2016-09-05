@@ -10,7 +10,7 @@ import ruleslang.semantic.context;
 import ruleslang.util;
 
 public alias IdentityHeader = size_t;
-public alias FunctionImpl = void function(Stack);
+public alias FunctionImpl = void function(Runtime);
 
 public abstract class Runtime {
     private Stack _stack;
@@ -62,7 +62,7 @@ public class IntrinsicRuntime : Runtime {
         if (func is null) {
             throw new Exception(format("Unknown function %s", symbolicName));
         }
-        (*func)(stack);
+        (*func)(this);
     }
 }
 
