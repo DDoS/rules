@@ -155,6 +155,22 @@ unittest {
             ~ "other: TupleLiteral({StringLiteral(\"yes\")})}))) | uint64",
         interpret("len({32: {\"no\"}, other: {\"yes\"}})")
     );
+    assertEqual(
+        "FunctionCall(opConcatenate(StringLiteral(\"12\"), StringLiteral(\"1\"))) | uint32[]",
+        interpret("\"12\" ~ \"1\"")
+    );
+    assertEqual(
+        "FunctionCall(opConcatenate(StringLiteral(\"1\"), StringLiteral(\"12\"))) | uint32[]",
+        interpret("\"1\" ~ \"12\"")
+    );
+    assertEqual(
+        "FunctionCall(opConcatenate(StringLiteral(\"1\"), ArrayLiteral({0: UnsignedIntegerLiteral(97)}))) | uint32[]",
+        interpret("\"1\" ~ {0: uint32('a')}")
+    );
+    assertEqual(
+        "FunctionCall(opConcatenate(ArrayLiteral({0: UnsignedIntegerLiteral(97)}), StringLiteral(\"1\"))) | uint32[]",
+        interpret("{0: uint32('a')} ~ \"1\"")
+    );
     assertInterpretFails("!1");
     assertInterpretFails("~true");
     assertInterpretFails("~1.");
@@ -172,6 +188,8 @@ unittest {
     assertInterpretFails("1.len()");
     assertInterpretFails("{}.len()");
     assertInterpretFails("true.len()");
+    assertInterpretFails("{0: uint16(49)} ~ \"b\"");
+    assertInterpretFails("\"b\" ~ {0: uint16(49)}");
     assertInterpretFails("{0: 0, 0: 1}");
     assertInterpretFails("{0: 0, 1: 1, other: 2, other: 4}");
     assertInterpretFails("{s: 0, s: 1}");

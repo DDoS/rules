@@ -418,28 +418,29 @@ public class IntrinsicNameSpace : NameSpace {
                 return [];
             }
             // Generate a function that takes that argument type and returns the length as the word type
-            auto paramType = arrayType.withoutLiteral().withoutSize();
+            auto paramType = arrayType.withoutLiteral();
             auto func = new immutable Function(LENGTH_NAME, LENGTH_SYMBOLIC_NAME, [paramType], getWordType());
             return [immutable IntrinsicFunction(func, LENGTH_IMPLEMENTATION)];
         }
         if (name == CONCATENATE_NAME && argumentTypes.length == 2) {
-            //  Both argument types should be an array
+            immutable(IntrinsicFunction)[] funcs;
+            //  If the first argument is an array type, try using it as the parameter type
             auto arrayTypeA = cast(immutable ArrayType) argumentTypes[0];
-            auto arrayTypeB = cast(immutable ArrayType) argumentTypes[1];
-            if (arrayTypeA is null || arrayTypeB is null) {
-                return [];
+            auto paramTypeA = arrayTypeA is null ? null : arrayTypeA.withoutLiteral().withoutSize();
+            if (paramTypeA !is null) {
+                auto funcA = new immutable Function(CONCATENATE_NAME, CONCATENATE_SYMBOLIC_NAME, [paramTypeA, paramTypeA],
+                        paramTypeA);
+                funcs ~= immutable IntrinsicFunction(funcA, CONCATENATE_IMPLEMENTATION);
             }
-            // Generate a first function that uses type A as the parameter type
-            auto paramTypeA = arrayTypeA.withoutLiteral().withoutSize();
-            auto funcA = new immutable Function(CONCATENATE_NAME, CONCATENATE_SYMBOLIC_NAME, [paramTypeA, paramTypeA],
-                    paramTypeA);
-            auto funcs = [immutable IntrinsicFunction(funcA, CONCATENATE_IMPLEMENTATION)];
-            // If the array types are not equal, generate a second function using type B
-            auto paramTypeB = arrayTypeB.withoutLiteral().withoutSize();
-            if (!paramTypeA.opEquals(paramTypeB)) {
-                auto funcB = new immutable Function(CONCATENATE_NAME, CONCATENATE_SYMBOLIC_NAME, [paramTypeB, paramTypeB],
-                        paramTypeB);
-                funcs ~= immutable IntrinsicFunction(funcB, CONCATENATE_IMPLEMENTATION);
+            //  If the second argument is a different array type, try also using it as the parameter type
+            auto arrayTypeB = cast(immutable ArrayType) argumentTypes[1];
+            auto paramTypeB = arrayTypeB is null ? null : arrayTypeB.withoutLiteral().withoutSize();
+            if (paramTypeB !is null) {
+                if (!paramTypeA.opEquals(paramTypeB)) {
+                    auto funcB = new immutable Function(CONCATENATE_NAME, CONCATENATE_SYMBOLIC_NAME, [paramTypeB, paramTypeB],
+                            paramTypeB);
+                    funcs ~= immutable IntrinsicFunction(funcB, CONCATENATE_IMPLEMENTATION);
+                }
             }
             return funcs;
         }
