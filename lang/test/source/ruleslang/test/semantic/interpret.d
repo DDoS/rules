@@ -189,7 +189,7 @@ unittest {
     assertInterpretFails("{}.len()");
     assertInterpretFails("true.len()");
     assertInterpretFails("{0: uint16(49)} ~ \"b\"");
-    assertInterpretFails("\"b\" ~ {0: uint16(49)}");
+    assertInterpretFails("\"b\" ~ {0: uint16(49)}");
     assertInterpretFails("{0: 0, 0: 1}");
     assertInterpretFails("{0: 0, 1: 1, other: 2, other: 4}");
     assertInterpretFails("{s: 0, s: 1}");
