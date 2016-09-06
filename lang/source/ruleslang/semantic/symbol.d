@@ -76,16 +76,8 @@ public immutable class Function : Symbol {
         }
         argumentConversions = new ConversionKind[argumentTypes.length];
         foreach (i, argType; argumentTypes) {
-            auto paramType = parameterTypes[i];
-            bool applicable;
             auto chain = new TypeConversionChain();
-            auto literalArgType = cast(immutable LiteralType) argType;
-            if (literalArgType !is null) {
-                applicable = literalArgType.specializableTo(paramType, chain);
-            } else {
-                applicable = argType.convertibleTo(paramType, chain);
-            }
-            if (!applicable) {
+            if (!argType.specializableTo(parameterTypes[i], chain)) {
                 return false;
             }
             argumentConversions[i] = chain.conversionKind();

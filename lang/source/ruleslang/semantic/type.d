@@ -148,6 +148,7 @@ public bool typesEqual(immutable(Type)[] as, immutable(Type)[] bs) {
 
 public immutable interface Type {
     public bool convertibleTo(immutable Type type, TypeConversionChain conversions);
+    public bool specializableTo(immutable Type type, TypeConversionChain conversions);
     public immutable(Type) lowestUpperBound(immutable Type other);
     public immutable(Type) withoutLiteral();
     public string toString();
@@ -345,6 +346,10 @@ public immutable class AtomicType : Type {
         return true;
     }
 
+    public override bool specializableTo(immutable Type type, TypeConversionChain conversions) {
+        return convertibleTo(type, conversions);
+    }
+
     public override immutable(Type) lowestUpperBound(immutable Type type) {
         // A LUB only exists with another atomic type
         auto other = cast(immutable AtomicType) type;
@@ -412,7 +417,6 @@ public immutable class AtomicType : Type {
 }
 
 public immutable interface LiteralType : Type {
-    public bool specializableTo(immutable Type type, TypeConversionChain conversions);
 }
 
 public immutable interface AtomicLiteralType : LiteralType {
@@ -721,6 +725,10 @@ public immutable class AnyType : CompositeType {
         return false;
     }
 
+    public override bool specializableTo(immutable Type type, TypeConversionChain conversions) {
+        return convertibleTo(type, conversions);
+    }
+
     public override immutable(Type) lowestUpperBound(immutable Type other) {
         auto referenceType = cast(immutable ReferenceType) other;
         if (referenceType !is null) {
@@ -787,6 +795,10 @@ public immutable class TupleType : CompositeType {
         }
         conversions.thenReferenceWidening();
         return true;
+    }
+
+    public override bool specializableTo(immutable Type type, TypeConversionChain conversions) {
+        return convertibleTo(type, conversions);
     }
 
     public override immutable(Type) lowestUpperBound(immutable Type other) {
@@ -896,6 +908,10 @@ public immutable class StructureType : TupleType {
         return true;
     }
 
+    public override bool specializableTo(immutable Type type, TypeConversionChain conversions) {
+        return convertibleTo(type, conversions);
+    }
+
     public override immutable(Type) lowestUpperBound(immutable Type other) {
         // Try to convert to a structure type by member names
         auto structureType = cast (immutable StructureType) other;
@@ -960,6 +976,10 @@ public immutable class ArrayType : ReferenceType {
             return true;
         }
         return false;
+    }
+
+    public override bool specializableTo(immutable Type type, TypeConversionChain conversions) {
+        return convertibleTo(type, conversions);
     }
 
     public override immutable(Type) lowestUpperBound(immutable Type other) {
@@ -1113,15 +1133,8 @@ public immutable class TupleLiteralType : TupleType, LiteralType {
             if (otherMemberType is null) {
                 continue;
             }
-            auto literalMemberType = cast(immutable LiteralType) memberType;
-            bool convertible;
             auto ignored = new TypeConversionChain();
-            if (literalMemberType !is null) {
-                convertible = literalMemberType.specializableTo(otherMemberType, ignored);
-            } else {
-                convertible = memberType.convertibleTo(otherMemberType, ignored);
-            }
-            if (!convertible) {
+            if (!memberType.specializableTo(otherMemberType, ignored)) {
                 return false;
             }
         }
@@ -1159,15 +1172,8 @@ public immutable class StructureLiteralType : StructureType, LiteralType {
             if (memberType is null) {
                 continue;
             }
-            auto literalMemberType = cast(immutable LiteralType) memberType;
-            bool convertible;
             auto ignored = new TypeConversionChain();
-            if (literalMemberType !is null) {
-                convertible = literalMemberType.specializableTo(otherMemberType, ignored);
-            } else {
-                convertible = memberType.convertibleTo(otherMemberType, ignored);
-            }
-            if (!convertible) {
+            if (!memberType.specializableTo(otherMemberType, ignored)) {
                 return false;
             }
         }
@@ -1219,15 +1225,8 @@ public immutable class SizedArrayLiteralType : SizedArrayType, LiteralType {
         // Each member must be specializable to the component type
         auto componentType = arrayType.componentType;
         foreach (memberType; _memberTypes) {
-            auto literalMemberType = cast(immutable LiteralType) memberType;
-            bool convertible;
             auto ignored = new TypeConversionChain();
-            if (literalMemberType !is null) {
-                convertible = literalMemberType.specializableTo(componentType, ignored);
-            } else {
-                convertible = memberType.convertibleTo(componentType, ignored);
-            }
-            if (!convertible) {
+            if (!memberType.specializableTo(componentType, ignored)) {
                 return false;
             }
         }
