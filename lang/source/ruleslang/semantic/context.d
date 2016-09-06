@@ -301,7 +301,7 @@ public class IntrinsicNameSpace : NameSpace {
        binaryFunctions ~= genBinaryFunctions!(OperatorFunction.LOGICAL_XOR_FUNCTION, Same, Same, bool)();
         auto assocBinaryFunctions = binaryFunctions.associateArrays!getName();
         binaryOperators = assocBinaryFunctions.assumeUnique();
-        // Implementation of the geneated functions
+        // Implementation of the generated functions
         LENGTH_IMPLEMENTATION = (runtime) {
             auto dataSegment = runtime.stack.pop!(void*) + IdentityHeader.sizeof;
             auto length = *(cast(size_t*) dataSegment);
