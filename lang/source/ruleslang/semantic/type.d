@@ -539,17 +539,8 @@ private template IntegerLiteralTypeTemplate(T) {
             // Can convert to an atomic type if in range
             auto atomic = cast(immutable AtomicType) type;
             if (atomic !is null && atomic.inRange(value)) {
-                // If the other is a literal, the values must be equal
-                auto signedIntegerLiteral = cast(immutable SignedIntegerLiteralType) type;
-                if (signedIntegerLiteral !is null && signedValue() != signedIntegerLiteral.value) {
-                    return false;
-                }
-                auto unsignedIntegerLiteral = cast(immutable UnsignedIntegerLiteralType) type;
-                if (unsignedIntegerLiteral !is null && unsignedValue() != unsignedIntegerLiteral.value) {
-                    return false;
-                }
-                auto floatLiteral = cast(immutable FloatLiteralType) type;
-                if (floatLiteral !is null && value != floatLiteral.value) {
+                // The other type can not be a literal
+                if (cast(AtomicLiteralType) atomic !is null) {
                     return false;
                 }
                 if (atomic.isFloat()) {
@@ -653,9 +644,8 @@ public immutable class FloatLiteralType : AtomicType, AtomicLiteralType {
         // Can cast to an atomic type if in range
         auto atomic = type.exactCastImmutable!AtomicType();
         if (atomic !is null && atomic.inRange(value)) {
-            // If the other is a literal, the values must be equal
-            auto floatLiteral = cast(immutable FloatLiteralType) type;
-            if (floatLiteral !is null && value != floatLiteral.value) {
+            // The other type can not be a literal
+            if (cast(AtomicLiteralType) atomic !is null) {
                 return false;
             }
             conversions.thenFloatLiteralNarrow();
@@ -1102,6 +1092,10 @@ public immutable class AnyTypeLiteral : AnyType, LiteralType {
         }
         // Can specialize to any another reference type
         if (cast(immutable ReferenceType) type !is null) {
+            // The other type can not be a literal
+            if (cast(LiteralType) type !is null) {
+                return false;
+            }
             conversions.thenReferenceNarrowing();
             return true;
         }
@@ -1125,6 +1119,10 @@ public immutable class TupleLiteralType : TupleType, LiteralType {
         // Can specialize to another reference type
         auto referenceType = cast(immutable ReferenceType) type;
         if (referenceType is null) {
+            return false;
+        }
+        // The other type can not be a literal
+        if (cast(LiteralType) type !is null) {
             return false;
         }
         // The members must be convertible to or specializable to that of the other
@@ -1163,6 +1161,10 @@ public immutable class StructureLiteralType : StructureType, LiteralType {
         // Only allow specialization to structure types
         auto structureType = cast(immutable StructureType) type;
         if (structureType is null) {
+            return false;
+        }
+        // The other type can not be a literal
+        if (cast(LiteralType) type !is null) {
             return false;
         }
         // Each member must be specializable to that of the other struct
@@ -1222,6 +1224,10 @@ public immutable class SizedArrayLiteralType : SizedArrayType, LiteralType {
         if (arrayType is null) {
             return false;
         }
+        // The other type can not be a literal
+        if (cast(LiteralType) type !is null) {
+            return false;
+        }
         // Each member must be specializable to the component type
         auto componentType = arrayType.componentType;
         foreach (memberType; _memberTypes) {
@@ -1277,6 +1283,10 @@ public immutable class StringLiteralType : SizedArrayLiteralType {
     public override bool specializableTo(immutable Type type, TypeConversionChain conversions) {
         if (convertibleTo(type, conversions)) {
             return true;
+        }
+        // The other type can not be a literal
+        if (cast(LiteralType) type !is null) {
+            return false;
         }
         // Can convert the string to UTF-16 or UTF-8
         auto clone = conversions.clone().thenStringLiteralToUtf16();
