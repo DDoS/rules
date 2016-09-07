@@ -436,7 +436,7 @@ public class IntrinsicNameSpace : NameSpace {
             auto arrayTypeB = cast(immutable ArrayType) argumentTypes[1];
             auto paramTypeB = arrayTypeB is null ? null : arrayTypeB.withoutLiteral().withoutSize();
             if (paramTypeB !is null) {
-                if (!paramTypeA.opEquals(paramTypeB)) {
+                if (!paramTypeB.opEquals(paramTypeA)) {
                     auto funcB = new immutable Function(CONCATENATE_NAME, CONCATENATE_SYMBOLIC_NAME, [paramTypeB, paramTypeB],
                             paramTypeB);
                     funcs ~= immutable IntrinsicFunction(funcB, CONCATENATE_IMPLEMENTATION);
