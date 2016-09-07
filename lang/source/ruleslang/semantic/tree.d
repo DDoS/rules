@@ -447,6 +447,24 @@ public immutable class TupleLiteralNode : ReferenceNode, LiteralNode {
         if (type.convertibleTo(specialType, ignored)) {
             return this;
         }
+        auto arrayType = cast(immutable ArrayType) specialType;
+        if (arrayType !is null) {
+            // Specialize all the values to the component type and label them by index
+            immutable(TypedNode)[] specialValues = [];
+            immutable(ArrayLabel)[] specialLabels = [];
+            foreach (i, value; values) {
+                specialValues ~= value.addCastNode(arrayType.componentType);
+                specialLabels ~= immutable ArrayLabel(i, _start, _end);
+            }
+            // If the other array is sized and this size is shorter, correct it
+            auto sizedArrayType = cast(immutable SizedArrayType) arrayType;
+            if (sizedArrayType !is null && specialValues.length < sizedArrayType.size) {
+                // Add a label for size minus one and a corresponding default value
+                specialLabels ~= immutable ArrayLabel(sizedArrayType.size - 1, _start, _end);
+                specialValues ~= sizedArrayType.componentType.defaultValue(_start, _end);
+            }
+            return new immutable ArrayLiteralNode(specialValues, specialLabels, _start, _end);
+        }
         return null;
     }
 
@@ -676,7 +694,7 @@ public immutable class ArrayLiteralNode : LiteralNode, ReferenceNode {
             foreach (value; values) {
                 specialValues ~= value.addCastNode(arrayType.componentType);
             }
-            // If the other array is sized and this size if shorter, correct it
+            // If the other array is sized and this size is shorter, correct it
             immutable(ArrayLabel)[] specialLabels = labels;
             auto sizedArrayType = cast(immutable SizedArrayType) arrayType;
             if (sizedArrayType !is null && type.size < sizedArrayType.size) {

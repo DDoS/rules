@@ -179,6 +179,11 @@ unittest {
         "FunctionCall(opConcatenate(ArrayLiteral({0: UnsignedIntegerLiteral(1)}), StringLiteral(\"1\"))) | uint32[]",
         interpret("{0: 1} ~ \"1\"")
     );
+    assertEqual(
+        "FunctionCall(opConcatenate(ArrayLiteral({0: UnsignedIntegerLiteral(97), 1: UnsignedIntegerLiteral(98), "
+            ~ "2: UnsignedIntegerLiteral(54)}), StringLiteral(\"yes\"))) | uint32[]",
+        interpret("{uint16('a'), 'b', 54} ~ \"yes\"")
+    );
     assertInterpretFails("!1");
     assertInterpretFails("~true");
     assertInterpretFails("~1.");
