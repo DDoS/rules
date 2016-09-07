@@ -171,6 +171,10 @@ unittest {
         "FunctionCall(opConcatenate(ArrayLiteral({0: UnsignedIntegerLiteral(97)}), StringLiteral(\"1\"))) | uint32[]",
         interpret("{0: uint32('a')} ~ \"1\"")
     );
+    assertEqual(
+        "FunctionCall(opConcatenate(ArrayLiteral({other: UnsignedIntegerLiteral(0)}), StringLiteral(\"1\"))) | uint32[]",
+        interpret("{} ~ \"1\"")
+    );
     assertInterpretFails("!1");
     assertInterpretFails("~true");
     assertInterpretFails("~1.");

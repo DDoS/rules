@@ -381,6 +381,14 @@ public immutable class EmptyLiteralNode : ReferenceNode, LiteralNode {
         if (AnyType.INSTANCE.convertibleTo(specialType, ignored)) {
             return this;
         }
+        auto arrayType = cast(immutable ArrayType) specialType;
+        if (arrayType !is null) {
+            auto sizedArrayType = cast(immutable SizedArrayType) arrayType;
+            immutable ArrayLabel label = sizedArrayType is null ? ArrayLabel.asOther(_start, _end)
+                    : immutable ArrayLabel(sizedArrayType.size - 1, _start, _end);
+            return new immutable ArrayLiteralNode([arrayType.componentType.defaultValue(_start, _end)],
+                    [label], _start, _end);
+        }
         return null;
     }
 
@@ -604,16 +612,21 @@ public immutable class ArrayLiteralNode : LiteralNode, ReferenceNode {
         this.labels = labels;
         // The array size if the max index label plus one
         ulong maxIndex = 0;
+        bool hasIndexLabel = false;
         foreach (label; this.labels) {
-            if (!label.other && label.index > maxIndex) {
-                maxIndex = label.index;
+            if (!label.other) {
+                hasIndexLabel = true;
+                if (label.index > maxIndex) {
+                    maxIndex = label.index;
+                }
             }
         }
+        auto size = hasIndexLabel ? maxIndex + 1 : 0;
         // Reduce the array member literals
         auto reducedValues = values.reduceLiterals();
         // Try to create the sized array type (can fail if there is no upper bound)
         string exceptionMessage;
-        type = collectExceptionMessage(new immutable SizedArrayLiteralType(reducedValues.getTypes(), maxIndex + 1),
+        type = collectExceptionMessage(new immutable SizedArrayLiteralType(reducedValues.getTypes(), size),
                 exceptionMessage);
         if (exceptionMessage !is null) {
             throw new SourceException(exceptionMessage, start, end);
@@ -1059,23 +1072,23 @@ public immutable(TypedNode)[] reduceLiterals(immutable(TypedNode)[] nodes) {
     return reduced;
 }
 
-public immutable(TypedNode) defaultValue(immutable Type type) {
+public immutable(TypedNode) defaultValue(immutable Type type, size_t start, size_t end) {
     // For an atomic type, simply zero-initialize
     auto atomicType = cast(immutable AtomicType) type;
     if (atomicType !is null) {
         if (atomicType.isBoolean()) {
-            return new immutable BooleanLiteralNode(false, 0, 0);
+            return new immutable BooleanLiteralNode(false, start, end);
         }
         if (atomicType.isFloat()) {
-            return new immutable FloatLiteralNode(atomicType, 0, 0, 0);
+            return new immutable FloatLiteralNode(atomicType, 0, start, end);
         }
         if (atomicType.isInteger()) {
             if (atomicType.isSigned()) {
-                return new immutable SignedIntegerLiteralNode(atomicType, 0, 0, 0);
+                return new immutable SignedIntegerLiteralNode(atomicType, 0, start, end);
             }
-            return new immutable UnsignedIntegerLiteralNode(atomicType, 0, 0, 0);
+            return new immutable UnsignedIntegerLiteralNode(atomicType, 0, start, end);
         }
     }
 
-    throw new Exception(format("No default value for type %s"), type.toString());
+    throw new Exception(format("No default value for type %s", type.toString()));
 }
