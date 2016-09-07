@@ -129,6 +129,10 @@ public class SourceException : Exception {
         if (source.length == 0) {
             return new ErrorInformation(this.msg, "", "", 0, 0, 0);
         }
+        // Special case, both start and end are max values when the source is unknown
+        if (_start == size_t.max && _end == size_t.max) {
+            return new ErrorInformation(this.msg, "", "", size_t.max, 0, 0);
+        }
         // find the line number the error occurred on
         size_t lineNumber = findLine(source, min(_start, source.length - 1));
         // find start and end of line containing the offender
@@ -180,6 +184,11 @@ public class SourceException : Exception {
             char[] buffer = [];
             buffer.reserve(256);
             buffer ~= "Error: \"" ~ message ~ '"';
+            // If the line number is max value then the source is unknown
+            if (lineNumber == size_t.max) {
+                buffer ~= " of unknown source";
+                return buffer.idup;
+            }
             if (offender != null) {
                 buffer ~= " caused by '" ~ offender ~ '\'';
             }
