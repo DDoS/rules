@@ -70,6 +70,51 @@ public immutable class NullNode : TypedNode {
     }
 }
 
+public immutable class NullLiteralNode : LiteralNode {
+    private size_t _start;
+    private size_t _end;
+
+    public this(size_t start, size_t end) {
+        _start = start;
+        _end = end;
+    }
+
+    @property public override size_t start() {
+        return _start;
+    }
+
+    @property public override size_t end() {
+        return _end;
+    }
+
+    public override immutable(TypedNode)[] getChildren() {
+        return [];
+    }
+
+    public override immutable(NullLiteralType) getType() {
+        return NullLiteralType.INSTANCE;
+    }
+
+    public override immutable(LiteralNode) specializeTo(immutable Type specialType) {
+        if (NullType.INSTANCE.opEquals(specialType)) {
+            return this;
+        }
+        return null;
+    }
+
+    public override bool isIntrinsicEvaluable() {
+        return true;
+    }
+
+    public override void evaluate(Runtime runtime) {
+        Evaluator.INSTANCE.evaluateNullLiteral(runtime, this);
+    }
+
+    public override string toString() {
+        return "NullLiteral(null)";
+    }
+}
+
 public immutable class BooleanLiteralNode : LiteralNode {
     private BooleanLiteralType type;
     private size_t _start;

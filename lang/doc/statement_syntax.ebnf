@@ -28,10 +28,10 @@
     Vec3[4] {} == {0, 0, 0, 0}
     Vec3[2] {3, 1} == {3, 1}
     Vec3[1][2] {{2}, {}} == {{2}, {0}}
-    Vec3[][2] {a} == {{1, 2, 3, 5} {}}
+    Vec3[][2] {a} == {{1, 2, 3, 5}, null}
 
     # When no sizes are given for arrays, the initializer size is used
-    Vec3[] {1, 2, 3}.length == 3
+    Vec3[] {1, 2, 3}.len() == 3
 *)
 
 (* Assignment aren't expressions in this language *)

@@ -17,6 +17,10 @@ public immutable class Interpreter {
     private this() {
     }
 
+    public immutable(NullLiteralNode) interpretNullLiteral(Context context, NullLiteral nullLiteral) {
+        return new immutable NullLiteralNode(nullLiteral.start, nullLiteral.end);
+    }
+
     public immutable(BooleanLiteralNode) interpretBooleanLiteral(Context context, BooleanLiteral boolean) {
         return new immutable BooleanLiteralNode(boolean.getValue(), boolean.start, boolean.end);
     }

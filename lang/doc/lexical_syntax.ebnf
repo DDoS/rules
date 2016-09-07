@@ -75,6 +75,8 @@ float = ([decimalDigitSequence], ".", decimalDigitSequence, [exponentPart])
     | (decimalDigitSequence, ".", [decimalDigitSequence], [exponentPart])
     | (decimalDigitSequence, exponentPart) ;
 
+null = "null" ;
+
 boolean = "true" | "false" ;
 
 (* bell, backspace, horizontal tab, line feed, vertical tab, form feed,
@@ -101,7 +103,7 @@ char = "'", (
 
 identifierToken = identifierStart, {identifierBody} ;
 literalToken = (
-    signedIntegerLiteral | unsignedIntegerLiteral | float | boolean
+    signedIntegerLiteral | unsignedIntegerLiteral | float | boolean | null
     | string | char
 ) ;
 symbolToken = symbol ;

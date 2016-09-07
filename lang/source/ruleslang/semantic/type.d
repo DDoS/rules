@@ -155,6 +155,46 @@ public immutable interface Type {
     public bool opEquals(immutable Type type);
 }
 
+public immutable class NullType : Type {
+    public static immutable NullType INSTANCE = new immutable NullType();
+
+    private this() {
+    }
+
+    public override bool convertibleTo(immutable Type type, TypeConversionChain conversions) {
+        // Only allow identity conversion
+        if (opEquals(type)) {
+            conversions.thenIdentity();
+            return true;
+        }
+        return false;
+    }
+
+    public override bool specializableTo(immutable Type type, TypeConversionChain conversions) {
+        return convertibleTo(type, conversions);
+    }
+
+    public override immutable(Type) lowestUpperBound(immutable Type other) {
+        // There is only a bound with itself
+        if (opEquals(other)) {
+            return this;
+        }
+        return null;
+    }
+
+    public override immutable(NullType) withoutLiteral() {
+        return this;
+    }
+
+    public override string toString() {
+        return "null";
+    }
+
+    public override bool opEquals(immutable Type type) {
+        return type.exactCastImmutable!NullType() !is null || cast(immutable NullLiteralType) type !is null;
+    }
+}
+
 public immutable class AtomicType : Type {
     private immutable struct DataInfo {
         private uint bitCount;
@@ -1083,6 +1123,17 @@ public immutable class SizedArrayType : ArrayType, CompositeType {
     }
 }
 
+public immutable class NullLiteralType : NullType, LiteralType {
+    public static immutable NullLiteralType INSTANCE = new immutable NullLiteralType();
+
+    private this() {
+    }
+
+    public override immutable(NullType) withoutLiteral() {
+        return NullType.INSTANCE;
+    }
+}
+
 public immutable class AnyTypeLiteral : AnyType, LiteralType {
     public static immutable AnyTypeLiteral INSTANCE = new immutable AnyTypeLiteral();
 
@@ -1403,9 +1454,9 @@ private size_t getStorageSize(immutable Type type) {
         }
         return size / 8;
     }
-    // For reference types, use the native word size
-    auto referenceType = cast(immutable ReferenceType) type;
-    if (referenceType !is null) {
+    // For reference types or null, use the native word size
+    if (cast(immutable ReferenceType) type !is null
+            || cast(immutable NullType) type !is null) {
         return size_t.sizeof;
     }
     assert (0);

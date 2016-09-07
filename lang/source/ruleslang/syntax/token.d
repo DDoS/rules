@@ -37,6 +37,7 @@ public enum Kind {
     RANGE_OPERATOR,
     ASSIGNMENT_OPERATOR,
     OTHER_SYMBOL,
+    NULL_LITERAL,
     BOOLEAN_LITERAL,
     STRING_LITERAL,
     CHARACTER_LITERAL,
@@ -156,6 +157,36 @@ public alias ConcatenateOperator = SourceToken!(Kind.CONCATENATE_OPERATOR);
 public alias RangOperator = SourceToken!(Kind.RANGE_OPERATOR);
 public alias AssignmentOperator = SourceToken!(Kind.ASSIGNMENT_OPERATOR);
 public alias OtherSymbol = SourceToken!(Kind.OTHER_SYMBOL);
+
+public class NullLiteral : SourceToken!(Kind.NULL_LITERAL), Expression {
+    public this(size_t start) {
+        super("null", start);
+    }
+
+    public this(size_t start, size_t end) {
+        super("null", start, end);
+    }
+
+    @property public override size_t start() {
+        return super.start;
+    }
+
+    @property public override size_t end() {
+        return super.end;
+    }
+
+    public override Expression map(ExpressionMapper mapper) {
+        return mapper.mapNullLiteral(this);
+    }
+
+    public override immutable(TypedNode) interpret(Context context) {
+        return Interpreter.INSTANCE.interpretNullLiteral(context, this);
+    }
+
+    public override string toString() {
+        return super.toString();
+    }
+}
 
 public class BooleanLiteral : SourceToken!(Kind.BOOLEAN_LITERAL), Expression {
     private bool value;
@@ -647,6 +678,8 @@ public string toString(Kind kind) {
         case ASSIGNMENT_OPERATOR:
         case OTHER_SYMBOL:
             return "Symbol";
+        case NULL_LITERAL:
+            return "NullLiteral";
         case BOOLEAN_LITERAL:
             return "BooleanLiteral";
         case STRING_LITERAL:

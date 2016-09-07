@@ -12,6 +12,10 @@ public abstract class TypeMapper {
 }
 
 public abstract class ExpressionMapper : TypeMapper {
+    public Expression mapNullLiteral(NullLiteral expression) {
+        return expression;
+    }
+
     public Expression mapBooleanLiteral(BooleanLiteral expression) {
         return expression;
     }

@@ -14,6 +14,10 @@ public immutable class Evaluator {
     private this() {
     }
 
+    public void evaluateNullLiteral(Runtime runtime, immutable NullLiteralNode nullLiteral) {
+        runtime.stack.push!(void*)(null);
+    }
+
     public void evaluateBooleanLiteral(Runtime runtime, immutable BooleanLiteralNode booleanLiteral) {
         runtime.stack.push!bool(booleanLiteral.getType().value);
     }

@@ -293,7 +293,9 @@ public void writeVariant(Variant variant, void* to) {
 
 private string buildTypeSwitch(string op)() {
     return `
-    if (cast(immutable ReferenceType) type !is null) {
+    if (cast(immutable NullType) type !is null) {
+        ` ~ op.positionalReplace("void*") ~ `
+    } else if (cast(immutable ReferenceType) type !is null) {
         ` ~ op.positionalReplace("void*") ~ `
     } else if (AtomicType.BOOL.opEquals(type)) {
         ` ~ op.positionalReplace("bool") ~ `

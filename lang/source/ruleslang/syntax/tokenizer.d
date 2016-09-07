@@ -84,6 +84,8 @@ public class Tokenizer {
                 // An indentifier can also be a keyword
                 if (identifier.isKeyword()) {
                     token = new Keyword(identifier, position);
+                } else if (identifier == NULL_LITERAL) {
+                    token = new NullLiteral(position);
                 } else if (identifier.isBooleanLiteral()) {
                     token = new BooleanLiteral(identifier, position);
                 } else {
@@ -412,6 +414,8 @@ public immutable dstring[] KEYWORDS = [
     "continue"d, "throw"d, "static"d, "import"d, "package"d, "new"d, "throws"d, "public"d,
     "return"d, "this"d, "super"d
 ];
+
+private immutable dstring NULL_LITERAL = "null"d;
 
 private immutable dstring FALSE_LITERAL = "false"d;
 private immutable dstring TRUE_LITERAL = "true"d;

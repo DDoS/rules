@@ -48,6 +48,10 @@ unittest {
 }
 
 unittest {
+    assertLexNoIndent("null", "NullLiteral(null)");
+}
+
+unittest {
     assertLexNoIndent("false", "BooleanLiteral(false)");
     assertLexNoIndent("true", "BooleanLiteral(true)");
 }

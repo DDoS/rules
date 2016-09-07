@@ -13,6 +13,10 @@ import ruleslang.test.assertion;
 
 unittest {
     assertEqual(
+        "NullLiteral(null) | null",
+        interpret("null")
+    );
+    assertEqual(
         "SignedIntegerLiteral(1) | sint_lit(1)",
         interpret("+1")
     );
