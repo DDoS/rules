@@ -410,7 +410,7 @@ public immutable class Interpreter {
     }
 
     public immutable(TypedNode) interpretValueCompare(Context context, ValueCompare expression) {
-        assert (0);
+        return NullNode.INSTANCE;
     }
 
     public immutable(TypedNode) interpretTypeCompare(Context context, TypeCompare expression) {
