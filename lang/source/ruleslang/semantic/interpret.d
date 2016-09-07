@@ -238,17 +238,7 @@ public immutable class Interpreter {
     }
 
     public immutable(TypedNode) interpretFunctionCall(Context context, FunctionCall call) {
-        // Interpret the argument and get their types
-        immutable(TypedNode)[] argumentNodes;
-        immutable(Type)[] argumentTypes;
-        argumentNodes.reserve(call.arguments.length);
-        argumentTypes.reserve(call.arguments.length);
-        foreach (argument; call.arguments) {
-            auto node = argument.interpret(context);
-            argumentNodes ~= node;
-            argumentTypes ~= node.getType();
-        }
-        // Now figure out if the call value is the name of a function or an actual value
+        // Figure out if the call value is the name of a function or an actual value
         auto value = call.value;
         auto nameReference = cast(NameReference) value;
         if (nameReference is null) {
