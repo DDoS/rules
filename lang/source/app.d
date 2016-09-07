@@ -16,6 +16,20 @@ import ruleslang.evaluation.runtime;
 import ruleslang.evaluation.evaluate;
 
 void main() {
+    /*
+        TODO:
+            Interpret range operators
+            Interpret reference compares
+            Full runtime type information
+            Interpret type compares
+            Interpret type declarations
+            Interpret initializers
+            Parse variable declarations
+            Interpret variable declarations
+            Interpret assignments
+            Parse control flow
+            Interpret control flow
+    */
     auto context = new Context();
     auto runtime = new IntrinsicRuntime();
     while (true) {
