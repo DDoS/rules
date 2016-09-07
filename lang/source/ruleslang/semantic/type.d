@@ -781,7 +781,7 @@ public immutable class AnyType : CompositeType {
     }
 
     public override string toString() {
-        return format("{}");
+        return "{}";
     }
 
     public override bool opEquals(immutable Type type) {
