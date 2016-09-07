@@ -4,6 +4,7 @@ import std.exception : assumeUnique;
 import std.meta : AliasSeq;
 import std.format : format;
 
+import ruleslang.syntax.source;
 import ruleslang.semantic.type;
 import ruleslang.semantic.symbol;
 import ruleslang.evaluation.runtime;
@@ -303,14 +304,24 @@ public class IntrinsicNameSpace : NameSpace {
         binaryOperators = assocBinaryFunctions.assumeUnique();
         // Implementation of the generated functions
         LENGTH_IMPLEMENTATION = (runtime) {
-            auto dataSegment = runtime.stack.pop!(void*) + IdentityHeader.sizeof;
+            auto address = runtime.stack.pop!(void*);
+            if (address is null) {
+                throw new SourceException("Null reference", size_t.max, size_t.max);
+            }
+            auto dataSegment = address + IdentityHeader.sizeof;
             auto length = *(cast(size_t*) dataSegment);
             runtime.stack.push!size_t(length);
         };
         CONCATENATE_IMPLEMENTATION = (runtime) {
             // Get the array addresses
             auto addressA = runtime.stack.pop!(void*);
+            if (addressA is null) {
+                throw new SourceException("Null reference", size_t.max, size_t.max);
+            }
             auto addressB = runtime.stack.pop!(void*);
+            if (addressB is null) {
+                throw new SourceException("Null reference", size_t.max, size_t.max);
+            }
             // Get the array data segments
             auto dataSegmentA = addressA + IdentityHeader.sizeof;
             auto dataSegmentB = addressB + IdentityHeader.sizeof;

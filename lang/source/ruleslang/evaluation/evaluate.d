@@ -122,8 +122,11 @@ public immutable class Evaluator {
     public void evaluateMemberAccess(Runtime runtime, immutable MemberAccessNode memberAccess) {
         // Evaluate the member access value to place it on the stack
         memberAccess.value.evaluate(runtime);
-        // Now get its address from the stack
+        // Now get its address from the stack and do a null check
         auto address = runtime.stack.pop!(void*);
+        if (address is null) {
+            throw new SourceException("Null reference", memberAccess.value);
+        }
         // Get the type identity from the header
         auto identity = runtime.getTypeIdentity(*(cast(IdentityHeader*) address));
         // From the identity, get the member offset
@@ -137,8 +140,11 @@ public immutable class Evaluator {
     public void evaluateIndexAccess(Runtime runtime, immutable IndexAccessNode indexAccess) {
         // Evaluate the index access value to place it on the stack
         indexAccess.value.evaluate(runtime);
-        // Now get its address from the stack
+        // Now get its address from the stack and do a null check
         auto address = runtime.stack.pop!(void*);
+        if (address is null) {
+            throw new SourceException("Null reference", indexAccess.value);
+        }
         // Now do the same for the index value
         indexAccess.index.evaluate(runtime);
         auto index = runtime.stack.pop!ulong();
