@@ -188,6 +188,30 @@ unittest {
             ~ "2: UnsignedIntegerLiteral(54)}), StringLiteral(\"yes\"))) | uint32[]",
         interpret("{uint16('a'), 'b', 54} ~ \"yes\"")
     );
+    assertEqual(
+        "FunctionCall(opRange(SignedIntegerLiteral(1), SignedIntegerLiteral(2))) | {sint64 from, sint64 to}",
+        interpret("1 .. 2")
+    );
+    assertEqual(
+        "FunctionCall(opRange(FloatLiteral(1), FloatLiteral(2))) | {fp64 from, fp64 to}",
+        interpret("1u .. 2")
+    );
+    assertEqual(
+        "FunctionCall(opRange(FloatLiteral(1), FloatLiteral(2))) | {fp64 from, fp64 to}",
+        interpret("1 .. 2u")
+    );
+    assertEqual(
+        "FunctionCall(opRange(UnsignedIntegerLiteral(1), UnsignedIntegerLiteral(2))) | {uint64 from, uint64 to}",
+        interpret("1u .. 2u")
+    );
+    assertEqual(
+        "FunctionCall(opRange(FloatLiteral(-3), FloatLiteral(2.1))) | {fp64 from, fp64 to}",
+        interpret("-3 .. 2.1")
+    );
+    assertEqual(
+        "FunctionCall(opRange(SignedIntegerLiteral(-2), SignedIntegerLiteral(23))) | {sint32 from, sint32 to}",
+        interpret("sint32(-2) .. sint32(23)")
+    );
     assertInterpretFails("!1");
     assertInterpretFails("~true");
     assertInterpretFails("~1.");
@@ -207,6 +231,9 @@ unittest {
     assertInterpretFails("true.len()");
     assertInterpretFails("{0: uint16(49)} ~ \"b\"");
     assertInterpretFails("\"b\" ~ {0: uint16(49)}");
+    assertInterpretFails("\"2\" .. \"1\"");
+    assertInterpretFails("{} .. 0");
+    assertInterpretFails("sint32(-2) .. uint32(23)");
     assertInterpretFails("{0: 0, 0: 1}");
     assertInterpretFails("{0: 0, 1: 1, other: 2, other: 4}");
     assertInterpretFails("{s: 0, s: 1}");

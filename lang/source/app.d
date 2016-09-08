@@ -18,7 +18,6 @@ import ruleslang.evaluation.evaluate;
 void main() {
     /*
         TODO:
-            Interpret range operators
             Interpret reference compares
             Full runtime type information
             Interpret type compares

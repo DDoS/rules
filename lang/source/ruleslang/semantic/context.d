@@ -299,7 +299,9 @@ public class IntrinsicNameSpace : NameSpace {
         binaryFunctions ~= genBinaryFunctions!(OperatorFunction.BITWISE_XOR_FUNCTION, Same, Same, IntegerTypes)();
         binaryFunctions ~= genBinaryFunctions!(OperatorFunction.BITWISE_OR_FUNCTION, Same, Same, IntegerTypes)();
         // Operators binary &&, ^^, ||
-       binaryFunctions ~= genBinaryFunctions!(OperatorFunction.LOGICAL_XOR_FUNCTION, Same, Same, bool)();
+        binaryFunctions ~= genBinaryFunctions!(OperatorFunction.LOGICAL_XOR_FUNCTION, Same, Same, bool)();
+        // Operator binary ..
+        binaryFunctions ~= genRangeFunctions!(int, uint, long, ulong, float, double)();
         auto assocBinaryFunctions = binaryFunctions.associateArrays!getName();
         binaryOperators = assocBinaryFunctions.assumeUnique();
         // Implementation of the generated functions
@@ -547,6 +549,22 @@ private immutable(IntrinsicFunction)[] genBinaryFunctions(OperatorFunction op,
     return funcs;
 }
 
+private immutable(IntrinsicFunction)[] genRangeFunctions(Param, Params...)() {
+    auto paramType = atomicTypeFor!Param();
+    auto returnType = genRangeReturnType(paramType);
+    auto func = new immutable Function(OperatorFunction.RANGE_FUNCTION, [paramType, paramType], returnType);
+    auto impl = genRangeOperatorImpl!Param();
+    auto funcs = [immutable IntrinsicFunction(func, impl)];
+    static if (Params.length > 0) {
+        funcs ~= genRangeFunctions!Params();
+    }
+    return funcs;
+}
+
+private immutable(StructureType) genRangeReturnType(immutable AtomicType paramType) {
+    return new immutable StructureType([paramType, paramType], ["from", "to"]);
+}
+
 private immutable(AtomicType) atomicTypeFor(T)() {
     static if (is(T == bool)) {
         return AtomicType.BOOL;
@@ -599,8 +617,6 @@ private enum string[string] FUNCTION_TO_DLANG_OPERATOR = [
     "opBitwiseXor": "$0 ^ $1",
     "opBitwiseOr": "$0 | $1",
     "opLogicalXor": "$0 ^ $1",
-    "opConcatenate": "$0 ~ $1",
-    "opRange": "$0.p_range($1)",
 ];
 
 private FunctionImpl genUnaryOperatorImpl(OperatorFunction func, Inner, Return)() {
@@ -622,6 +638,19 @@ private FunctionImpl genBinaryOperatorImpl(OperatorFunction func, Left, Right, R
     FunctionImpl implementation = (runtime) {
         enum op = FUNCTION_TO_DLANG_OPERATOR[func].positionalReplace("runtime.stack.pop!Left()", "runtime.stack.pop!Right()");
         mixin("runtime.stack.push!Return(cast(Return) (" ~ op ~ "));");
+    };
+    return implementation;
+}
+
+private FunctionImpl genRangeOperatorImpl(Param)() {
+    FunctionImpl implementation = (runtime) {
+        // Shitty inefficient way of doing this because of a DMD bug with static fields
+        auto identity = genRangeReturnType(atomicTypeFor!Param()).identity();
+        auto address = runtime.allocateComposite(identity);
+        auto dataSegment = address + IdentityHeader.sizeof;
+        runtime.stack.popTo!Param(dataSegment + identity.memberOffsetByName["from"]);
+        runtime.stack.popTo!Param(dataSegment + identity.memberOffsetByName["to"]);
+        runtime.stack.push!(void*)(address);
     };
     return implementation;
 }
