@@ -133,7 +133,46 @@ public class Stack {
     }
 
     public void push(T)(immutable Type type, T data) {
-        mixin (buildTypeSwitch!"push!($0)(cast($0) data);");
+        static if (is(T : long)) {
+            if (AtomicType.BOOL.opEquals(type)) {
+                push!bool(cast(bool) data);
+            } else if (AtomicType.SINT8.opEquals(type)) {
+                push!byte(cast(byte) data);
+            } else if (AtomicType.UINT8.opEquals(type)) {
+                push!ubyte(cast(ubyte) data);
+            } else if (AtomicType.SINT16.opEquals(type)) {
+                push!short(cast(short) data);
+            } else if (AtomicType.UINT16.opEquals(type)) {
+                push!ushort(cast(ushort) data);
+            } else if (AtomicType.SINT32.opEquals(type)) {
+                push!int(cast(int) data);
+            } else if (AtomicType.UINT32.opEquals(type)) {
+                push!uint(cast(uint) data);
+            } else if (AtomicType.SINT64.opEquals(type)) {
+                push!long(cast(long) data);
+            } else if (AtomicType.UINT64.opEquals(type)) {
+                push!ulong(cast(ulong) data);
+            } else {
+                assert (0);
+            }
+        } else static if (is(T : double)) {
+            if (AtomicType.FP32.opEquals(type)) {
+                push!float(cast(float) data);
+            } else if (AtomicType.FP64.opEquals(type)) {
+                push!double(cast(double) data);
+            } else {
+                assert (0);
+            }
+        } else static if (is(T == void*)) {
+            if (cast(immutable ReferenceType) type !is null
+                    || cast(immutable NullType) type !is null) {
+                push!(void*)(cast(void*) data);
+            } else {
+                assert (0);
+            }
+        } else {
+            static assert (0);
+        }
     }
 
     public void pushFrom(T)(void* from) {
@@ -293,9 +332,8 @@ public void writeVariant(Variant variant, void* to) {
 
 private string buildTypeSwitch(string op)() {
     return `
-    if (cast(immutable NullType) type !is null) {
-        ` ~ op.positionalReplace("void*") ~ `
-    } else if (cast(immutable ReferenceType) type !is null) {
+    if (cast(immutable ReferenceType) type !is null
+            || cast(immutable NullType) type !is null) {
         ` ~ op.positionalReplace("void*") ~ `
     } else if (AtomicType.BOOL.opEquals(type)) {
         ` ~ op.positionalReplace("bool") ~ `
