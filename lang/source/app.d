@@ -18,8 +18,8 @@ import ruleslang.evaluation.evaluate;
 void main() {
     /*
         TODO:
-            Interpret reference compares
             Full runtime type information
+            GC scan reference type arrays
             Interpret type compares
             Interpret type declarations
             Interpret initializers
