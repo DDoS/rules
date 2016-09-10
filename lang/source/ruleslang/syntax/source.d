@@ -82,6 +82,19 @@ unittest {
 }
 
 public class SourceException : Exception {
+    // This is a duck typing trick: "is(type)" only returns true if the type is valid.
+    // The type can be that of a lambda, so we declare one and get the type using typeof(lambda).
+    // Since typeof doesn't actually evaluate the expression, all that matters is that it compiles.
+    // This is where duck typing comes in, the lambda body defines the operations we want on S
+    // and only compiles if the operations are valid
+    private enum bool isSourceIndexed(S) = is(typeof(
+        (inout int = 0) {
+            S s = S.init;
+            size_t start = s.start;
+            size_t end = s.end;
+        }
+    ));
+
     private string offender = null;
     private size_t _start;
     private size_t _end;
@@ -96,19 +109,6 @@ public class SourceException : Exception {
     public this(SourceIndexed)(string message, SourceIndexed problem) if (isSourceIndexed!SourceIndexed){
         this(message, problem.start, problem.end);
     }
-
-    // This is a duck typing trick: "is(type)" only returns true if the type is valid.
-    // The type can be that of a lambda, so we declare one and get the type using typeof(lambda).
-    // Since typeof doesn't actually evaluate the expression, all that matters is that it compiles.
-    // This is where duck typing comes in, the lambda body defines the operations we want on S
-    // and only compiles if the operations are valid
-    private enum bool isSourceIndexed(S) = is(typeof(
-        (inout int = 0) {
-            S s = S.init;
-            size_t start = s.start;
-            size_t end = s.end;
-        }
-    ));
 
     public this(string message, size_t start, size_t end) {
         super(message);
@@ -127,11 +127,11 @@ public class SourceException : Exception {
 
     public immutable(ErrorInformation)* getErrorInformation(string source) {
         if (source.length == 0) {
-            return new ErrorInformation(this.msg, "", "", 0, 0, 0);
+            return new immutable ErrorInformation(this.msg, offender, "", 0, 0, 0);
         }
         // Special case, both start and end are max values when the source is unknown
         if (_start == size_t.max && _end == size_t.max) {
-            return new ErrorInformation(this.msg, "", "", size_t.max, 0, 0);
+            return new immutable ErrorInformation(this.msg, offender);
         }
         // find the line number the error occurred on
         size_t lineNumber = findLine(source, min(_start, source.length - 1));
@@ -144,7 +144,7 @@ public class SourceException : Exception {
         }
         lineEnd--;
         string line = source[lineStart .. min(lineEnd + 1, $)].stripRight();
-        return new ErrorInformation(this.msg, offender, line, lineNumber, _start - lineStart, _end - lineStart);
+        return new immutable ErrorInformation(this.msg, offender, line, lineNumber, _start - lineStart, _end - lineStart);
     }
 
     private static size_t findLine(string source, size_t index) {
@@ -175,31 +175,56 @@ public class SourceException : Exception {
     public immutable struct ErrorInformation {
         public string message;
         public string offender;
+        public bool knownSource;
         public string line;
         public size_t lineNumber;
         public size_t startIndex;
         public size_t endIndex;
 
+        public this(string message, string offender) {
+            this.message = message;
+            this.offender = offender;
+            knownSource = false;
+        }
+
+        public this(string message, string offender, string line, size_t lineNumber, size_t startIndex, size_t endIndex) {
+            this.message = message;
+            this.offender = offender;
+            knownSource = true;
+            this.line = line;
+            this.lineNumber = lineNumber;
+            this.startIndex = startIndex;
+            this.endIndex = endIndex;
+        }
+
         public string toString() {
+            // Create a mutable string
             char[] buffer = [];
             buffer.reserve(256);
+            // Begin with the error message
             buffer ~= "Error: \"" ~ message ~ '"';
-            // If the line number is max value then the source is unknown
-            if (lineNumber == size_t.max) {
-                buffer ~= " of unknown source";
-                return buffer.idup;
-            }
+            // Add the offender if known
             if (offender != null) {
                 buffer ~= " caused by '" ~ offender ~ '\'';
             }
+            // If the source is unknown mention it and stop here
+            if (!knownSource) {
+                buffer ~= " of unknown source";
+                return buffer.idup;
+            }
+            // Othwerise add the line number and index in that line
             buffer ~= " at line: " ~ lineNumber.to!string ~ ", index: " ~ startIndex.to!string;
+            // Also add the end index if more than one character is involved
             if (startIndex != endIndex) {
                 buffer ~= " to " ~ endIndex.to!string;
             }
+            // Now append the actual line source
             buffer ~= " in \n" ~ line ~ '\n';
+            // We'll underline the problem area, so first pad to the start index
             foreach (i; 0 .. startIndex) {
                 buffer ~= ' ';
             }
+            // Now underline, using a circumflex for a single character or tildes for many
             if (startIndex == endIndex) {
                 buffer ~= '^';
             } else {
@@ -207,6 +232,7 @@ public class SourceException : Exception {
                     buffer ~= '~';
                 }
             }
+            // Finally return an immutable duplicate of the buffer (a proper string)
             return buffer.idup;
         }
     }
