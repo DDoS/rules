@@ -990,6 +990,50 @@ public immutable class FunctionCallNode : TypedNode {
     }
 }
 
+public immutable class ReferenceCompareNode : TypedNode {
+    public TypedNode left;
+    public TypedNode right;
+    public bool negated;
+    private size_t _start;
+    private size_t _end;
+
+    public this(immutable TypedNode left, immutable TypedNode right, bool negated, size_t start, size_t end) {
+        this.left = left;
+        this.right = right;
+        this.negated = negated;
+        _start = start;
+        _end = end;
+    }
+
+    @property public override size_t start() {
+        return _start;
+    }
+
+    @property public override size_t end() {
+        return _end;
+    }
+
+    public override immutable(TypedNode)[] getChildren() {
+        return [left, right];
+    }
+
+    public override immutable(Type) getType() {
+        return AtomicType.BOOL;
+    }
+
+    public override bool isIntrinsicEvaluable() {
+        return left.isIntrinsicEvaluable() && right.isIntrinsicEvaluable();
+    }
+
+    public override void evaluate(Runtime runtime) {
+        Evaluator.INSTANCE.evaluateReferenceCompare(runtime, this);
+    }
+
+    public override string toString() {
+        return format("ReferenceCompare(%s %s== %s)", left.toString, negated ? "!" : "=", right.toString());
+    }
+}
+
 public immutable class ConditionalNode : TypedNode {
     public TypedNode condition;
     public TypedNode whenTrue;

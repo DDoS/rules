@@ -207,6 +207,24 @@ public immutable class Evaluator {
         runtime.call(functionCall.func);
     }
 
+    public void evaluateReferenceCompare(Runtime runtime, immutable ReferenceCompareNode referenceCompare) {
+        // Evaluate the left operand and get the address
+        referenceCompare.left.evaluate(runtime);
+        auto addressA = runtime.stack.pop!(void*);
+        // Evaluate the right operand and get the address
+        referenceCompare.right.evaluate(runtime);
+        auto addressB = runtime.stack.pop!(void*);
+        // Use the equivalent Dlang operator to evaluate
+        bool equal;
+        if (referenceCompare.negated) {
+            equal = addressA !is addressB;
+        } else {
+            equal = addressA is addressB;
+        }
+        // Push the result onto the stack
+        runtime.stack.push!bool(equal);
+    }
+
     public void evaluateConditional(Runtime runtime, immutable ConditionalNode conditional) {
         // First evaluate the condition node
         conditional.condition.evaluate(runtime);

@@ -409,8 +409,30 @@ public immutable class Interpreter {
         assert (0);
     }
 
-    public immutable(TypedNode) interpretValueCompare(Context context, ValueCompare expression) {
-        return NullNode.INSTANCE;
+    public immutable(TypedNode) interpretValueCompare(Context context, ValueCompare valueCompare) {
+        bool negated = false;
+        final switch (valueCompare.operator.getSource()) {
+            case "!==": {
+                negated = true;
+                goto case "===";
+            }
+            case "===": {
+                // The left and right types must be reference types or null
+                auto leftNode = valueCompare.left.interpret(context);
+                if (cast(immutable ReferenceType) leftNode.getType() is null
+                        && cast(immutable NullType) leftNode.getType() is null) {
+                    throw new SourceException(format("Left type must be a reference type or null, not %s",
+                            leftNode.getType()), valueCompare.left);
+                }
+                auto rightNode = valueCompare.right.interpret(context);
+                if (cast(immutable ReferenceType) rightNode.getType() is null
+                        && cast(immutable NullType) rightNode.getType() is null) {
+                    throw new SourceException(format("Right type must be a reference type or null, not %s",
+                            rightNode.getType()), valueCompare.right);
+                }
+                return new immutable ReferenceCompareNode(leftNode, rightNode, negated, valueCompare.start, valueCompare.end);
+            }
+        }
     }
 
     public immutable(TypedNode) interpretTypeCompare(Context context, TypeCompare expression) {

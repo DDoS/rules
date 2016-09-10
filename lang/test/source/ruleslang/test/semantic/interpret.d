@@ -212,6 +212,31 @@ unittest {
         "FunctionCall(opRange(SignedIntegerLiteral(-2), SignedIntegerLiteral(23))) | {sint32 from, sint32 to}",
         interpret("sint32(-2) .. sint32(23)")
     );
+    assertEqual(
+        "ReferenceCompare(EmptyLiteralNode({}) === EmptyLiteralNode({})) | bool",
+        interpret("{} === {}")
+    );
+    assertEqual(
+        "ReferenceCompare(EmptyLiteralNode({}) !== EmptyLiteralNode({})) | bool",
+        interpret("{} !== {}")
+    );
+    assertEqual(
+        "ReferenceCompare(EmptyLiteralNode({}) !== StringLiteral(\"2\")) | bool",
+        interpret("{} !== \"2\"")
+    );
+    assertEqual(
+        "ReferenceCompare(NullLiteral(null) === StringLiteral(\"2\")) | bool",
+        interpret("null === \"2\"")
+    );
+    assertEqual(
+        "ReferenceCompare(NullLiteral(null) === NullLiteral(null)) | bool",
+        interpret("null === null")
+    );
+    assertEqual(
+        "ReferenceCompare(TupleLiteral({SignedIntegerLiteral(1), SignedIntegerLiteral(2), SignedIntegerLiteral(3)}) === "
+                ~ "StructLiteral({s: SignedIntegerLiteral(3), e: BooleanLiteral(true)})) | bool",
+        interpret("{1, 2, 3} === {s: 3, e: true}")
+    );
     assertInterpretFails("!1");
     assertInterpretFails("~true");
     assertInterpretFails("~1.");
@@ -234,6 +259,13 @@ unittest {
     assertInterpretFails("\"2\" .. \"1\"");
     assertInterpretFails("{} .. 0");
     assertInterpretFails("sint32(-2) .. uint32(23)");
+    assertInterpretFails("{} === 0");
+    assertInterpretFails("{} !== 0");
+    assertInterpretFails("0 === {}");
+    assertInterpretFails("0 !== {}");
+    assertInterpretFails("null === 0");
+    assertInterpretFails("0 === null");
+    assertInterpretFails("0 === 2");
     assertInterpretFails("{0: 0, 0: 1}");
     assertInterpretFails("{0: 0, 1: 1, other: 2, other: 4}");
     assertInterpretFails("{s: 0, s: 1}");
