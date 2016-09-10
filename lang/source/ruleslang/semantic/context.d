@@ -305,7 +305,7 @@ public class IntrinsicNameSpace : NameSpace {
         auto assocBinaryFunctions = binaryFunctions.associateArrays!getName();
         binaryOperators = assocBinaryFunctions.assumeUnique();
         // Implementation of the generated functions
-        LENGTH_IMPLEMENTATION = (runtime) {
+        LENGTH_IMPLEMENTATION = (runtime, func) {
             auto address = runtime.stack.pop!(void*);
             if (address is null) {
                 throw new SourceException("Null reference", size_t.max, size_t.max);
@@ -314,7 +314,7 @@ public class IntrinsicNameSpace : NameSpace {
             auto length = *(cast(size_t*) dataSegment);
             runtime.stack.push!size_t(length);
         };
-        CONCATENATE_IMPLEMENTATION = (runtime) {
+        CONCATENATE_IMPLEMENTATION = (runtime, func) {
             // Get the array addresses
             auto addressA = runtime.stack.pop!(void*);
             if (addressA is null) {
@@ -619,33 +619,32 @@ private enum string[string] FUNCTION_TO_DLANG_OPERATOR = [
     "opLogicalXor": "$0 ^ $1",
 ];
 
-private FunctionImpl genUnaryOperatorImpl(OperatorFunction func, Inner, Return)() {
-    FunctionImpl implementation = (runtime) {
-        enum op = FUNCTION_TO_DLANG_OPERATOR[func].positionalReplace("runtime.stack.pop!Inner()");
+private FunctionImpl genUnaryOperatorImpl(OperatorFunction opFunc, Inner, Return)() {
+    FunctionImpl implementation = (runtime, func) {
+        enum op = FUNCTION_TO_DLANG_OPERATOR[opFunc].positionalReplace("runtime.stack.pop!Inner()");
         mixin("runtime.stack.push!Return(cast(Return) (" ~ op ~ "));");
     };
     return implementation;
 }
 
 private FunctionImpl genCastImpl(From, To)() {
-    FunctionImpl implementation = (runtime) {
+    FunctionImpl implementation = (runtime, func) {
         mixin("runtime.stack.push!To(cast(To) runtime.stack.pop!From());");
     };
     return implementation;
 }
 
-private FunctionImpl genBinaryOperatorImpl(OperatorFunction func, Left, Right, Return)() {
-    FunctionImpl implementation = (runtime) {
-        enum op = FUNCTION_TO_DLANG_OPERATOR[func].positionalReplace("runtime.stack.pop!Left()", "runtime.stack.pop!Right()");
+private FunctionImpl genBinaryOperatorImpl(OperatorFunction opFunc, Left, Right, Return)() {
+    FunctionImpl implementation = (runtime, func) {
+        enum op = FUNCTION_TO_DLANG_OPERATOR[opFunc].positionalReplace("runtime.stack.pop!Left()", "runtime.stack.pop!Right()");
         mixin("runtime.stack.push!Return(cast(Return) (" ~ op ~ "));");
     };
     return implementation;
 }
 
 private FunctionImpl genRangeOperatorImpl(Param)() {
-    FunctionImpl implementation = (runtime) {
-        // Shitty inefficient way of doing this because of a DMD bug with static fields
-        auto identity = genRangeReturnType(atomicTypeFor!Param()).identity();
+    FunctionImpl implementation = (runtime, func) {
+        auto identity = func.returnType.castOrFail!(immutable ReferenceType).identity();
         auto address = runtime.allocateComposite(identity);
         auto dataSegment = address + IdentityHeader.sizeof;
         runtime.stack.popTo!Param(dataSegment + identity.memberOffsetByName["from"]);

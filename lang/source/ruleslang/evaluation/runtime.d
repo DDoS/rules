@@ -10,7 +10,7 @@ import ruleslang.semantic.context;
 import ruleslang.util;
 
 public alias IdentityHeader = size_t;
-public alias FunctionImpl = void function(Runtime);
+public alias FunctionImpl = void function(Runtime, immutable Function);
 
 public abstract class Runtime {
     private Stack _stack;
@@ -32,11 +32,7 @@ public abstract class Runtime {
         return _heap;
     }
 
-    public void call(immutable Function func) {
-        call(func.symbolicName);
-    }
-
-    public abstract void call(string symbolicName);
+    public abstract void call(immutable Function func);
 
     public IdentityHeader registerTypeIdentity(immutable TypeIdentity identity) {
         // If it already exists in the list, return the index
@@ -84,12 +80,13 @@ public abstract class Runtime {
 }
 
 public class IntrinsicRuntime : Runtime {
-    public override void call(string symbolicName) {
-        auto func = symbolicName in IntrinsicNameSpace.FUNCTION_IMPLEMENTATIONS;
-        if (func is null) {
+    public override void call(immutable Function func) {
+        auto symbolicName = func.symbolicName;
+        auto impl = symbolicName in IntrinsicNameSpace.FUNCTION_IMPLEMENTATIONS;
+        if (impl is null) {
             throw new Exception(format("Unknown function %s", symbolicName));
         }
-        (*func)(this);
+        (*impl)(this, func);
     }
 }
 
