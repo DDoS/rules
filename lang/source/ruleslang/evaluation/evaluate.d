@@ -226,6 +226,47 @@ public immutable class Evaluator {
         runtime.stack.push!bool(equal);
     }
 
+    public void evaluateTypeCompare(Runtime runtime, immutable TypeCompareNode typeCompare) {
+        // Evaluate the value operand and get the address
+        typeCompare.value.evaluate(runtime);
+        auto address = runtime.stack.pop!(void*);
+        // From the address get the type
+        auto type = runtime.getType(*(cast(TypeIndex*) address));
+        // Perform the comparison according to the kind
+        auto compareType = typeCompare.compareType;
+        bool result;
+        final switch (typeCompare.kind) with (TypeCompareNode.Kind) {
+            case EQUAL:
+                result = type.opEquals(compareType);
+                break;
+            case NOT_EQUAL:
+                result = !type.opEquals(compareType);
+                break;
+            case SUBTYPE:
+                auto conversions = new TypeConversionChain();
+                result = type.convertibleTo(compareType, conversions);
+                break;
+            case SUPERTYPE:
+                auto conversions = new TypeConversionChain();
+                result = compareType.convertibleTo(type, conversions);
+                break;
+            case PROPER_SUBTYPE:
+                auto conversions = new TypeConversionChain();
+                result = type.convertibleTo(compareType, conversions) && !compareType.convertibleTo(type, conversions);
+                break;
+            case PROPER_SUPERTYPE:
+                auto conversions = new TypeConversionChain();
+                result = !type.convertibleTo(compareType, conversions) && compareType.convertibleTo(type, conversions);
+                break;
+            case DISTINCT:
+                auto conversions = new TypeConversionChain();
+                result = !type.convertibleTo(compareType, conversions) && !compareType.convertibleTo(type, conversions);
+                break;
+        }
+        // Push the result onto the stack
+        runtime.stack.push!bool(result);
+    }
+
     public void evaluateConditional(Runtime runtime, immutable ConditionalNode conditional) {
         // First evaluate the condition node
         conditional.condition.evaluate(runtime);

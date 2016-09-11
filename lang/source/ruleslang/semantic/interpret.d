@@ -435,7 +435,38 @@ public immutable class Interpreter {
         }
     }
 
-    public immutable(TypedNode) interpretTypeCompare(Context context, TypeCompare expression) {
+    public immutable(TypedNode) interpretTypeCompare(Context context, TypeCompare typeCompare) {
+        // The value must be a reference type
+        auto valueNode = typeCompare.value.interpret(context);
+        if (cast(immutable ReferenceType) valueNode.getType() is null) {
+            throw new SourceException(format("Value must be a reference type, not %s", valueNode.getType()), typeCompare.value);
+        }
+        // Get the comparison kind from the operator
+        TypeCompareNode.Kind kind;
+        final switch (typeCompare.operator.getSource()) with (TypeCompareNode.Kind) {
+            case "::":
+                kind = EQUAL;
+                break;
+            case "!:":
+                kind = NOT_EQUAL;
+                break;
+            case "<:":
+                kind = SUBTYPE;
+                break;
+            case ">:":
+                kind = SUPERTYPE;
+                break;
+            case "<<:":
+                kind = PROPER_SUBTYPE;
+                break;
+            case ">>:":
+                kind = PROPER_SUPERTYPE;
+                break;
+            case "<:>":
+                kind = DISTINCT;
+                break;
+        }
+        // TODO: finish me when type declarations are done
         return NullNode.INSTANCE;
     }
 

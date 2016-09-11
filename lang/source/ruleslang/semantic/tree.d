@@ -1002,7 +1002,80 @@ public immutable class ReferenceCompareNode : TypedNode {
     }
 
     public override string toString() {
-        return format("ReferenceCompare(%s %s== %s)", left.toString, negated ? "!" : "=", right.toString());
+        return format("ReferenceCompare(%s %s== %s)", left.toString(), negated ? "!" : "=", right.toString());
+    }
+}
+
+public immutable class TypeCompareNode : TypedNode {
+    public enum Kind {
+        EQUAL, NOT_EQUAL, SUBTYPE, SUPERTYPE, PROPER_SUBTYPE, PROPER_SUPERTYPE, DISTINCT
+    }
+
+    public TypedNode value;
+    public ReferenceType compareType;
+    public TypeCompareNode.Kind kind;
+    private size_t _start;
+    private size_t _end;
+
+    public this(immutable TypedNode value, immutable ReferenceType compareType, TypeCompareNode.Kind kind,
+            size_t start, size_t end) {
+        this.value = value;
+        this.compareType = compareType;
+        this.kind = kind;
+        _start = start;
+        _end = end;
+    }
+
+    @property public override size_t start() {
+        return _start;
+    }
+
+    @property public override size_t end() {
+        return _end;
+    }
+
+    public override immutable(TypedNode)[] getChildren() {
+        return [value];
+    }
+
+    public override immutable(Type) getType() {
+        return AtomicType.BOOL;
+    }
+
+    public override bool isIntrinsicEvaluable() {
+        return value.isIntrinsicEvaluable();
+    }
+
+    public override void evaluate(Runtime runtime) {
+        Evaluator.INSTANCE.evaluateTypeCompare(runtime, this);
+    }
+
+    public override string toString() {
+        string operator;
+        final switch (kind) with (TypeCompareNode.Kind) {
+            case EQUAL:
+                operator = "::";
+                break;
+            case NOT_EQUAL:
+                operator = "!:";
+                break;
+            case SUBTYPE:
+                operator = "<:";
+                break;
+            case SUPERTYPE:
+                operator = ">:";
+                break;
+            case PROPER_SUBTYPE:
+                operator = "<<:";
+                break;
+            case PROPER_SUPERTYPE:
+                operator = ">>:";
+                break;
+            case DISTINCT:
+                operator = "<:>";
+                break;
+        }
+        return format("TypeCompare(%s %s %s)", value.toString(), operator, compareType.toString());
     }
 }
 
