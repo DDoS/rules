@@ -94,10 +94,11 @@ private string asString(Runtime runtime, immutable Type type, void* address) {
         return "null";
     }
 
-    auto dataLayout = runtime.getType(*(cast(TypeIndex*) referenceAddress)).getDataLayout();
+    auto referenceType = runtime.getType(*(cast(TypeIndex*) referenceAddress));
+    auto dataLayout = referenceType.getDataLayout();
     auto dataSegment = referenceAddress + TypeIndex.sizeof;
 
-    auto stringLiteral = cast(immutable StringLiteralType) type;
+    auto stringLiteral = cast(immutable StringLiteralType) referenceType;
     if (stringLiteral !is null) {
         auto length = *(cast(size_t*) dataSegment);
         dataSegment += size_t.sizeof;
@@ -105,7 +106,7 @@ private string asString(Runtime runtime, immutable Type type, void* address) {
         return '"' ~ stringData.idup.to!string() ~ '"';
     }
 
-    auto arrayType = cast(immutable ArrayType) type;
+    auto arrayType = cast(immutable ArrayType) referenceType;
     if (arrayType !is null) {
         auto length = *(cast(size_t*) dataSegment);
         dataSegment += size_t.sizeof;
@@ -121,12 +122,12 @@ private string asString(Runtime runtime, immutable Type type, void* address) {
         return str;
     }
 
-    auto anyType = cast(immutable AnyType) type;
+    auto anyType = cast(immutable AnyType) referenceType;
     if (anyType !is null) {
         return "{}";
     }
 
-    auto structType = cast(immutable StructureType) type;
+    auto structType = cast(immutable StructureType) referenceType;
     if (structType !is null) {
         string str = "{";
         foreach (i, memberName; structType.memberNames) {
@@ -141,7 +142,7 @@ private string asString(Runtime runtime, immutable Type type, void* address) {
         return str;
     }
 
-    auto tupleType = cast(immutable TupleType) type;
+    auto tupleType = cast(immutable TupleType) referenceType;
     if (tupleType !is null) {
         string str = "{";
         foreach (i, memberType; tupleType.memberTypes) {
