@@ -331,7 +331,7 @@ public class IntrinsicNameSpace : NameSpace {
             auto lengthA = *(cast(size_t*) dataSegmentA);
             auto lengthB = *(cast(size_t*) dataSegmentB);
             // Allocate the new array from the common type and the summed length
-            auto type = runtime.getType(*(cast(TypeIndex*) addressA));
+            auto type = runtime.getType(*(cast(TypeIndex*) addressA)).castOrFail!(immutable ArrayType);
             auto lengthC = lengthA + lengthB;
             auto addressC = runtime.allocateArray(type, lengthC);
             // Get the new array data segment

@@ -18,7 +18,6 @@ import ruleslang.evaluation.evaluate;
 void main() {
     /*
         TODO:
-            GC scan reference type arrays
             Interpret type compares
             Interpret type declarations
             Interpret initializers

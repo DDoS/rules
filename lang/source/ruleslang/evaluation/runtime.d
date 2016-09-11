@@ -63,15 +63,20 @@ public abstract class Runtime {
         return address;
     }
 
-    public void* allocateArray(immutable ReferenceType type, size_t length) {
+    public void* allocateArray(immutable ArrayType type, size_t length) {
         auto dataLayout = type.getDataLayout();
         assert (dataLayout.kind == DataLayout.Kind.ARRAY);
         // Register the type identity
         auto typeIndex = registerType(type);
         // Calculate the size of the array (header + length field + data) and allocate the memory
         auto size = TypeIndex.sizeof + size_t.sizeof + dataLayout.componentSize * length;
-        // TODO: reference arrays need to be scanned
-        auto address = heap.allocateNotScanned(size);
+        // Reference arrays need to be scanned
+        void* address;
+        if (cast(immutable ReferenceType) type.componentType !is null) {
+            address = heap.allocateScanned(size);
+        } else {
+            address = heap.allocateNotScanned(size);
+        }
         // Next set the header
         *(cast (TypeIndex*) address) = typeIndex;
         // Finally set the length field
