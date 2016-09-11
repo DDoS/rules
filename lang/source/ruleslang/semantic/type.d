@@ -733,6 +733,7 @@ public immutable class FloatLiteralType : AtomicType, AtomicLiteralType {
 
 public immutable interface ReferenceType : Type {
     public immutable(Type) getMemberType(ulong index);
+    public immutable(DataLayout) getDataLayout();
 }
 
 public immutable interface CompositeType : ReferenceType {
@@ -741,7 +742,6 @@ public immutable interface CompositeType : ReferenceType {
 
 public immutable class AnyType : CompositeType {
     public static immutable AnyType INSTANCE = new immutable AnyType();
-    public static immutable TypeIdentity INFO = INSTANCE.identity();
 
     private this() {
     }
@@ -778,6 +778,10 @@ public immutable class AnyType : CompositeType {
 
     public override immutable(Type) getMemberType(ulong index) {
         return null;
+    }
+
+    public override immutable(DataLayout) getDataLayout() {
+        return DataLayout.forAnyType();
     }
 
     public override string toString() {
@@ -875,6 +879,10 @@ public immutable class TupleType : CompositeType {
 
     public override immutable(Type) getMemberType(ulong index) {
         return index >= memberTypes.length ? null : memberTypes[index];
+    }
+
+    public override immutable(DataLayout) getDataLayout() {
+        return DataLayout.forTupleType(this);
     }
 
     public override string toString() {
@@ -1039,6 +1047,10 @@ public immutable class ArrayType : ReferenceType {
 
     public override immutable(Type) getMemberType(ulong index) {
         return componentType;
+    }
+
+    public override immutable(DataLayout) getDataLayout() {
+        return DataLayout.forArrayType(this);
     }
 
     public immutable(ArrayType) withoutSize() {
@@ -1384,63 +1396,54 @@ public immutable class StringLiteralType : SizedArrayLiteralType {
     }
 }
 
-public immutable struct TypeIdentity {
+public immutable struct DataLayout {
     public enum Kind {
         TUPLE, STRUCT, ARRAY
     }
 
+    private static auto ANY_TYPE_LAYOUT = immutable DataLayout(0, [], null, 0, DataLayout.Kind.TUPLE);
     public size_t dataSize;
     public size_t[] memberOffsetByIndex;
     public size_t[string] memberOffsetByName;
     public size_t componentSize;
-    public TypeIdentity.Kind kind;
-}
+    public DataLayout.Kind kind;
 
-public TypeIdentity identity(immutable ReferenceType type) {
-    auto tuple = cast(immutable TupleType) type;
-    if (tuple !is null) {
-        return tuple.tupleIdentity();
+    public static immutable(DataLayout) forAnyType() {
+        return ANY_TYPE_LAYOUT;
     }
-    auto array = cast(immutable ArrayType) type;
-    if (array !is null) {
-        return array.arrayIdentity();
-    }
-    auto any = cast(immutable AnyType) type;
-    if (any !is null) {
-        return immutable TypeIdentity(0, [], null, 0, TypeIdentity.Kind.TUPLE);
-    }
-    assert (0);
-}
 
-private TypeIdentity tupleIdentity(immutable TupleType type) {
-    size_t dataSize = 0;
-    auto offsets = new size_t[type.memberTypes.length];
-    foreach (i, memberType; type.memberTypes) {
-        auto memberSize = memberType.getStorageSize();
-        dataSize = dataSize.alignOffset!size_t(memberSize);
-        offsets[i] = dataSize;
-        dataSize += memberSize;
-    }
-    TypeIdentity.Kind kind;
-    size_t[string] names;
-    auto structType = cast(immutable StructureType) type;
-    if (structType !is null) {
-        kind = TypeIdentity.Kind.STRUCT;
-        foreach (i, name; structType.memberNames) {
-            names[name] = offsets[i];
+    public static immutable(DataLayout) forTupleType(immutable TupleType type) {
+        // Add the member index offsets and calculate the total size at the same time
+        size_t dataSize = 0;
+        auto offsets = new size_t[type.memberTypes.length];
+        foreach (i, memberType; type.memberTypes) {
+            auto memberSize = memberType.getStorageSize();
+            dataSize = dataSize.alignOffset!size_t(memberSize);
+            offsets[i] = dataSize;
+            dataSize += memberSize;
         }
-    } else {
-        kind = TypeIdentity.Kind.TUPLE;
-        names = null;
+        // If the type is a struct, add the member names offsets
+        DataLayout.Kind kind;
+        size_t[string] names;
+        auto structType = cast(immutable StructureType) type;
+        if (structType !is null) {
+            kind = DataLayout.Kind.STRUCT;
+            foreach (i, name; structType.memberNames) {
+                names[name] = offsets[i];
+            }
+        } else {
+            kind = DataLayout.Kind.TUPLE;
+            names = null;
+        }
+        return immutable DataLayout(dataSize, offsets.assumeUnique(), names.assumeUnique(), 0, kind);
     }
-    return immutable TypeIdentity(dataSize, offsets.idup, names.assumeUnique(), 0, kind);
-}
 
-private TypeIdentity arrayIdentity(immutable ArrayType type) {
-    // Since arrays are dynamically allocated, only the size of the length field is known
-    enum lengthFieldSize = size_t.sizeof;
-    return immutable TypeIdentity(lengthFieldSize, [0, lengthFieldSize], null,
-            type.componentType.getStorageSize(), TypeIdentity.Kind.ARRAY);
+    public static immutable(DataLayout) forArrayType(immutable ArrayType type) {
+        // Since arrays are dynamically allocated, only the size of the length field is known
+        enum lengthFieldSize = size_t.sizeof;
+        return immutable DataLayout(lengthFieldSize, [0, lengthFieldSize], null,
+                type.componentType.getStorageSize(), DataLayout.Kind.ARRAY);
+    }
 }
 
 private size_t getStorageSize(immutable Type type) {

@@ -9,19 +9,18 @@ import ruleslang.semantic.symbol;
 import ruleslang.semantic.context;
 import ruleslang.util;
 
-public alias IdentityHeader = size_t;
+public alias TypeIndex = size_t;
 public alias FunctionImpl = void function(Runtime, immutable Function);
 
 public abstract class Runtime {
     private Stack _stack;
     private Heap _heap;
-    private immutable(TypeIdentity)[] identities;
+    private immutable(ReferenceType)[] types;
 
     public this() {
         _stack = new Stack(4 * 1024);
         _heap = new Heap();
-        identities = [];
-        identities.reserve(256);
+        types = [];
     }
 
     @property public Stack stack() {
@@ -34,47 +33,49 @@ public abstract class Runtime {
 
     public abstract void call(immutable Function func);
 
-    public IdentityHeader registerTypeIdentity(immutable TypeIdentity identity) {
+    public TypeIndex registerType(immutable ReferenceType type) {
         // If it already exists in the list, return the index
-        foreach (IdentityHeader i, id; identities) {
-            if (id == identity) {
-                return i;
+        foreach (TypeIndex index, registeredType; types) {
+            if (registeredType.opEquals(type)) {
+                return index;
             }
         }
         // Otherwise append it
-        identities ~= identity;
-        return cast(IdentityHeader) identities.length - 1;
+        types ~= type;
+        return cast(TypeIndex) (types.length - 1);
     }
 
-    public immutable(TypeIdentity) getTypeIdentity(IdentityHeader index) {
-        assert (index < identities.length);
-        return identities[index];
+    public immutable(ReferenceType) getType(TypeIndex index) {
+        assert (index < types.length);
+        return types[index];
     }
 
-    public void* allocateComposite(immutable TypeIdentity identity) {
-        assert (identity.kind == TypeIdentity.Kind.TUPLE || identity.kind == TypeIdentity.Kind.STRUCT);
+    public void* allocateComposite(immutable ReferenceType type) {
+        auto dataLayout = type.getDataLayout();
+        assert (dataLayout.kind == DataLayout.Kind.TUPLE || dataLayout.kind == DataLayout.Kind.STRUCT);
         // Register the type identity
-        auto infoIndex = registerTypeIdentity(identity);
+        auto typeIndex = registerType(type);
         // Calculate the size of the composite (header + data) and allocate the memory
-        auto size = IdentityHeader.sizeof + identity.dataSize;
+        auto size = TypeIndex.sizeof + dataLayout.dataSize;
         auto address = heap.allocateScanned(size);
         // Next set the header
-        *(cast (IdentityHeader*) address) = infoIndex;
+        *(cast (TypeIndex*) address) = typeIndex;
         return address;
     }
 
-    public void* allocateArray(immutable TypeIdentity identity, size_t length) {
-        assert (identity.kind == TypeIdentity.Kind.ARRAY);
+    public void* allocateArray(immutable ReferenceType type, size_t length) {
+        auto dataLayout = type.getDataLayout();
+        assert (dataLayout.kind == DataLayout.Kind.ARRAY);
         // Register the type identity
-        auto infoIndex = registerTypeIdentity(identity);
+        auto typeIndex = registerType(type);
         // Calculate the size of the array (header + length field + data) and allocate the memory
-        auto size = IdentityHeader.sizeof + size_t.sizeof + identity.componentSize * length;
+        auto size = TypeIndex.sizeof + size_t.sizeof + dataLayout.componentSize * length;
         // TODO: reference arrays need to be scanned
         auto address = heap.allocateNotScanned(size);
         // Next set the header
-        *(cast (IdentityHeader*) address) = infoIndex;
+        *(cast (TypeIndex*) address) = typeIndex;
         // Finally set the length field
-        *(cast (size_t*) (address + IdentityHeader.sizeof)) = length;
+        *(cast (size_t*) (address + TypeIndex.sizeof)) = length;
         return address;
     }
 }

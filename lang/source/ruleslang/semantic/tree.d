@@ -32,7 +32,7 @@ public immutable interface LiteralNode : TypedNode {
 }
 
 public immutable interface ReferenceNode : TypedNode {
-    public immutable(TypeIdentity) getTypeIdentity();
+    public immutable(ReferenceType) getType();
 }
 
 public immutable class NullNode : TypedNode {
@@ -164,13 +164,11 @@ public immutable class BooleanLiteralNode : LiteralNode {
 
 public immutable class StringLiteralNode : ReferenceNode, LiteralNode {
     private StringLiteralType type;
-    private TypeIdentity identity;
     private size_t _start;
     private size_t _end;
 
     public this(dstring value, size_t start, size_t end) {
         type = new immutable StringLiteralType(value);
-        identity = type.identity();
         _start = start;
         _end = end;
     }
@@ -189,10 +187,6 @@ public immutable class StringLiteralNode : ReferenceNode, LiteralNode {
 
     public override immutable(StringLiteralType) getType() {
         return type;
-    }
-
-    public override immutable(TypeIdentity) getTypeIdentity() {
-        return identity;
     }
 
     public override immutable(LiteralNode) specializeTo(immutable Type specialType) {
@@ -417,10 +411,6 @@ public immutable class EmptyLiteralNode : ReferenceNode, LiteralNode {
         return AnyTypeLiteral.INSTANCE;
     }
 
-    public override immutable(TypeIdentity) getTypeIdentity() {
-        return AnyType.INFO;
-    }
-
     public override immutable(LiteralNode) specializeTo(immutable Type specialType) {
         auto ignored = new TypeConversionChain();
         if (AnyType.INSTANCE.convertibleTo(specialType, ignored)) {
@@ -455,14 +445,12 @@ public immutable class EmptyLiteralNode : ReferenceNode, LiteralNode {
 public immutable class TupleLiteralNode : ReferenceNode, LiteralNode {
     public TypedNode[] values;
     private TupleLiteralType type;
-    private TypeIdentity identity;
     private size_t _start;
     private size_t _end;
 
     public this(immutable(TypedNode)[] values, size_t start, size_t end) {
         this.values = values.reduceLiterals();
         this.type = new immutable TupleLiteralType(this.values.getTypes());
-        identity = type.identity();
         _start = start;
         _end = end;
     }
@@ -481,10 +469,6 @@ public immutable class TupleLiteralNode : ReferenceNode, LiteralNode {
 
     public override immutable(TupleLiteralType) getType() {
         return type;
-    }
-
-    public override immutable(TypeIdentity) getTypeIdentity() {
-        return identity;
     }
 
     public override immutable(LiteralNode) specializeTo(immutable Type specialType) {
@@ -546,7 +530,6 @@ public immutable class StructLiteralNode : ReferenceNode, LiteralNode {
     public TypedNode[] values;
     private StructLabel[] labels;
     private StructureLiteralType type;
-    private TypeIdentity identity;
     private size_t _start;
     private size_t _end;
 
@@ -571,7 +554,6 @@ public immutable class StructLiteralNode : ReferenceNode, LiteralNode {
             labelNames ~= label.name;
         }
         type = new immutable StructureLiteralType(this.values.getTypes(), labelNames);
-        identity = type.identity();
         _start = start;
         _end = end;
     }
@@ -590,10 +572,6 @@ public immutable class StructLiteralNode : ReferenceNode, LiteralNode {
 
     public override immutable(StructureLiteralType) getType() {
         return type;
-    }
-
-    public override immutable(TypeIdentity) getTypeIdentity() {
-        return identity;
     }
 
     public override immutable(LiteralNode) specializeTo(immutable Type specialType) {
@@ -656,7 +634,6 @@ public immutable class ArrayLiteralNode : LiteralNode, ReferenceNode {
     public TypedNode[] values;
     public ArrayLabel[] labels;
     private SizedArrayLiteralType type;
-    private TypeIdentity identity;
     private size_t _start;
     private size_t _end;
 
@@ -696,7 +673,6 @@ public immutable class ArrayLiteralNode : LiteralNode, ReferenceNode {
         if (exceptionMessage !is null) {
             throw new SourceException(exceptionMessage, start, end);
         }
-        identity = type.identity();
         // Add casts to the component types on the values
         immutable(TypedNode)[] castValues = [];
         foreach (value; reducedValues) {
@@ -721,10 +697,6 @@ public immutable class ArrayLiteralNode : LiteralNode, ReferenceNode {
 
     public override immutable(SizedArrayLiteralType) getType() {
         return type;
-    }
-
-    public override immutable(TypeIdentity) getTypeIdentity() {
-        return identity;
     }
 
     public override immutable(LiteralNode) specializeTo(immutable Type specialType) {

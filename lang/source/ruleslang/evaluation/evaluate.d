@@ -25,9 +25,9 @@ public immutable class Evaluator {
     public void evaluateStringLiteral(Runtime runtime, immutable StringLiteralNode stringLiteral) {
         // Allocate the string
         auto value = stringLiteral.getType().value;
-        auto address = runtime.allocateArray(stringLiteral.getTypeIdentity(), value.length);
+        auto address = runtime.allocateArray(stringLiteral.getType(), value.length);
         // Then place the string data
-        auto dataSegment = cast(dchar*) (address + IdentityHeader.sizeof + size_t.sizeof);
+        auto dataSegment = cast(dchar*) (address + TypeIndex.sizeof + size_t.sizeof);
         dataSegment[0 .. value.length] = value;
         // Finally push the address to the stack
         runtime.stack.push(address);
@@ -47,31 +47,31 @@ public immutable class Evaluator {
 
     public void evaluateEmptyLiteral(Runtime runtime, immutable EmptyLiteralNode emptyLiteral) {
         // Allocate the empty literal
-        auto address = runtime.allocateComposite(emptyLiteral.getTypeIdentity());
+        auto address = runtime.allocateComposite(emptyLiteral.getType());
         // It doesn't have any data, so just push the address to the stack
         runtime.stack.push(address);
     }
 
     public void evaluateTupleLiteral(Runtime runtime, immutable TupleLiteralNode tupleLiteral) {
-        evaluateTupleLiteral(runtime, tupleLiteral.getType(), tupleLiteral.getTypeIdentity(), tupleLiteral.values);
+        evaluateTupleLiteral(runtime, tupleLiteral.getType(), tupleLiteral.values);
     }
 
     public void evaluateStructLiteral(Runtime runtime, immutable StructLiteralNode structLiteral) {
         // This is the same as a tuple literal evalution-wise. The member names are just used for access operations
-        evaluateTupleLiteral(runtime, structLiteral.getType, structLiteral.getTypeIdentity(), structLiteral.values);
+        evaluateTupleLiteral(runtime, structLiteral.getType(), structLiteral.values);
     }
 
-    private static void evaluateTupleLiteral(Runtime runtime, immutable TupleType type, immutable TypeIdentity info,
-            immutable(TypedNode)[] values) {
+    private static void evaluateTupleLiteral(Runtime runtime, immutable TupleType type, immutable(TypedNode)[] values) {
         // Allocate the literal
-        auto address = runtime.allocateComposite(info);
+        auto address = runtime.allocateComposite(type);
         // Place the literal data
-        auto dataSegment = address + IdentityHeader.sizeof;
+        auto dataLayout = type.getDataLayout();
+        auto dataSegment = address + TypeIndex.sizeof;
         foreach (i, memberType; type.memberTypes) {
             // Evaluate the member to place the value on the stack
             values[i].evaluate(runtime);
             // Get the member data address
-            auto memberAddress = dataSegment + info.memberOffsetByIndex[i];
+            auto memberAddress = dataSegment + dataLayout.memberOffsetByIndex[i];
             // Pop the stack data to the data segment
             runtime.stack.popTo(memberType, memberAddress);
         }
@@ -82,14 +82,14 @@ public immutable class Evaluator {
     public void evaluateArrayLiteral(Runtime runtime, immutable ArrayLiteralNode arrayLiteral) {
         auto type = arrayLiteral.getType();
         // Allocate the string
-        auto identity = arrayLiteral.getTypeIdentity();
         auto length = type.size;
-        auto address = runtime.allocateArray(identity, length);
+        auto address = runtime.allocateArray(type, length);
         // Then place the array data
-        auto dataSegment = address + IdentityHeader.sizeof + size_t.sizeof;
+        auto dataLayout = type.getDataLayout();
+        auto dataSegment = address + TypeIndex.sizeof + size_t.sizeof;
         bool foundOther = false;
         Variant otherCache;
-        for (size_t i = 0; i < length; i += 1, dataSegment += identity.componentSize) {
+        for (size_t i = 0; i < length; i += 1, dataSegment += dataLayout.componentSize) {
             // Get the value for the array index
             bool isOther;
             auto value = arrayLiteral.getValueAt(i, isOther);
@@ -127,12 +127,12 @@ public immutable class Evaluator {
         if (address is null) {
             throw new SourceException("Null reference", memberAccess.value);
         }
-        // Get the type identity from the header
-        auto identity = runtime.getTypeIdentity(*(cast(IdentityHeader*) address));
-        // From the identity, get the member offset
-        auto memberOffset = identity.memberOffsetByName[memberAccess.name];
+        // Get the type from the header
+        auto type = runtime.getType(*(cast(TypeIndex*) address));
+        // From the type data layout, get the member offset
+        auto memberOffset = type.getDataLayout().memberOffsetByName[memberAccess.name];
         // Get the member address
-        auto memberAddress = address + IdentityHeader.sizeof + memberOffset;
+        auto memberAddress = address + TypeIndex.sizeof + memberOffset;
         // Finally push the member's data onto the stack
         runtime.stack.pushFrom(memberAccess.getType(), memberAddress);
     }
@@ -148,34 +148,35 @@ public immutable class Evaluator {
         // Now do the same for the index value
         indexAccess.index.evaluate(runtime);
         auto index = runtime.stack.pop!ulong();
-        // Get the type identity from the header
-        auto identity = runtime.getTypeIdentity(*(cast(IdentityHeader*) address));
+        // Get the type and data layout from the header
+        auto type = runtime.getType(*(cast(TypeIndex*) address));
+        auto dataLayout = type.getDataLayout();
         // Get the data segment
-        auto dataSegment = address + IdentityHeader.sizeof;
+        auto dataSegment = address + TypeIndex.sizeof;
         // Getting the member offset needs to be handled differently according to the kind
         size_t memberOffset;
-        final switch (identity.kind) with (TypeIdentity.Kind) {
+        final switch (dataLayout.kind) with (DataLayout.Kind) {
             case TUPLE: {
-                // From the identity, get the member offset from the index
-                memberOffset = identity.memberOffsetByIndex[index];
+                // From the data layout, get the member offset from the index
+                memberOffset = dataLayout.memberOffsetByIndex[index];
                 break;
             }
             case STRUCT: {
-                auto type = indexAccess.value.getType();
+                auto valueType = indexAccess.value.getType();
                 // Accessing for a tuple or struct type works differently
-                auto tupleType = cast(immutable TupleType) type;
+                auto tupleType = cast(immutable TupleType) valueType;
                 if (tupleType !is null) {
-                    // From the identity, get the member offset from the index
-                    memberOffset = identity.memberOffsetByIndex[index];
+                    // From the data layout, get the member offset from the index
+                    memberOffset = dataLayout.memberOffsetByIndex[index];
                     break;
                 }
                 // Since struct members can be reorderd by reference widening, we need to use the name
-                auto structType = cast(immutable StructureType) type;
+                auto structType = cast(immutable StructureType) valueType;
                 if (structType !is null) {
                     // From the type, get the name at the index
                     auto memberName = structType.memberNames[index];
-                    // From the identity, get the member offset from the name
-                    memberOffset = identity.memberOffsetByName[memberName];
+                    // From the data layout, get the member offset from the name
+                    memberOffset = dataLayout.memberOffsetByName[memberName];
                     break;
                 }
                 assert (0);
@@ -188,7 +189,7 @@ public immutable class Evaluator {
                             indexAccess.index);
                 }
                 // Calculate the offset as the length field size plus the component size times the index
-                memberOffset = size_t.sizeof + identity.componentSize * index;
+                memberOffset = size_t.sizeof + dataLayout.componentSize * index;
                 break;
             }
         }

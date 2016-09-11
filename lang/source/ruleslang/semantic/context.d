@@ -310,7 +310,7 @@ public class IntrinsicNameSpace : NameSpace {
             if (address is null) {
                 throw new SourceException("Null reference", size_t.max, size_t.max);
             }
-            auto dataSegment = address + IdentityHeader.sizeof;
+            auto dataSegment = address + TypeIndex.sizeof;
             auto length = *(cast(size_t*) dataSegment);
             runtime.stack.push!size_t(length);
         };
@@ -325,23 +325,23 @@ public class IntrinsicNameSpace : NameSpace {
                 throw new SourceException("Null reference", size_t.max, size_t.max);
             }
             // Get the array data segments
-            auto dataSegmentA = addressA + IdentityHeader.sizeof;
-            auto dataSegmentB = addressB + IdentityHeader.sizeof;
+            auto dataSegmentA = addressA + TypeIndex.sizeof;
+            auto dataSegmentB = addressB + TypeIndex.sizeof;
             // Get the array length
             auto lengthA = *(cast(size_t*) dataSegmentA);
             auto lengthB = *(cast(size_t*) dataSegmentB);
-            // Allocate the new array from the common identity and the summed length
-            auto identity = runtime.getTypeIdentity(*(cast(IdentityHeader*) addressA));
+            // Allocate the new array from the common type and the summed length
+            auto type = runtime.getType(*(cast(TypeIndex*) addressA));
             auto lengthC = lengthA + lengthB;
-            auto addressC = runtime.allocateArray(identity, lengthC);
+            auto addressC = runtime.allocateArray(type, lengthC);
             // Get the new array data segment
-            auto dataSegmentC = addressC + IdentityHeader.sizeof;
+            auto dataSegmentC = addressC + TypeIndex.sizeof;
             // Get the container part of all three arrays
             auto containerA = dataSegmentA + size_t.sizeof;
             auto containerB = dataSegmentB + size_t.sizeof;
             auto containerC = dataSegmentC + size_t.sizeof;
             // Convert the lengths to byte size
-            auto componentSize = identity.componentSize;
+            auto componentSize = type.getDataLayout().componentSize;
             lengthA *= componentSize;
             lengthB *= componentSize;
             lengthC *= componentSize;
@@ -644,11 +644,12 @@ private FunctionImpl genBinaryOperatorImpl(OperatorFunction opFunc, Left, Right,
 
 private FunctionImpl genRangeOperatorImpl(Param)() {
     FunctionImpl implementation = (runtime, func) {
-        auto identity = func.returnType.castOrFail!(immutable ReferenceType).identity();
-        auto address = runtime.allocateComposite(identity);
-        auto dataSegment = address + IdentityHeader.sizeof;
-        runtime.stack.popTo!Param(dataSegment + identity.memberOffsetByName["from"]);
-        runtime.stack.popTo!Param(dataSegment + identity.memberOffsetByName["to"]);
+        auto returnType = func.returnType.castOrFail!(immutable ReferenceType);
+        auto address = runtime.allocateComposite(returnType);
+        auto dataLayout = returnType.getDataLayout();
+        auto dataSegment = address + TypeIndex.sizeof;
+        runtime.stack.popTo!Param(dataSegment + dataLayout.memberOffsetByName["from"]);
+        runtime.stack.popTo!Param(dataSegment + dataLayout.memberOffsetByName["to"]);
         runtime.stack.push!(void*)(address);
     };
     return implementation;

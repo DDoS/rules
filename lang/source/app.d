@@ -18,7 +18,6 @@ import ruleslang.evaluation.evaluate;
 void main() {
     /*
         TODO:
-            Full runtime type information
             GC scan reference type arrays
             Interpret type compares
             Interpret type declarations
@@ -96,8 +95,8 @@ private string asString(Runtime runtime, immutable Type type, void* address) {
         return "null";
     }
 
-    auto identity = runtime.getTypeIdentity(*(cast(IdentityHeader*) referenceAddress));
-    auto dataSegment = referenceAddress + IdentityHeader.sizeof;
+    auto dataLayout = runtime.getType(*(cast(TypeIndex*) referenceAddress)).getDataLayout();
+    auto dataSegment = referenceAddress + TypeIndex.sizeof;
 
     auto stringLiteral = cast(immutable StringLiteralType) type;
     if (stringLiteral !is null) {
@@ -114,7 +113,7 @@ private string asString(Runtime runtime, immutable Type type, void* address) {
         string str = "{";
         foreach (i; 0 .. length) {
             str ~= runtime.asString(arrayType.componentType, dataSegment);
-            dataSegment += identity.componentSize;
+            dataSegment += dataLayout.componentSize;
             if (i < length - 1) {
                 str ~= ", ";
             }
@@ -134,7 +133,7 @@ private string asString(Runtime runtime, immutable Type type, void* address) {
         foreach (i, memberName; structType.memberNames) {
             auto memberType = structType.getMemberType(i);
             str ~= memberName ~ ": ";
-            str ~= runtime.asString(memberType, dataSegment + identity.memberOffsetByName[memberName]);
+            str ~= runtime.asString(memberType, dataSegment + dataLayout.memberOffsetByName[memberName]);
             if (i < structType.memberNames.length - 1) {
                 str ~= ", ";
             }
@@ -147,7 +146,7 @@ private string asString(Runtime runtime, immutable Type type, void* address) {
     if (tupleType !is null) {
         string str = "{";
         foreach (i, memberType; tupleType.memberTypes) {
-            str ~= runtime.asString(memberType, dataSegment + identity.memberOffsetByIndex[i]);
+            str ~= runtime.asString(memberType, dataSegment + dataLayout.memberOffsetByIndex[i]);
             if (i < tupleType.memberTypes.length - 1) {
                 str ~= ", ";
             }
