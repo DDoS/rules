@@ -5,13 +5,25 @@ import ruleslang.syntax.ast.type;
 import ruleslang.syntax.ast.expression;
 import ruleslang.syntax.ast.statement;
 
-public abstract class TypeMapper {
-    public Type mapNamedType(NamedType type) {
+public abstract class TypeAstMapper {
+    public TypeAst mapNamedTypeAst(NamedTypeAst type) {
+        return type;
+    }
+
+    public TypeAst mapAnyTypeAst(AnyTypeAst type) {
+        return type;
+    }
+
+    public TypeAst mapTupleTypeAst(TupleTypeAst type) {
+        return type;
+    }
+
+    public TypeAst mapStructTypeAst(StructTypeAst type) {
         return type;
     }
 }
 
-public abstract class ExpressionMapper : TypeMapper {
+public abstract class ExpressionMapper : TypeAstMapper {
     public Expression mapNullLiteral(NullLiteral expression) {
         return expression;
     }

@@ -230,7 +230,7 @@ private Expression parseCompare(Tokenizer tokens) {
         values ~= parseShift(tokens);
     }
     TypeCompareOperator typeOperator = null;
-    Type type = null;
+    TypeAst type = null;
     if (tokens.head().getKind() == Kind.TYPE_COMPARE_OPERATOR) {
         typeOperator = tokens.head().castOrFail!TypeCompareOperator();
         tokens.advance();

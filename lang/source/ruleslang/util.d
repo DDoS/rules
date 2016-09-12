@@ -96,9 +96,10 @@ public V[Kb] mapKeys(alias mapKey, Ka, Kb = ReturnType!mapKey, V)(V[Ka] array) {
     return mapped;
 }
 
-public auto stringZip(string joiner, string stringer = ".to!string()", RangeA, RangeB)(RangeA a, RangeB b)
-        if (isInputRange!RangeA && isInputRange!RangeB) {
-    return zip(a, b).map!("a[0]" ~ stringer ~ " ~ \"" ~ joiner ~ "\" ~ a[1]" ~ stringer);
+public auto stringZip(string joiner, string stringerA = ".to!string()", string stringerB = ".to!string()", RangeA, RangeB)
+        (RangeA a, RangeB b) if (isInputRange!RangeA && isInputRange!RangeB) {
+    enum mapper = "a[0]" ~ stringerA ~ " ~ \"" ~ joiner ~ "\" ~ a[1]" ~ stringerB;
+    return zip(a, b).map!mapper();
 }
 
 public string join(string joiner, string stringer = "a.to!string()", Range)(Range things)

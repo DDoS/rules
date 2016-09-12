@@ -1,5 +1,6 @@
-(* Names are just "." separated list of identifiers. They represent packages, class
-    names, fields and/or variables. These need to be disambiguated later. *)
+(* Names are just "." separated list of identifiers. They represent packages,
+    class names, fields and/or variables. These need to be disambiguated
+    later. *)
 name = identifierToken, {".", identifierToken} ;
 
 (* Array notation is like D and reversed compared to Java.
@@ -13,4 +14,15 @@ arrayDimension = arrayUnsized | arraySized ;
 (* Named types are names with optional array dimensions *)
 namedType = name, {arrayDimension} ;
 
-type = namedType ;
+(* Any type is only {} *)
+anyType = "{", "}" ;
+
+(* Tuple type is like {uint8, bool[]} *)
+tupleType = "{", type, {type}, "}" ;
+
+(* Struct type is like {uint32 x, uint32 y} *)
+structType = "{", (type, identifier), {type, identifier}, "}" ;
+
+compositeType = anyType | tupleType | structType ;
+
+type = namedType | compositeType ;

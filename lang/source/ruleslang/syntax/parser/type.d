@@ -44,16 +44,60 @@ private Expression parseArrayDimension(Tokenizer tokens, out size_t end) {
     return size;
 }
 
-public NamedType parseNamedType(Tokenizer tokens) {
+public NamedTypeAst parseNamedType(Tokenizer tokens) {
     auto name = parseName(tokens);
     Expression[] dimensions = [];
     auto end = name[$ - 1].end;
     while (tokens.head() == "[") {
         dimensions ~= parseArrayDimension(tokens, end);
     }
-    return new NamedType(name, dimensions, end);
+    return new NamedTypeAst(name, dimensions, end);
 }
 
-public Type parseType(Tokenizer tokens) {
+public TypeAst parseCompositeType(Tokenizer tokens) {
+    if (tokens.head() != "{") {
+        throw new SourceException("Expected '{'", tokens.head());
+    }
+    auto start = tokens.head().start;
+    tokens.advance();
+    if (tokens.head() == "}") {
+        auto end = tokens.head().end;
+        tokens.advance();
+        return new AnyTypeAst(start, end);
+    }
+    TypeAst[] memberTypes = [parseType(tokens)];
+    Identifier[] memberNames = [];
+    bool structType = false;
+    if (tokens.head().getKind() == Kind.IDENTIFIER) {
+        memberNames ~= tokens.head().castOrFail!Identifier();
+        tokens.advance();
+        structType = true;
+    }
+    while (tokens.head() == ",") {
+        tokens.advance();
+        memberTypes ~= parseType(tokens);
+        if (structType) {
+            if (tokens.head().getKind() != Kind.IDENTIFIER) {
+                throw new SourceException("Expected identifier", tokens.head());
+            }
+            memberNames ~= tokens.head().castOrFail!Identifier();
+            tokens.advance();
+        }
+    }
+    if (tokens.head() != "}") {
+        throw new SourceException("Expected '}'", tokens.head());
+    }
+    auto end = tokens.head().end;
+    tokens.advance();
+    if (structType) {
+        return new StructTypeAst(memberTypes, memberNames, start, end);
+    }
+    return new TupleTypeAst(memberTypes, start, end);
+}
+
+public TypeAst parseType(Tokenizer tokens) {
+    if (tokens.head() == "{") {
+        return parseCompositeType(tokens);
+    }
     return parseNamedType(tokens);
 }

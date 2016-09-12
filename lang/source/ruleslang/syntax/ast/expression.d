@@ -127,10 +127,10 @@ public class CompositeLiteral : Expression {
 }
 
 public class Initializer : Expression {
-    private NamedType type;
+    private NamedTypeAst type;
     private CompositeLiteral literal;
 
-    public this(NamedType type, CompositeLiteral literal) {
+    public this(NamedTypeAst type, CompositeLiteral literal) {
         this.type = type;
         this.literal = literal;
     }
@@ -144,7 +144,7 @@ public class Initializer : Expression {
     }
 
     public override Expression map(ExpressionMapper mapper) {
-        type = type.map(mapper).castOrFail!NamedType();
+        type = type.map(mapper).castOrFail!NamedTypeAst();
         literal = literal.map(mapper).castOrFail!CompositeLiteral();
         return mapper.mapInitializer(this);
     }
@@ -434,10 +434,10 @@ public alias ValueCompare = Binary!("ValueCompare", ValueCompareOperator);
 public class Compare : Expression {
     private Expression[] _values;
     private ValueCompareOperator[] _valueOperators;
-    private Type _type;
+    private TypeAst _type;
     private TypeCompareOperator _typeOperator;
 
-    public this(Expression[] values, ValueCompareOperator[] valueOperators, Type type, TypeCompareOperator typeOperator) {
+    public this(Expression[] values, ValueCompareOperator[] valueOperators, TypeAst type, TypeCompareOperator typeOperator) {
         _values = values;
         _valueOperators = valueOperators;
         _type = type;
@@ -452,7 +452,7 @@ public class Compare : Expression {
         return _valueOperators;
     }
 
-    @property public Type type() {
+    @property public TypeAst type() {
         return _type;
     }
 
@@ -497,10 +497,10 @@ public class Compare : Expression {
 
 public class TypeCompare : Expression {
     private Expression _value;
-    private Type _type;
+    private TypeAst _type;
     private TypeCompareOperator _operator;
 
-    public this(Expression value, Type type, TypeCompareOperator operator) {
+    public this(Expression value, TypeAst type, TypeCompareOperator operator) {
         _value = value;
         _type = type;
         _operator = operator;
@@ -510,7 +510,7 @@ public class TypeCompare : Expression {
         return _value;
     }
 
-    @property public Type type() {
+    @property public TypeAst type() {
         return _type;
     }
 
