@@ -73,6 +73,10 @@ unittest {
         parseTestType("{uint32[], ca.sapon.Test}")
     );
     assertEqual(
+        "{{uint32[] us}, ca.sapon.Test}",
+        parseTestType("{{uint32[] us}, ca.sapon.Test}")
+    );
+    assertEqual(
         "{bool b}",
         parseTestType("{bool b}")
     );
@@ -87,6 +91,10 @@ unittest {
     assertEqual(
         "{uint32[] us, ca.sapon.Test sap}",
         parseTestType("{uint32[] us, ca.sapon.Test sap}")
+    );
+    assertEqual(
+        "{{uint32[] us}, {ca.sapon.Test, Hey}}",
+        parseTestType("{{uint32[] us}, {ca.sapon.Test, Hey}}")
     );
     assertParseTypeFail("{bool b, bool}");
     assertParseTypeFail("{bool, bool b}");

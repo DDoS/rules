@@ -18,9 +18,9 @@ import ruleslang.evaluation.evaluate;
 void main() {
     /*
         TODO:
-            Interpret type compares
             Interpret type declarations
             Interpret initializers
+            Interpret type compares
             Parse variable declarations
             Interpret variable declarations
             Interpret assignments
