@@ -135,24 +135,26 @@ public class SourceException : Exception {
         }
         // find the line number the error occurred on
         size_t lineNumber = findLine(source, min(_start, source.length - 1));
-        // find start and end of line containing the offender
+        // find start and end of the line containing the error
         ptrdiff_t lineStart = _start, lineEnd = _start;
-        while (--lineStart >= 0 && !source[lineStart].isNewLineChar()) {
+        while (lineStart > 0 && !source[lineStart - 1].isNewLineChar()) {
+            lineStart--;
         }
-        lineStart++;
-        while (++lineEnd < source.length && !source[lineEnd].isNewLineChar()) {
+        while (lineEnd < source.length && !source[lineEnd].isNewLineChar()) {
+            lineEnd++;
         }
-        lineEnd--;
-        string line = source[lineStart .. min(lineEnd + 1, $)].stripRight();
+        string line = source[lineStart .. lineEnd].stripRight();
         return new immutable ErrorInformation(this.msg, offender, line, lineNumber, _start - lineStart, _end - lineStart);
     }
 
     private static size_t findLine(string source, size_t index) {
         size_t line = 0;
-        for (size_t i = 0; i <= index; i++) {
+        for (size_t i = 0; i < index; i++) {
             if (source[i].isNewLineChar()) {
                 consumeNewLine(source, i);
-                line++;
+                if (i < index) {
+                    line++;
+                }
             }
         }
         return line;

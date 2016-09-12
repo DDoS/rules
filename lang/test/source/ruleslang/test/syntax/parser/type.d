@@ -55,7 +55,7 @@ unittest {
         "{}",
         parseTestType("{    }")
     );
-    assertParseTypeFail("{\n}");
+    assertParseTypeFail("{\r\n}");
     assertEqual(
         "{bool}",
         parseTestType("{bool}")
