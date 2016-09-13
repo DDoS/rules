@@ -409,10 +409,7 @@ public immutable dstring[] SYMBOLS = [
 ];
 
 public immutable dstring[] KEYWORDS = [
-    "when"d, "with"d, "then"d, "match"d, "if"d, "else"d, "for"d, "for_rev"d, "while"d,
-    "do"d, "try"d, "catch"d, "finally"d, "let"d, "var"d, "class"d, "void"d, "break"d,
-    "continue"d, "throw"d, "static"d, "import"d, "package"d, "new"d, "throws"d, "public"d,
-    "return"d, "this"d, "super"d
+    "def"d, "let"d, "var"d, "if"d, "else"d, "for"d
 ];
 
 private immutable dstring NULL_LITERAL = "null"d;

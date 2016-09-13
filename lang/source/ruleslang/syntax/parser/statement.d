@@ -8,6 +8,7 @@ import ruleslang.syntax.token;
 import ruleslang.syntax.tokenizer;
 import ruleslang.syntax.ast.expression;
 import ruleslang.syntax.ast.statement;
+import ruleslang.syntax.parser.type;
 import ruleslang.syntax.parser.expression;
 import ruleslang.util;
 
@@ -37,6 +38,25 @@ private IndentSpec* noIndentation() {
     return new IndentSpec(' ', 0);
 }
 
+private TypeDefinition parseTypeDefinition(Tokenizer tokens) {
+    if (tokens.head() != "def") {
+        throw new SourceException("Expected \"def\"", tokens.head());
+    }
+    auto start = tokens.head().start;
+    tokens.advance();
+    if (tokens.head().getKind() != Kind.IDENTIFIER) {
+        throw new SourceException("Expected an identifier", tokens.head());
+    }
+    auto name = tokens.head().castOrFail!Identifier();
+    tokens.advance();
+    if (tokens.head() != ":") {
+        throw new SourceException("Expected ':'", tokens.head());
+    }
+    tokens.advance();
+    auto type = parseType(tokens);
+    return new TypeDefinition(name, type, start);
+}
+
 private Statement parseAssigmnentOrFunctionCall(Tokenizer tokens) {
     auto access = parseAccess(tokens);
     auto call = cast(FunctionCall) access;
@@ -56,6 +76,9 @@ private Statement parseAssigmnentOrFunctionCall(Tokenizer tokens) {
 }
 
 public Statement parseStatement(Tokenizer tokens) {
+    if (tokens.head() == "def") {
+        return parseTypeDefinition(tokens);
+    }
     return parseAssigmnentOrFunctionCall(tokens);
 }
 

@@ -10,6 +10,17 @@ import ruleslang.test.assertion;
 
 unittest {
     assertEqual(
+        "TypeDefinition(def test: lol)",
+        parse("def test: lol")
+    );
+    assertEqual(
+        "TypeDefinition(def Vec2d: {fp64 x, fp64 y})",
+        parse("def Vec2d: {fp64 x, fp64 y}")
+    );
+}
+
+unittest {
+    assertEqual(
         "Assignment(a = SignedIntegerLiteral(1))",
         parse("a = 1")
     );

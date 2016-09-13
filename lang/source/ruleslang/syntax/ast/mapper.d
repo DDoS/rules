@@ -162,6 +162,10 @@ public abstract class ExpressionMapper : TypeAstMapper {
 }
 
 public abstract class StatementMapper : ExpressionMapper {
+    public Statement mapTypeDefinition(TypeDefinition statement) {
+        return statement;
+    }
+
     public Statement mapAssignment(Assignment statement) {
         return statement;
     }

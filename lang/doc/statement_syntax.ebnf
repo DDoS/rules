@@ -38,6 +38,9 @@
 referenceExpression = name | fieldAccess | indexAccess ;
 assignment = referenceExpression, assignmentOperator, expression ;
 
+(* Used to give names to types, example: def Vec2d: {fp64 x, fp64 y} *)
+typeDef = "def", identifier, ":", type ;
+
 indentation = indentationToken, {indentationToken} ;
 
 statement = assignment | functionCall ;

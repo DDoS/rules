@@ -20,12 +20,7 @@ symbol = "!" | "@" | "%" | "?" | "&" | "*" | "(" | ")" | "-" | "=" | "+"
     | "*=" | "/=" | "%=" | "+=" | "-=" | "<<=" | ">>=" | ">>>=" | "&=" | "^="
     | "|=" | "&&=" | "^^=" | "||=" | "~=" ;
 
-keyword = "rule" | "when" | "with" | "then" | "match" | "if"
-    | "else" | "for" | "for_rev" | "while" | "do" | "try"
-    | "catch" | "finally" | "let" | "var" | "class" | "void"
-    | "break" | "continue" | "throw" | "static" | "import"
-    | "package" | "new" | "throws" | "public" | "return"
-    | "this" | "super" ;
+keyword = "def" | "let" | "var" | "if" | "else" | "for" ;
 
 (* Excludes the backslash so we can use it for escape sequences *)
 printChar = ?all ASCII print characters? ;

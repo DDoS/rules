@@ -4,6 +4,7 @@ import std.format : format;
 
 import ruleslang.syntax.source;
 import ruleslang.syntax.token;
+import ruleslang.syntax.ast.type;
 import ruleslang.syntax.ast.expression;
 import ruleslang.syntax.ast.mapper;
 import ruleslang.util;
@@ -13,6 +14,43 @@ public interface Statement {
     @property public size_t end();
     public Statement map(StatementMapper mapper);
     public string toString();
+}
+
+public class TypeDefinition : Statement {
+    private Identifier _name;
+    private TypeAst _type;
+    private size_t _start;
+
+    public this(Identifier name, TypeAst type, size_t start) {
+        _name = name;
+        _type = type;
+        _start = start;
+    }
+
+    @property public Identifier name() {
+        return _name;
+    }
+
+    @property public TypeAst type() {
+        return _type;
+    }
+
+    @property public override size_t start() {
+        return _start;
+    }
+
+    @property public override size_t end() {
+        return _type.end;
+    }
+
+    public override Statement map(StatementMapper mapper) {
+        _type = _type.map(mapper);
+        return mapper.mapTypeDefinition(this);
+    }
+
+    public override string toString() {
+        return format("TypeDefinition(def %s: %s)", _name.getSource(), _type.toString());
+    }
 }
 
 public class Assignment : Statement {
