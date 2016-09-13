@@ -61,16 +61,26 @@ public immutable class Interpreter {
         return *wrapped;
     }
 
-    public immutable(AnyType) interpretAnyType(Context context, AnyTypeAst namedType) {
+    public immutable(AnyType) interpretAnyType(Context context, AnyTypeAst anyType) {
         return AnyType.INSTANCE;
     }
 
-    public immutable(TupleType) interpretTupleType(Context context, TupleTypeAst namedType) {
-        assert (0);
+    public immutable(TupleType) interpretTupleType(Context context, TupleTypeAst tupleType) {
+        immutable(Type)[] memberTypes;
+        foreach (memberType; tupleType.memberTypes) {
+            memberTypes ~= memberType.interpret(context);
+        }
+        return new immutable TupleType(memberTypes);
     }
 
-    public immutable(StructureType) interpretStructType(Context context, StructTypeAst namedType) {
-        assert (0);
+    public immutable(StructureType) interpretStructType(Context context, StructTypeAst structType) {
+        immutable(Type)[] memberTypes;
+        immutable(string)[] memberNames;
+        foreach (i, memberType; structType.memberTypes) {
+            memberTypes ~= memberType.interpret(context);
+            memberNames ~= structType.memberNames[i].getSource();
+        }
+        return new immutable StructureType(memberTypes, memberNames);
     }
 
     public immutable(NullLiteralNode) interpretNullLiteral(Context context, NullLiteral nullLiteral) {

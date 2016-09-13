@@ -262,12 +262,12 @@ unittest {
         interpret("{s: {}}.s <<: {}")
     );
     assertEqual(
-        "TypeCompare(EmptyLiteralNode({}) >>: {}) | bool",
-        interpret("{} >>: {}")
+        "TypeCompare(EmptyLiteralNode({}) >>: {bool b, uint32[2] test}) | bool",
+        interpret("{} >>: {bool b, uint32[2] test}")
     );
     assertEqual(
-        "TypeCompare(EmptyLiteralNode({}) <:> {}) | bool",
-        interpret("{} <:> {}")
+        "TypeCompare(EmptyLiteralNode({}) <:> {{}, bool, uint32[]}) | bool",
+        interpret("{} <:> {{}, bool, uint32[]}")
     );
     assertInterpretFails("!1");
     assertInterpretFails("~true");
