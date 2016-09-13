@@ -237,6 +237,38 @@ unittest {
                 ~ "StructLiteral({s: SignedIntegerLiteral(3), e: BooleanLiteral(true)})) | bool",
         interpret("{1, 2, 3} === {s: 3, e: true}")
     );
+    assertEqual(
+        "TypeCompare(EmptyLiteralNode({}) :: {}) | bool",
+        interpret("{} :: {}")
+    );
+    assertEqual(
+        "TypeCompare(StringLiteral(\"\") !: {}) | bool",
+        interpret("\"\" !: {}")
+    );
+    assertEqual(
+        "TypeCompare(TupleLiteral({SignedIntegerLiteral(1)}) <: {}) | bool",
+        interpret("{1} <: {}")
+    );
+    assertEqual(
+        "TypeCompare(StructLiteral({s: UnsignedIntegerLiteral(5)}) >: {}) | bool",
+        interpret("{s : 5u} >: {}")
+    );
+    assertEqual(
+        "TypeCompare(IndexAccess(TupleLiteral({EmptyLiteralNode({})})[UnsignedIntegerLiteral(0)]) <<: {}) | bool",
+        interpret("{{}}[0] <<: {}")
+    );
+    assertEqual(
+        "TypeCompare(MemberAccess(StructLiteral({s: EmptyLiteralNode({})}).s) <<: {}) | bool",
+        interpret("{s: {}}.s <<: {}")
+    );
+    assertEqual(
+        "TypeCompare(EmptyLiteralNode({}) >>: {}) | bool",
+        interpret("{} >>: {}")
+    );
+    assertEqual(
+        "TypeCompare(EmptyLiteralNode({}) <:> {}) | bool",
+        interpret("{} <:> {}")
+    );
     assertInterpretFails("!1");
     assertInterpretFails("~true");
     assertInterpretFails("~1.");
@@ -266,6 +298,9 @@ unittest {
     assertInterpretFails("null === 0");
     assertInterpretFails("0 === null");
     assertInterpretFails("0 === 2");
+    assertInterpretFails("true :: bool");
+    assertInterpretFails("{} :: bool");
+    assertInterpretFails("true :: {}");
     assertInterpretFails("{0: 0, 0: 1}");
     assertInterpretFails("{0: 0, 1: 1, other: 2, other: 4}");
     assertInterpretFails("{s: 0, s: 1}");

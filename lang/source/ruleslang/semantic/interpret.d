@@ -519,7 +519,7 @@ public immutable class Interpreter {
         auto type = typeCompare.type.interpret(context);
         auto referenceType = cast(immutable ReferenceType) type;
         if (referenceType is null) {
-            throw new SourceException(format("Not a reference type %s", type.toString()), typeCompare.type);
+            throw new SourceException(format("Must be a reference type, not %s", type.toString()), typeCompare.type);
         }
         return new immutable TypeCompareNode(valueNode, referenceType, kind, typeCompare.start, typeCompare.end);
     }
