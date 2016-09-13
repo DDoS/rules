@@ -515,8 +515,13 @@ public immutable class Interpreter {
                 kind = DISTINCT;
                 break;
         }
-        // TODO: finish me when type declarations are done
-        return NullNode.INSTANCE;
+        // Get the type to compare against
+        auto type = typeCompare.type.interpret(context);
+        auto referenceType = cast(immutable ReferenceType) type;
+        if (referenceType is null) {
+            throw new SourceException(format("Not a reference type %s", type.toString()), typeCompare.type);
+        }
+        return new immutable TypeCompareNode(valueNode, referenceType, kind, typeCompare.start, typeCompare.end);
     }
 
     public immutable(TypedNode) interpretBitwiseAnd(Context context, BitwiseAnd expression) {
