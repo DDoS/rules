@@ -274,51 +274,59 @@ unittest {
 unittest {
     assertInterpretFails("1[0]");
     assertEqual(
-        "IndexAccess(StringLiteral(\"1\")[UnsignedIntegerLiteral(0)])) | uint32",
+        "IndexAccess(StringLiteral(\"1\")[UnsignedIntegerLiteral(0)]) | uint32",
         interpret("\"1\"[0]")
     );
     assertInterpretFails("\"1\"[-1]");
     assertInterpretFails("\"1\"[2]");
-    assertInterpretFails("\"1\"[0 + 0]");
     assertEqual(
-        "IndexAccess(StringLiteral(\"1\")[UnsignedIntegerLiteral(0)])) | uint32",
+        "IndexAccess(StringLiteral(\"1\")[UnsignedIntegerLiteral(0)]) | uint32",
+        interpret("\"1\"[0 + 0]")
+    );
+    assertEqual(
+        "IndexAccess(StringLiteral(\"1\")[UnsignedIntegerLiteral(0)]) | uint32",
         interpret("\"1\"[0u + 0u]")
     );
     assertEqual(
-        "IndexAccess(TupleLiteral({SignedIntegerLiteral(0), FloatLiteral(1)})[UnsignedIntegerLiteral(0)]))"
+        "IndexAccess(TupleLiteral({SignedIntegerLiteral(0), FloatLiteral(1)})[UnsignedIntegerLiteral(0)])"
             ~ " | sint_lit(0)",
         interpret("{0, 1.}[0]")
     );
     assertEqual(
-        "IndexAccess(TupleLiteral({SignedIntegerLiteral(0), FloatLiteral(1)})[UnsignedIntegerLiteral(1)]))"
+        "IndexAccess(TupleLiteral({SignedIntegerLiteral(0), FloatLiteral(1)})[UnsignedIntegerLiteral(0)])"
+            ~ " | sint_lit(0)",
+        interpret("{0, 1.}[0 + 0]")
+    );
+    assertEqual(
+        "IndexAccess(TupleLiteral({SignedIntegerLiteral(0), FloatLiteral(1)})[UnsignedIntegerLiteral(1)])"
             ~ " | fp_lit(1)",
         interpret("{0, 1.}[1u]")
     );
     assertInterpretFails("{0, 1.}[2u]");
     assertEqual(
-        "IndexAccess(TupleLiteral({SignedIntegerLiteral(0), FloatLiteral(1)})[UnsignedIntegerLiteral(1)]))"
+        "IndexAccess(TupleLiteral({SignedIntegerLiteral(0), FloatLiteral(1)})[UnsignedIntegerLiteral(1)])"
             ~ " | fp_lit(1)",
         interpret("{0, 1.}[0u + 1u]")
     );
     assertEqual(
         "IndexAccess(ArrayLiteral({0: SignedIntegerLiteral(1), 1: SignedIntegerLiteral(2)})["
-            ~ "UnsignedIntegerLiteral(0)])) | sint64",
+            ~ "UnsignedIntegerLiteral(0)]) | sint64",
         interpret("{0: 1, 1: 2}[0u]")
     );
     assertEqual(
         "IndexAccess(ArrayLiteral({0: SignedIntegerLiteral(1), 1: SignedIntegerLiteral(2)})["
-            ~ "UnsignedIntegerLiteral(1)])) | sint64",
+            ~ "UnsignedIntegerLiteral(1)]) | sint64",
         interpret("{0: 1, 1: 2}[1u]")
     );
     assertInterpretFails("{0: 1, 1: 2}[2u]");
     assertEqual(
         "IndexAccess(ArrayLiteral({0: SignedIntegerLiteral(1), 1: SignedIntegerLiteral(2)})["
-            ~ "UnsignedIntegerLiteral(0)])) | sint64",
+            ~ "UnsignedIntegerLiteral(0)]) | sint64",
         interpret("{0: 1, 1: 2}[0u + 0u]")
     );
     assertEqual(
         "IndexAccess(ArrayLiteral({0: FloatLiteral(1), 1: FloatLiteral(2.2)})["
-            ~ "UnsignedIntegerLiteral(0)])) | fp64",
+            ~ "UnsignedIntegerLiteral(0)]) | fp64",
         interpret("{0: 1, 1: 2.2}[0u + 0u]")
     );
     assertInterpretFails("{}[0]");

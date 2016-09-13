@@ -835,7 +835,7 @@ public immutable class MemberAccessNode : TypedNode {
     }
 
     public override string toString() {
-        return format("MemberAccess(%s(%s))", value.toString(), name);
+        return format("MemberAccess(%s.%s)", value.toString(), name);
     }
 }
 
@@ -908,7 +908,7 @@ public immutable class IndexAccessNode : TypedNode {
     }
 
     public override string toString() {
-        return format("IndexAccess(%s[%s]))", value.toString(), index.toString());
+        return format("IndexAccess(%s[%s])", value.toString(), index.toString());
     }
 }
 
