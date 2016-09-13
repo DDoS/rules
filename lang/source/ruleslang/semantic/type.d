@@ -632,7 +632,7 @@ private template IntegerLiteralTypeTemplate(T) {
         }
 
         public override immutable(FloatLiteralType) toFloatLiteral() {
-            return new immutable FloatLiteralType(value);
+            return new immutable FloatLiteralType(AtomicType.INTEGER_TO_FLOAT[info], value);
         }
 
         public override immutable(AtomicType) withoutLiteral() {
