@@ -1148,15 +1148,9 @@ public immutable(Type)[] getTypes(immutable(TypedNode)[] values) {
 
 private immutable(TypedNode) addCastNode(immutable TypedNode fromNode, immutable Type toType) {
     // Get the conversion chain from the node type to the parameter type
-    auto fromLiteralNode = cast(immutable LiteralNode) fromNode;
     auto conversions = new TypeConversionChain();
-    if (fromLiteralNode !is null) {
-        bool convertible = fromLiteralNode.getType().specializableTo(toType, conversions);
-        assert (convertible);
-    } else {
-        bool convertible = fromNode.getType().convertibleTo(toType, conversions);
-        assert (convertible);
-    }
+    bool convertible = fromNode.getType().specializableTo(toType, conversions);
+    assert (convertible);
     // Wrap the node in casts based on the chain conversion type
     if (conversions.isIdentity() || conversions.isReferenceWidening()) {
         // Nothing to cast
@@ -1164,6 +1158,7 @@ private immutable(TypedNode) addCastNode(immutable TypedNode fromNode, immutable
     }
     if (conversions.isNumericWidening()) {
         // If the "from" node is a literal, use specialization instead of a cast
+        auto fromLiteralNode = cast(immutable LiteralNode) fromNode;
         if (fromLiteralNode !is null) {
             return specializeNode(fromLiteralNode, toType);
         }
@@ -1174,6 +1169,7 @@ private immutable(TypedNode) addCastNode(immutable TypedNode fromNode, immutable
     }
     if (conversions.isNumericNarrowing() || conversions.isReferenceNarrowing()) {
         // Must use specialization instead of a cast
+        auto fromLiteralNode = cast(immutable LiteralNode) fromNode;
         assert (fromLiteralNode !is null);
         return specializeNode(fromLiteralNode, toType);
     }

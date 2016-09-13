@@ -279,17 +279,10 @@ public immutable class Interpreter {
         if (referenceType is null) {
             throw new SourceException(format("Not a composite type %s", valueType.toString()), indexAccess.value);
         }
-        // Check if the index type is a uint64
+        // Check if the index type is uint64
         auto indexType = indexNode.getType();
         auto conversions = new TypeConversionChain();
-        bool indexConvertible;
-        auto literalIndex = cast(immutable IntegerLiteralType) indexType;
-        if (literalIndex !is null) {
-            indexConvertible = literalIndex.specializableTo(AtomicType.UINT64, conversions);
-        } else {
-            indexConvertible = indexType.convertibleTo(AtomicType.UINT64, conversions);
-        }
-        if (!indexConvertible) {
+        if (!indexType.specializableTo(AtomicType.UINT64, conversions)) {
             throw new SourceException(format("Index type %s is not convertible to uint64", indexType.toString()),
                     indexAccess.index);
         }
