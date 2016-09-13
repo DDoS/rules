@@ -42,7 +42,7 @@ public immutable class Interpreter {
                 wrapped = &unsized;
             } else {
                 // Check if the size has type uint64
-                auto sizeNodeType = dimension.interpret(context).getType();
+                auto sizeNodeType = dimension.interpret(context).reduceLiterals().getType();
                 auto conversions = new TypeConversionChain();
                 if (!sizeNodeType.specializableTo(AtomicType.UINT64, conversions)) {
                     throw new SourceException(format("Size type %s is not convertible to uint64", sizeNodeType.toString()),
@@ -164,7 +164,7 @@ public immutable class Interpreter {
     private static immutable(TypedNode) interpretTupleLiteral(Context context, CompositeLiteral compositeLiteral) {
         immutable(TypedNode)[] valueNodes = [];
         foreach (LabeledExpression value; compositeLiteral.values) {
-            valueNodes ~= value.expression.interpret(context);
+            valueNodes ~= value.expression.interpret(context).reduceLiterals();
             auto label = value.label;
             // Tuples are un-labeled
             if (label !is null) {
@@ -178,7 +178,7 @@ public immutable class Interpreter {
         immutable(TypedNode)[] valueNodes = [];
         immutable(StructLabel)[] labels;
         foreach (LabeledExpression value; compositeLiteral.values) {
-            valueNodes ~= value.expression.interpret(context);
+            valueNodes ~= value.expression.interpret(context).reduceLiterals();
             auto label = value.label;
             // Structs only have identifier labels
             if (label is null) {
@@ -196,7 +196,7 @@ public immutable class Interpreter {
         immutable(TypedNode)[] valueNodes = [];
         immutable(ArrayLabel)[] labels = [];
         foreach (LabeledExpression value; compositeLiteral.values) {
-            valueNodes ~= value.expression.interpret(context);
+            valueNodes ~= value.expression.interpret(context).reduceLiterals();
             labels ~= checkArrayLabel(value);
         }
         return new immutable ArrayLiteralNode(valueNodes, labels, compositeLiteral.start, compositeLiteral.end);
@@ -251,7 +251,7 @@ public immutable class Interpreter {
     }
 
     public immutable(MemberAccessNode) interpretMemberAccess(Context context, MemberAccess memberAccess) {
-        auto valueNode = memberAccess.value.interpret(context);
+        auto valueNode = memberAccess.value.interpret(context).reduceLiterals();
         return interpretMemberAccess(memberAccess.value, valueNode, memberAccess.name);
     }
 
@@ -271,8 +271,8 @@ public immutable class Interpreter {
 
     public immutable(TypedNode) interpretIndexAccess(Context context, IndexAccess indexAccess) {
         // Interpret both the value and the index
-        auto valueNode = indexAccess.value.interpret(context);
-        auto indexNode = indexAccess.index.interpret(context);
+        auto valueNode = indexAccess.value.interpret(context).reduceLiterals();
+        auto indexNode = indexAccess.index.interpret(context).reduceLiterals();
         // Check if the value type is a indexible
         auto valueType = valueNode.getType();
         auto referenceType = cast(immutable ReferenceType) valueType;
@@ -300,7 +300,7 @@ public immutable class Interpreter {
             auto memberAccess = cast(MemberAccess) value;
             if (memberAccess is null) {
                 // No member, this is just a value call (no function name is given)
-                return interpretValueCall(value, value.interpret(context));
+                return interpretValueCall(value, value.interpret(context).reduceLiterals());
             }
             // Otherwise the value is being called with the member name as the function name
             auto lastName = memberAccess.name;
@@ -346,7 +346,7 @@ public immutable class Interpreter {
 
     private static immutable(TypedNode) interpretValueFunctionCall(Context context, FunctionCall call, Expression value,
             Identifier name) {
-        auto valueNode = value.interpret(context);
+        auto valueNode = value.interpret(context).reduceLiterals();
         // If the value is a multi-part name, then all but the last part should
         // resolve to some value. The last name is either a structure member or
         // the name of a function (when using UFCS). The member has priority
@@ -408,7 +408,7 @@ public immutable class Interpreter {
         immutable(TypedNode)[] argumentNodes;
         argumentNodes.reserve(call.arguments.length);
         foreach (argument; call.arguments) {
-            argumentNodes ~= argument.interpret(context);
+            argumentNodes ~= argument.interpret(context).reduceLiterals();
         }
         return argumentNodes;
     }
@@ -467,13 +467,13 @@ public immutable class Interpreter {
             }
             case "===": {
                 // The left and right types must be reference types or null
-                auto leftNode = valueCompare.left.interpret(context);
+                auto leftNode = valueCompare.left.interpret(context).reduceLiterals();
                 if (cast(immutable ReferenceType) leftNode.getType() is null
                         && cast(immutable NullType) leftNode.getType() is null) {
                     throw new SourceException(format("Left type must be a reference type or null, not %s",
                             leftNode.getType()), valueCompare.left);
                 }
-                auto rightNode = valueCompare.right.interpret(context);
+                auto rightNode = valueCompare.right.interpret(context).reduceLiterals();
                 if (cast(immutable ReferenceType) rightNode.getType() is null
                         && cast(immutable NullType) rightNode.getType() is null) {
                     throw new SourceException(format("Right type must be a reference type or null, not %s",
@@ -486,7 +486,7 @@ public immutable class Interpreter {
 
     public immutable(TypedNode) interpretTypeCompare(Context context, TypeCompare typeCompare) {
         // The value must be a reference type
-        auto valueNode = typeCompare.value.interpret(context);
+        auto valueNode = typeCompare.value.interpret(context).reduceLiterals();
         if (cast(immutable ReferenceType) valueNode.getType() is null) {
             throw new SourceException(format("Value must be a reference type, not %s", valueNode.getType()), typeCompare.value);
         }
@@ -538,11 +538,11 @@ public immutable class Interpreter {
 
     public immutable(TypedNode) interpretLogicalAnd(Context context, LogicalAnd logicalAnd) {
         // Both the left and right nodes must be bools
-        auto leftNode = logicalAnd.left.interpret(context);
+        auto leftNode = logicalAnd.left.interpret(context).reduceLiterals();
         if (!AtomicType.BOOL.opEquals(leftNode.getType())) {
             throw new SourceException(format("Left type must be bool, not %s", leftNode.getType()), logicalAnd.left);
         }
-        auto rightNode = logicalAnd.right.interpret(context);
+        auto rightNode = logicalAnd.right.interpret(context).reduceLiterals();
         if (!AtomicType.BOOL.opEquals(rightNode.getType())) {
             throw new SourceException(format("Right type must be bool, not %s", rightNode.getType()), logicalAnd.right);
         }
@@ -557,11 +557,11 @@ public immutable class Interpreter {
 
     public immutable(TypedNode) interpretLogicalOr(Context context, LogicalOr logicalOr) {
         // Both the left and right nodes must be bools
-        auto leftNode = logicalOr.left.interpret(context);
+        auto leftNode = logicalOr.left.interpret(context).reduceLiterals();
         if (!AtomicType.BOOL.opEquals(leftNode.getType())) {
             throw new SourceException(format("Left type must be bool, not %s", leftNode.getType()), logicalOr.left);
         }
-        auto rightNode = logicalOr.right.interpret(context);
+        auto rightNode = logicalOr.right.interpret(context).reduceLiterals();
         if (!AtomicType.BOOL.opEquals(rightNode.getType())) {
             throw new SourceException(format("Right type must be bool, not %s", rightNode.getType()), logicalOr.right);
         }
@@ -580,14 +580,14 @@ public immutable class Interpreter {
 
     public immutable(TypedNode) interpretConditional(Context context, Conditional conditional) {
         // Get the condition node and make sure it is a bool type
-        auto conditionNode = conditional.condition.interpret(context);
+        auto conditionNode = conditional.condition.interpret(context).reduceLiterals();
         if (!AtomicType.BOOL.opEquals(conditionNode.getType())) {
             throw new SourceException(format("Condition type must be bool, not %s", conditionNode.getType()),
                     conditional.condition);
         }
         // Get the value nodes
-        auto trueNode = conditional.trueValue().interpret(context);
-        auto falseNode = conditional.falseValue().interpret(context);
+        auto trueNode = conditional.trueValue().interpret(context).reduceLiterals();
+        auto falseNode = conditional.falseValue().interpret(context).reduceLiterals();
         return new immutable ConditionalNode(conditionNode, trueNode, falseNode, conditional.start, conditional.end);
     }
 }

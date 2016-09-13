@@ -449,7 +449,7 @@ public immutable class TupleLiteralNode : ReferenceNode, LiteralNode {
     private size_t _end;
 
     public this(immutable(TypedNode)[] values, size_t start, size_t end) {
-        this.values = values.reduceLiterals();
+        this.values = values;
         this.type = new immutable TupleLiteralType(this.values.getTypes());
         _start = start;
         _end = end;
@@ -536,7 +536,7 @@ public immutable class StructLiteralNode : ReferenceNode, LiteralNode {
     public this(immutable(TypedNode)[] values, immutable(StructLabel)[] labels, size_t start, size_t end) {
         assert(values.length > 0);
         assert(values.length == labels.length);
-        this.values = values.reduceLiterals();
+        this.values = values;
         // Ensure the struct labels are unique
         foreach (i, labelA; labels) {
             foreach (j, labelB; labels) {
@@ -664,18 +664,16 @@ public immutable class ArrayLiteralNode : LiteralNode, ReferenceNode {
             }
         }
         auto size = hasIndexLabel ? maxIndex + 1 : 0;
-        // Reduce the array member literals
-        auto reducedValues = values.reduceLiterals();
         // Try to create the sized array type (can fail if there is no upper bound)
         string exceptionMessage;
-        type = collectExceptionMessage(new immutable SizedArrayLiteralType(reducedValues.getTypes(), size),
+        type = collectExceptionMessage(new immutable SizedArrayLiteralType(values.getTypes(), size),
                 exceptionMessage);
         if (exceptionMessage !is null) {
             throw new SourceException(exceptionMessage, start, end);
         }
         // Add casts to the component types on the values
         immutable(TypedNode)[] castValues = [];
-        foreach (value; reducedValues) {
+        foreach (value; values) {
             castValues ~= value.addCastNode(type.componentType);
         }
         this.values = castValues;
@@ -804,7 +802,7 @@ public immutable class MemberAccessNode : TypedNode {
     private size_t _end;
 
     public this(immutable TypedNode value, string name, size_t start, size_t end) {
-        this.value = value.reduceLiterals();
+        this.value = value;
         this.name = name;
         type = this.value.getType().castOrFail!(immutable StructureType)().getMemberType(name);
         assert (type !is null);
@@ -849,8 +847,8 @@ public immutable class IndexAccessNode : TypedNode {
     private size_t _end;
 
     public this(immutable TypedNode value, immutable TypedNode index, size_t start, size_t end) {
-        this.value = value.reduceLiterals();
-        this.index = index.reduceLiterals().addCastNode(AtomicType.UINT64);
+        this.value = value;
+        this.index = index.addCastNode(AtomicType.UINT64);
         _start = start;
         _end = end;
         // Next find the acess type
@@ -926,7 +924,7 @@ public immutable class FunctionCallNode : TypedNode {
         // Perform literal reduction then wrap the argument nodes in casts to make the conversions explicit
         immutable(TypedNode)[] castArguments = [];
         foreach (i, arg; arguments) {
-            castArguments ~= arg.reduceLiterals().addCastNode(func.parameterTypes[i]);
+            castArguments ~= arg.addCastNode(func.parameterTypes[i]);
         }
         this.arguments = castArguments;
         _start = start;
@@ -1089,10 +1087,10 @@ public immutable class ConditionalNode : TypedNode {
 
     public this(immutable TypedNode condition, immutable TypedNode whenTrue, immutable TypedNode whenFalse,
             size_t start, size_t end) {
-        this.condition = condition.reduceLiterals();
+        this.condition = condition;
         // Reduce the literals of the possible values
-        auto reducedTrue = whenTrue.reduceLiterals();
-        auto reducedFalse = whenFalse.reduceLiterals();
+        auto reducedTrue = whenTrue;
+        auto reducedFalse = whenFalse;
         // The type is the LUB of the two possible values
         type = reducedTrue.getType().lowestUpperBound(reducedFalse.getType());
         if (type is null) {
