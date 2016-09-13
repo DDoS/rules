@@ -27,6 +27,22 @@ public class Context {
         ];
     }
 
+    public immutable(Type) resolveType(string name) {
+        // Search the name spaces in order of priority without shadowing
+        immutable(Type)[] types = [];
+        foreach (names; priority) {
+            auto type = names.getType(name);
+            if (type is null) {
+                continue;
+            }
+            types ~= type;
+        }
+        if (types.length > 1) {
+            throw new Exception(format("Found more than one type for the name %s", name));
+        }
+        return types.length <= 0 ? null : types[0];
+    }
+
     public immutable(Field) resolveField(string name) {
         // Search the name spaces in order of priority
         // Allowing higher priority ones to shadow the others
@@ -41,7 +57,7 @@ public class Context {
     }
 
     public immutable(Function) resolveFunction(string name, immutable(Type)[] argumentTypes) {
-        // Search the name spaces in order of priority, but without shadowing
+        // Search the name spaces in order of priority without shadowing
         immutable(ApplicableFunction)[] functions;
         foreach (names; priority) {
             functions ~= names.getFunctions(name, argumentTypes);
@@ -164,11 +180,16 @@ public immutable struct ApplicableFunction {
 }
 
 public interface NameSpace {
+    public immutable(Type) getType(string name);
     public immutable(Field) getField(string name);
     public immutable(ApplicableFunction)[] getFunctions(string name, immutable(Type)[] argumentTypes);
 }
 
 public class ForeignNameSpace : NameSpace {
+    public override immutable(Type) getType(string name) {
+        return null;
+    }
+
     public override immutable(Field) getField(string name) {
         return null;
     }
@@ -179,6 +200,10 @@ public class ForeignNameSpace : NameSpace {
 }
 
 public class ImportedNameSpace : NameSpace {
+    public override immutable(Type) getType(string name) {
+        return null;
+    }
+
     public override immutable(Field) getField(string name) {
         return null;
     }
@@ -190,6 +215,10 @@ public class ImportedNameSpace : NameSpace {
 
 public class ScopeNameSpace : NameSpace {
     private ScopeNameSpace parent;
+
+    public override immutable(Type) getType(string name) {
+        return null;
+    }
 
     public override immutable(Field) getField(string name) {
         return null;
@@ -370,6 +399,11 @@ public class IntrinsicNameSpace : NameSpace {
     }
 
     private this() {
+    }
+
+    public override immutable(Type) getType(string name) {
+        auto type = name in AtomicType.BY_NAME;
+        return type is null ? null : *type;
     }
 
     public override immutable(Field) getField(string name) const {

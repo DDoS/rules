@@ -4,6 +4,7 @@ import std.format : format;
 
 import ruleslang.syntax.source;
 import ruleslang.syntax.token;
+import ruleslang.syntax.ast.type;
 import ruleslang.syntax.ast.expression;
 import ruleslang.semantic.tree;
 import ruleslang.semantic.context;
@@ -15,6 +16,61 @@ public immutable class Interpreter {
     public static immutable Interpreter INSTANCE = new immutable Interpreter();
 
     private this() {
+    }
+
+    public immutable(Type) interpretNamedType(Context context, NamedTypeAst namedType) {
+        auto name = namedType.name;
+        if (name.length != 1) {
+            throw new SourceException("Multi-part type names are not supported right now", namedType);
+        }
+        // Get the type from the name by doing a context lookup
+        auto nameSource = name[0].getSource();
+        string exceptionMessage;
+        auto type = collectExceptionMessage(context.resolveType(nameSource), exceptionMessage);
+        if (exceptionMessage !is null) {
+            throw new SourceException(exceptionMessage, name[0]);
+        }
+        if (type is null) {
+            throw new SourceException(format("No type for name %s", nameSource), name[0]);
+        }
+        // Add array dimensions if any
+        immutable(Type)* wrapped = &type;
+        foreach (dimension; namedType.dimensions) {
+            if (dimension is null) {
+                // Null means unsized
+                immutable(Type) unsized = new immutable ArrayType(*wrapped);
+                wrapped = &unsized;
+            } else {
+                // Check if the size has type uint64
+                auto sizeNodeType = dimension.interpret(context).getType();
+                auto conversions = new TypeConversionChain();
+                if (!sizeNodeType.specializableTo(AtomicType.UINT64, conversions)) {
+                    throw new SourceException(format("Size type %s is not convertible to uint64", sizeNodeType.toString()),
+                            dimension);
+                }
+                // Try to get the size (should be available as a literal)
+                auto literalSizeNodeType = cast(immutable IntegerLiteralType) sizeNodeType;
+                if (literalSizeNodeType is null) {
+                    throw new SourceException("Array size must be known at compile time", dimension);
+                }
+                auto size = literalSizeNodeType.unsignedValue();
+                immutable(Type) sized = new immutable SizedArrayType(*wrapped, size);
+                wrapped = &sized;
+            }
+        }
+        return *wrapped;
+    }
+
+    public immutable(AnyType) interpretAnyType(Context context, AnyTypeAst namedType) {
+        return AnyType.INSTANCE;
+    }
+
+    public immutable(TupleType) interpretTupleType(Context context, TupleTypeAst namedType) {
+        assert (0);
+    }
+
+    public immutable(StructureType) interpretStructType(Context context, StructTypeAst namedType) {
+        assert (0);
     }
 
     public immutable(NullLiteralNode) interpretNullLiteral(Context context, NullLiteral nullLiteral) {

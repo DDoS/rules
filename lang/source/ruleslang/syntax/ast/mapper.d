@@ -6,19 +6,19 @@ import ruleslang.syntax.ast.expression;
 import ruleslang.syntax.ast.statement;
 
 public abstract class TypeAstMapper {
-    public TypeAst mapNamedTypeAst(NamedTypeAst type) {
+    public TypeAst mapNamedType(NamedTypeAst type) {
         return type;
     }
 
-    public TypeAst mapAnyTypeAst(AnyTypeAst type) {
+    public TypeAst mapAnyType(AnyTypeAst type) {
         return type;
     }
 
-    public TypeAst mapTupleTypeAst(TupleTypeAst type) {
+    public TypeAst mapTupleType(TupleTypeAst type) {
         return type;
     }
 
-    public TypeAst mapStructTypeAst(StructTypeAst type) {
+    public TypeAst mapStructType(StructTypeAst type) {
         return type;
     }
 }

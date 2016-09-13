@@ -230,6 +230,7 @@ public immutable class AtomicType : Type {
     private static immutable immutable(AtomicType)[immutable(DataInfo)] SIGNED_TO_UNSIGNED;
     private static immutable immutable(AtomicType)[immutable(DataInfo)] INTEGER_TO_FLOAT;
     private static immutable immutable(AtomicType)[immutable(DataInfo)] INFO_TO_SINGLETON;
+    public static immutable immutable(AtomicType)[string] BY_NAME;
     public string name;
     private DataInfo info;
 
@@ -281,6 +282,14 @@ public immutable class AtomicType : Type {
             FP32.info: FP32, FP64.info: FP64
         ];
         INFO_TO_SINGLETON = infoToSingleton.assumeUnique();
+
+        immutable(AtomicType)[string] byName = [
+            BOOL.name: BOOL,
+            UINT8.name: UINT8, SINT8.name: SINT8, UINT16.name: UINT16, SINT16.name: SINT16,
+            UINT32.name: UINT32, SINT32.name: SINT32, UINT64.name: UINT64, SINT64.name: SINT64,
+            FP32.name: FP32, FP64.name: FP64
+        ];
+        BY_NAME = byName.assumeUnique();
     }
 
     private this(string name, uint bitCount, bool signed, bool fp) {

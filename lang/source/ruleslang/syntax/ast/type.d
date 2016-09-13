@@ -7,6 +7,10 @@ import ruleslang.syntax.source;
 import ruleslang.syntax.token;
 import ruleslang.syntax.ast.expression;
 import ruleslang.syntax.ast.mapper;
+import ruleslang.semantic.context;
+import ruleslang.semantic.type;
+import ruleslang.semantic.context;
+import ruleslang.semantic.interpret;
 
 import ruleslang.util;
 
@@ -14,6 +18,7 @@ public interface TypeAst {
     @property public size_t start();
     @property public size_t end();
     public TypeAst map(ExpressionMapper mapper);
+    public immutable(Type) interpret(Context context);
     public string toString();
 }
 
@@ -48,7 +53,11 @@ public class NamedTypeAst : TypeAst {
         foreach (i, dimension; _dimensions) {
             _dimensions[i] = dimension is null ? null : dimension.map(mapper);
         }
-        return mapper.mapNamedTypeAst(this);
+        return mapper.mapNamedType(this);
+    }
+
+    public override immutable(Type) interpret(Context context) {
+        return Interpreter.INSTANCE.interpretNamedType(context, this);
     }
 
     public override string toString() {
@@ -76,7 +85,11 @@ public class AnyTypeAst : TypeAst {
     }
 
     public override TypeAst map(ExpressionMapper mapper) {
-        return mapper.mapAnyTypeAst(this);
+        return mapper.mapAnyType(this);
+    }
+
+    public override immutable(AnyType) interpret(Context context) {
+        return Interpreter.INSTANCE.interpretAnyType(context, this);
     }
 
     public override string toString() {
@@ -111,7 +124,11 @@ public class TupleTypeAst : TypeAst {
         foreach (i, memberType; _memberTypes) {
             _memberTypes[i] = memberType.map(mapper);
         }
-        return mapper.mapTupleTypeAst(this);
+        return mapper.mapTupleType(this);
+    }
+
+    public override immutable(TupleType) interpret(Context context) {
+        return Interpreter.INSTANCE.interpretTupleType(context, this);
     }
 
     public override string toString() {
@@ -153,7 +170,11 @@ public class StructTypeAst : TypeAst {
         foreach (i, memberType; _memberTypes) {
             _memberTypes[i] = memberType.map(mapper);
         }
-        return mapper.mapStructTypeAst(this);
+        return mapper.mapStructType(this);
+    }
+
+    public override immutable(StructureType) interpret(Context context) {
+        return Interpreter.INSTANCE.interpretStructType(context, this);
     }
 
     public override string toString() {
