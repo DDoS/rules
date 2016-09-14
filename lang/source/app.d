@@ -4,8 +4,9 @@ import std.conv : to;
 import ruleslang.syntax.source;
 import ruleslang.syntax.token;
 import ruleslang.syntax.tokenizer;
-import ruleslang.syntax.ast.statement;
 import ruleslang.syntax.ast.expression;
+import ruleslang.syntax.ast.statement;
+import ruleslang.syntax.parser.expression;
 import ruleslang.syntax.parser.statement;
 import ruleslang.semantic.opexpand;
 import ruleslang.semantic.type;
@@ -18,9 +19,7 @@ import ruleslang.evaluation.evaluate;
 void main() {
     /*
         TODO:
-            Interpret type declarations
             Interpret initializers
-            Interpret type compares
             Parse variable declarations
             Interpret variable declarations
             Interpret assignments
@@ -28,28 +27,35 @@ void main() {
             Interpret control flow
     */
     auto context = new Context();
+    context.enterFunction();
     auto runtime = new IntrinsicRuntime();
+    bool expressionMode = false;
     while (true) {
+        if (expressionMode) {
+            stdout.write(">>");
+        }
         stdout.write("> ");
         auto source = stdin.readln();
         if (source.length <= 0) {
             stdout.writeln();
             break;
         }
+        if (source[0] == '\u0001') {
+            expressionMode ^= true;
+            continue;
+        }
         try {
             auto tokenizer = new Tokenizer(new DCharReader(source));
-            foreach (statement; tokenizer.parseStatements()) {
-                statement = statement.expandOperators();
-                stdout.writeln(statement.toString());
-                auto assignment = cast(Assignment) statement;
-                if (assignment !is null) {
-                    assignment.value.printInfo(context, runtime);
-                    continue;
+            if (expressionMode) {
+                while (tokenizer.head().getKind() == Kind.INDENTATION) {
+                    tokenizer.advance();
                 }
-                auto functionCall = cast(FunctionCall) statement;
-                if (functionCall !is null) {
-                    functionCall.printInfo(context, runtime);
-                    continue;
+                if (tokenizer.head().getKind() != Kind.EOF) {
+                    tokenizer.parseExpression().evaluate(context, runtime);
+                }
+            } else {
+                foreach (statement; tokenizer.parseStatements()) {
+                    statement.evaluate(context, runtime);
                 }
             }
         } catch (SourceException exception) {
@@ -58,29 +64,39 @@ void main() {
     }
 }
 
-private void printInfo(Expression expression, Context context, Runtime runtime) {
+private void evaluate(Expression expression, Context context, Runtime runtime) {
+    expression = expression.expandOperators();
+    stdout.writeln("syntax: ", expression.toString());
     auto node = expression.interpret(context);
     if (cast(NullNode) node !is null) {
         return;
     }
-    stdout.writeln("RHS semantic: ", node.toString());
-    auto typedNode = cast(immutable TypedNode) node;
-    if (typedNode is null) {
-        return;
-    }
-    auto reducedNode = typedNode.reduceLiterals();
+    stdout.writeln("semantic: ", node.toString());
+    auto reducedNode = node.reduceLiterals();
     auto type = reducedNode.getType();
-    stdout.writeln("RHS type: ", type.toString());
+    stdout.writeln("type: ", type.toString());
     try {
         reducedNode.evaluate(runtime);
-        stdout.writeln("RHS value: ", runtime.getStackTop(type));
+        auto valueAddress = runtime.stack.peekAddress(type);
+        stdout.writeln("value: ", runtime.asString(type, valueAddress));
     } catch (NotImplementedException ignored) {
-        stdout.writeln("RHS value not implemented: ", ignored.msg);
+        stdout.writeln("value not implemented: ", ignored.msg);
     }
 }
 
-private string getStackTop(Runtime runtime, immutable Type type) {
-    return runtime.asString(type, runtime.stack.peekAddress(type));
+private void evaluate(Statement statement, Context context, Runtime runtime) {
+    statement = statement.expandOperators();
+    stdout.writeln("syntax: ", statement.toString());
+    auto node = statement.interpret(context);
+    if (cast(NullNode) node !is null) {
+        return;
+    }
+    stdout.writeln("semantic: ", node.toString());
+    try {
+        node.evaluate(runtime);
+    } catch (NotImplementedException ignored) {
+        stdout.writeln("value not implemented: ", ignored.msg);
+    }
 }
 
 private string asString(Runtime runtime, immutable Type type, void* address) {
