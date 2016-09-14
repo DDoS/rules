@@ -99,6 +99,7 @@ private Expression parseAtom(Tokenizer tokens) {
         if (tokens.head() != ")") {
             throw new SourceException("Expected ')'", tokens.head());
         }
+        expression.end = tokens.head().end;
         tokens.advance();
         return expression;
     }
