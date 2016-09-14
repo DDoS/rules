@@ -22,10 +22,3 @@ _testmain.go
 *.exe
 *.test
 *.prof
-
-# Intellij Files
-*.iml
-.idea
-
-bower_components
-node_modules
