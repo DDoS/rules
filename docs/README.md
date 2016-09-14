@@ -1,7 +1,3 @@
-# Ruler
-
-###### A scalable and cloud-ready business rules processing engine
-
 # Ruler Introduction
 
 ## What does Ruler do?
