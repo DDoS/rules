@@ -571,6 +571,23 @@ unittest {
     interpretExpFails("2 if \"lol\" else 2");
 }
 
+unittest {
+    auto context = new Context();
+    assertEqual(
+        "TypeDefinition(def test: bool)",
+        interpretStmt("def test: bool", context)
+    );
+    assertEqual(
+        "TypeDefinition(def wow: {uint32[1], {bool b}, fp32})",
+        interpretStmt("def wow: {uint32[1], {test b}, fp32}", context)
+    );
+    interpretStmtFails("def test: uint32", context);
+    assertEqual(
+        "TypeCompare(EmptyLiteralNode({}) >>: {bool}) | bool",
+        interpretExp("{} >>: {test}", context)
+    );
+}
+
 private string interpretExp(alias info = getAllInfo)(string source, Context context = new Context()) {
     auto tokenizer = new Tokenizer(new DCharReader(source));
     if (tokenizer.head().getKind() == Kind.INDENTATION) {
