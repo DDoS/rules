@@ -1,6 +1,7 @@
 module ruleslang.semantic.interpret;
 
 import std.format : format;
+import std.typecons : Rebindable;
 
 import ruleslang.syntax.source;
 import ruleslang.syntax.token;
@@ -35,12 +36,12 @@ public immutable class Interpreter {
             throw new SourceException(format("No type for name %s", nameSource), name[0]);
         }
         // Add array dimensions if any
-        immutable(Type)* wrapped = &type;
+        Rebindable!(immutable Type) wrapped = type;
         foreach (dimension; namedType.dimensions) {
             if (dimension is null) {
                 // Null means unsized
-                immutable(Type) unsized = new immutable ArrayType(*wrapped);
-                wrapped = &unsized;
+                immutable(Type) unsized = new immutable ArrayType(wrapped);
+                wrapped = unsized;
             } else {
                 // Check if the size has type uint64
                 auto sizeNodeType = dimension.interpret(context).reduceLiterals().getType();
@@ -55,11 +56,11 @@ public immutable class Interpreter {
                     throw new SourceException("Array size must be known at compile time", dimension);
                 }
                 auto size = literalSizeNodeType.unsignedValue();
-                immutable(Type) sized = new immutable SizedArrayType(*wrapped, size);
-                wrapped = &sized;
+                immutable(Type) sized = new immutable SizedArrayType(wrapped, size);
+                wrapped = sized;
             }
         }
-        return *wrapped;
+        return wrapped;
     }
 
     public immutable(AnyType) interpretAnyType(Context context, AnyTypeAst anyType) {
@@ -141,12 +142,12 @@ public immutable class Interpreter {
         }
         immutable(TypedNode) fieldAccess = new immutable FieldAccessNode(field, firstPart.start, firstPart.end);
         // If the name has more parts, treat the next as a structure member accesses
-        immutable(TypedNode)* lastAccess = &fieldAccess;
+        Rebindable!(immutable TypedNode) lastAccess = fieldAccess;
         foreach (i, part; name[1 .. $]) {
-            immutable(TypedNode) memberAccess = interpretMemberAccess(new NameReference(name[0 .. i + 1]), *lastAccess, part);
-            lastAccess = &memberAccess;
+            immutable(TypedNode) memberAccess = interpretMemberAccess(new NameReference(name[0 .. i + 1]), lastAccess, part);
+            lastAccess = memberAccess;
         }
-        return *lastAccess;
+        return lastAccess;
     }
 
     public immutable(TypedNode) interpretCompositeLiteral(Context context, CompositeLiteral compositeLiteral) {
@@ -501,6 +502,12 @@ public immutable class Interpreter {
         if (cast(immutable ReferenceType) valueNode.getType() is null) {
             throw new SourceException(format("Value must be a reference type, not %s", valueNode.getType()), typeCompare.value);
         }
+        // Get the type to compare against
+        auto type = typeCompare.type.interpret(context);
+        auto referenceType = cast(immutable ReferenceType) type;
+        if (referenceType is null) {
+            throw new SourceException(format("Must be a reference type, not %s", type.toString()), typeCompare.type);
+        }
         // Get the comparison kind from the operator
         TypeCompareNode.Kind kind;
         final switch (typeCompare.operator.getSource()) with (TypeCompareNode.Kind) {
@@ -525,12 +532,6 @@ public immutable class Interpreter {
             case "<:>":
                 kind = DISTINCT;
                 break;
-        }
-        // Get the type to compare against
-        auto type = typeCompare.type.interpret(context);
-        auto referenceType = cast(immutable ReferenceType) type;
-        if (referenceType is null) {
-            throw new SourceException(format("Must be a reference type, not %s", type.toString()), typeCompare.type);
         }
         return new immutable TypeCompareNode(valueNode, referenceType, kind, typeCompare.start, typeCompare.end);
     }

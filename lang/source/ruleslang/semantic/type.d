@@ -4,6 +4,7 @@ import std.format : format;
 import std.array : split;
 import std.algorithm.comparison : min;
 import std.algorithm.searching : canFind;
+import std.typecons : Rebindable;
 import std.exception : assumeUnique;
 import std.math: isNaN, isInfinity;
 import std.utf : codeLength;
@@ -425,20 +426,20 @@ public immutable class AtomicType : Type {
         auto thisParents = this.getSupertypes();
         auto otherParents = other.getSupertypes();
         // Then we recurse on each combinatio of super types, and keep the smallest result
-        immutable(Type)* candidate = null;
+        Rebindable!(immutable Type) candidate = null;
         foreach (thisParent; thisParents) {
             foreach (otherParent; otherParents) {
                 auto lub = thisParent.lowestUpperBound(otherParent);
                 if (lub is null) {
                     continue;
                 }
-                if (candidate == null || lub.convertibleTo(*candidate, ignored)) {
-                    candidate = &lub;
+                if (candidate == null || lub.convertibleTo(candidate, ignored)) {
+                    candidate = lub;
                 }
             }
         }
         // It's possible that no LUB exists
-        return candidate == null ? null : *candidate;
+        return candidate;
     }
 
     public override immutable(AtomicType) withoutLiteral() {
@@ -1274,18 +1275,16 @@ public immutable class SizedArrayLiteralType : SizedArrayType, LiteralType {
         assert (memberTypes.length <= size + 1);
         _memberTypes = memberTypes;
         // The component type is the lowest upper bound of the components
-        auto firstType = memberTypes[0];
-        immutable(Type)* componentType = &firstType;
+        Rebindable!(immutable Type) componentType = memberTypes[0];
         foreach (memberType; memberTypes[1 .. $]) {
-            auto currentLub = *componentType;
-            auto lub = currentLub.lowestUpperBound(memberType);
+            auto lub = componentType.lowestUpperBound(memberType);
             if (lub is null) {
                 throw new Exception(format("No common supertype for %s and %s",
-                        currentLub.toString(), memberType.toString()));
+                        componentType.toString(), memberType.toString()));
             }
-            componentType = &lub;
+            componentType = lub;
         }
-        super(*componentType, size);
+        super(componentType, size);
     }
 
     public override bool specializableTo(immutable Type type, TypeConversionChain conversions) {
