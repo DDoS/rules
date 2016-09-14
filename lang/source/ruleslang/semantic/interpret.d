@@ -40,8 +40,7 @@ public immutable class Interpreter {
         foreach (dimension; namedType.dimensions) {
             if (dimension is null) {
                 // Null means unsized
-                immutable(Type) unsized = new immutable ArrayType(wrapped);
-                wrapped = unsized;
+                wrapped = new immutable ArrayType(wrapped);
             } else {
                 // Check if the size has type uint64
                 auto sizeNodeType = dimension.interpret(context).reduceLiterals().getType();
@@ -56,8 +55,7 @@ public immutable class Interpreter {
                     throw new SourceException("Array size must be known at compile time", dimension);
                 }
                 auto size = literalSizeNodeType.unsignedValue();
-                immutable(Type) sized = new immutable SizedArrayType(wrapped, size);
-                wrapped = sized;
+                wrapped = new immutable SizedArrayType(wrapped, size);
             }
         }
         return wrapped;
