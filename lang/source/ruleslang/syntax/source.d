@@ -136,7 +136,7 @@ public class SourceException : Exception {
         // find the line number the error occurred on
         size_t lineNumber = findLine(source, min(_start, source.length - 1));
         // find start and end of the line containing the error
-        ptrdiff_t lineStart = _start, lineEnd = _start;
+        size_t lineStart = _start, lineEnd = _start;
         while (lineStart > 0 && !source[lineStart - 1].isNewLineChar()) {
             lineStart--;
         }

@@ -58,7 +58,7 @@ public class Tokenizer {
             // is not after a new line
             auto start = chars.count;
             auto indentation = chars.collectIndentation();
-            auto end = chars.count - 1 < start ? start : chars.count - 1;
+            auto end = chars.count > start ? chars.count - 1 : start;
             token = new Indentation(indentation, start, end);
             while (chars.consumeIgnored()) {
                 // Remove trailing comments and whitespace
@@ -118,7 +118,7 @@ public class Tokenizer {
                 // Remove trailing comments and whitespace
             }
         }
-        return token is null ? new Eof(chars.count - 1) : token;
+        return token is null ? new Eof(chars.count) : token;
     }
 }
 
