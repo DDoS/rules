@@ -10,31 +10,59 @@ import ruleslang.semantic.symbol;
 import ruleslang.evaluation.runtime;
 import ruleslang.util;
 
+private enum ScopeKind {
+    TOP_LEVEL, FUNCTION, BLOCK
+}
+
 public class Context {
     private ForeignNameSpace foreignNames;
     private ImportedNameSpace importedNames;
-    private ScopeNameSpace scopeNames;
+    private SourceNameSpace sourceNames;
     private IntrinsicNameSpace intrisicNames;
-    private NameSpace[] priority;
 
     public this() {
         foreignNames = new ForeignNameSpace();
         importedNames = new ImportedNameSpace();
-        scopeNames = new ScopeNameSpace();
+        sourceNames = new SourceNameSpace(ScopeKind.TOP_LEVEL, null);
         intrisicNames = new IntrinsicNameSpace();
-        priority = [
-            cast(NameSpace) intrisicNames, cast(NameSpace) scopeNames, cast(NameSpace) importedNames
-        ];
+    }
+
+    public void enterFunction() {
+        auto functionNames = new SourceNameSpace(ScopeKind.FUNCTION, sourceNames);
+        sourceNames = functionNames;
+    }
+
+    public void enterBlock() {
+        assert (sourceNames.scopeKind == ScopeKind.FUNCTION || sourceNames.scopeKind == ScopeKind.BLOCK);
+        auto blockNames = new SourceNameSpace(ScopeKind.BLOCK, sourceNames);
+        sourceNames = blockNames;
+    }
+
+    public void exitScope() {
+        assert (sourceNames.scopeKind != ScopeKind.TOP_LEVEL);
+        sourceNames = sourceNames.parent;
+    }
+
+    public void defineType(string name, immutable(Type) type) {
+        // Definitions are done in the source name space
+        // and aren't allowed to shadow higher priority ones
+        auto existing = intrisicNames.getType(name);
+        if (existing !is null) {
+            throw new Exception(format("Cannot redeclare type %s", name));
+        }
+        sourceNames.defineType(name, type);
     }
 
     public immutable(Type) resolveType(string name) {
         // Search the name spaces in order of priority without shadowing
         immutable(Type)[] types = [];
-        foreach (names; priority) {
-            auto type = names.getType(name);
-            if (type is null) {
-                continue;
-            }
+        if (auto type = intrisicNames.getType(name)) {
+            types ~= type;
+        }
+        if (auto type = sourceNames.getType(name)) {
+            types ~= type;
+        }
+        if (auto type = importedNames.getType(name)) {
             types ~= type;
         }
         if (types.length > 1) {
@@ -47,11 +75,14 @@ public class Context {
         // Search the name spaces in order of priority
         // Allowing higher priority ones to shadow the others
         // TODO: allow shawdowing?
-        foreach (names; priority) {
-            auto field = names.getField(name);
-            if (field !is null) {
-                return field;
-            }
+        if (auto field = intrisicNames.getField(name)) {
+            return field;
+        }
+        if (auto field = sourceNames.getField(name)) {
+            return field;
+        }
+        if (auto field = importedNames.getField(name)) {
+            return field;
         }
         return null;
     }
@@ -59,9 +90,9 @@ public class Context {
     public immutable(Function) resolveFunction(string name, immutable(Type)[] argumentTypes) {
         // Search the name spaces in order of priority without shadowing
         immutable(ApplicableFunction)[] functions;
-        foreach (names; priority) {
-            functions ~= names.getFunctions(name, argumentTypes);
-        }
+        functions ~= intrisicNames.getFunctions(name, argumentTypes);
+        functions ~= sourceNames.getFunctions(name, argumentTypes);
+        functions ~= importedNames.getFunctions(name, argumentTypes);
         if (functions.length > 0) {
             return functions.resolveOverloads();
         }
@@ -213,11 +244,39 @@ public class ImportedNameSpace : NameSpace {
     }
 }
 
-public class ScopeNameSpace : NameSpace {
-    private ScopeNameSpace parent;
+public class SourceNameSpace : NameSpace {
+    private SourceNameSpace _parent;
+    public immutable ScopeKind scopeKind;
+    private immutable(Type)*[string] typesByName;
+    private immutable(Field)*[string] fieldsByName;
+    private immutable(Function)[][string] functionsByName;
+
+    public this(ScopeKind scopeKind, SourceNameSpace parent) {
+        this.scopeKind = scopeKind;
+        _parent = parent;
+    }
+
+    @property public SourceNameSpace parent() {
+        return _parent;
+    }
+
+    public void defineType(string name, immutable(Type) type) {
+        auto existing = getType(name);
+        if (existing !is null) {
+            throw new Exception(format("Cannot redeclare type %s", name));
+        }
+        typesByName[name] = &type;
+    }
 
     public override immutable(Type) getType(string name) {
-        return null;
+        auto type = name in typesByName;
+        if (type is null) {
+            if (parent is null) {
+                return null;
+            }
+            return parent.getType(name);
+        }
+        return **type;
     }
 
     public override immutable(Field) getField(string name) {

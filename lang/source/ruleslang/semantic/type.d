@@ -201,6 +201,7 @@ public immutable class AtomicType : Type {
         private bool signed;
         private bool fp;
     }
+
     public static immutable AtomicType BOOL = new immutable AtomicType("bool", 1, false, false);
     public static immutable AtomicType SINT8 = new immutable AtomicType("sint8", 8, true, false);
     public static immutable AtomicType UINT8 = new immutable AtomicType("uint8", 8, false, false);

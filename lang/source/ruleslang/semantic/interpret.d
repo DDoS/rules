@@ -6,6 +6,7 @@ import ruleslang.syntax.source;
 import ruleslang.syntax.token;
 import ruleslang.syntax.ast.type;
 import ruleslang.syntax.ast.expression;
+import ruleslang.syntax.ast.statement;
 import ruleslang.semantic.tree;
 import ruleslang.semantic.context;
 import ruleslang.semantic.type;
@@ -599,5 +600,20 @@ public immutable class Interpreter {
         auto trueNode = conditional.trueValue().interpret(context).reduceLiterals();
         auto falseNode = conditional.falseValue().interpret(context).reduceLiterals();
         return new immutable ConditionalNode(conditionNode, trueNode, falseNode, conditional.start, conditional.end);
+    }
+
+    public immutable(Node) interpretTypeDefinition(Context context, TypeDefinition typeDefinition) {
+        auto name = typeDefinition.name.getSource();
+        auto type = typeDefinition.type.interpret(context);
+        try {
+            context.defineType(name, type);
+        } catch (Exception exception) {
+            throw new SourceException(exception.msg, typeDefinition);
+        }
+        return new immutable TypeDefinitionNode(name, type, typeDefinition.start, typeDefinition.end);
+    }
+
+    public immutable(Node) interpretAssignment(Context context, Assignment typeDefinition) {
+        return NullNode.INSTANCE;
     }
 }

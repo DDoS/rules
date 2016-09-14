@@ -1135,6 +1135,40 @@ public immutable class ConditionalNode : TypedNode {
     }
 }
 
+public immutable class TypeDefinitionNode : Node {
+    public string name;
+    public Type type;
+    private size_t _start;
+    private size_t _end;
+
+    public this(string name, immutable Type type, size_t start, size_t end) {
+        this.name = name;
+        this.type = type;
+        _start = start;
+        _end = end;
+    }
+
+    @property public override size_t start() {
+        return _start;
+    }
+
+    @property public override size_t end() {
+        return _end;
+    }
+
+    public override immutable(TypedNode)[] getChildren() {
+        return [];
+    }
+
+    public override void evaluate(Runtime runtime) {
+        // Nothing to do, this is purely used at compile time
+    }
+
+    public override string toString() {
+        return format("TypeDefinition(def %s: %s)", name, type.toString());
+    }
+}
+
 public immutable(Type)[] getTypes(immutable(TypedNode)[] values) {
     immutable(Type)[] valueTypes = [];
     valueTypes.reserve(values.length);
