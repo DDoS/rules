@@ -252,8 +252,24 @@ public immutable class Interpreter {
         throw new SourceException(format("Not a valid array label %s", label.getSource()), label);
     }
 
-    public immutable(TypedNode) interpretInitializer(Context context, Initializer expression) {
-        return NullNode.INSTANCE;
+    public immutable(TypedNode) interpretInitializer(Context context, Initializer initializer) {
+        // Interpret the type and the composite literal
+        auto type = initializer.type.interpret(context);
+        auto literalNode = initializer.literal.interpret(context).castOrFail!(immutable LiteralNode);
+        // Check if we can initialize the literal as the given type
+        auto literalType = literalNode.getType();
+        auto ignored = new TypeConversionChain();
+        if (!literalType.specializableTo(type, ignored)) {
+            throw new SourceException(format("Cannot specialize %s to %s", literalType.toString(), type.toString()),
+                    initializer);
+        }
+        // Apply the specialization
+        auto specialized = literalNode.specializeTo(type);
+        if (specialized is null) {
+            throw new SourceException(format("Specialization from %s to %s is not implemented",
+                    literalType.toString(), type.toString()), initializer);
+        }
+        return specialized;
     }
 
     public immutable(TypedNode) interpretContextMemberAccess(Context context, ContextMemberAccess expression) {

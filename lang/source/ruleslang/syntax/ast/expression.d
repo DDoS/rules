@@ -113,21 +113,29 @@ public class CompositeLiteral : Expression {
 }
 
 public class Initializer : Expression {
-    private NamedTypeAst type;
-    private CompositeLiteral literal;
+    private NamedTypeAst _type;
+    private CompositeLiteral _literal;
 
     public this(NamedTypeAst type, CompositeLiteral literal) {
-        this.type = type;
-        this.literal = literal;
+        _type = type;
+        _literal = literal;
         _start = type.start;
         _end = literal.end;
+    }
+
+    @property public NamedTypeAst type() {
+        return _type;
+    }
+
+    @property public CompositeLiteral literal() {
+        return _literal;
     }
 
     mixin sourceIndexFields;
 
     public override Expression map(ExpressionMapper mapper) {
-        type = type.map(mapper).castOrFail!NamedTypeAst();
-        literal = literal.map(mapper).castOrFail!CompositeLiteral();
+        _type = _type.map(mapper).castOrFail!NamedTypeAst();
+        _literal = _literal.map(mapper).castOrFail!CompositeLiteral();
         return mapper.mapInitializer(this);
     }
 
@@ -136,7 +144,7 @@ public class Initializer : Expression {
     }
 
     public override string toString() {
-        return format("Initializer(%s{%s})", type.toString(), literal.values.join!", "());
+        return format("Initializer(%s{%s})", _type.toString(), _literal.values.join!", "());
     }
 }
 
