@@ -347,10 +347,9 @@ unittest {
         new immutable TupleLiteralType([new immutable SignedIntegerLiteralType(-3)]),
         new immutable TupleType([AtomicType.UINT8, AtomicType.UINT8])
     );
-    assertSpecializable(
+    assertNotSpecializable(
         new immutable TupleLiteralType([new immutable SignedIntegerLiteralType(0), new immutable SignedIntegerLiteralType(1)]),
-        new immutable TupleType([AtomicType.UINT8]),
-        TypeConversion.REFERENCE_NARROWING
+        new immutable TupleType([AtomicType.UINT8])
     );
     assertSpecializable(
         new immutable TupleLiteralType([AtomicType.UINT8]),
@@ -412,13 +411,12 @@ unittest {
         new immutable StructureLiteralType([new immutable SignedIntegerLiteralType(-3)], ["b"]),
         new immutable StructureType([AtomicType.UINT8, AtomicType.UINT8], ["b", "a"])
     );
-    assertSpecializable(
+    assertNotSpecializable(
         new immutable StructureLiteralType(
             [new immutable SignedIntegerLiteralType(0), new immutable SignedIntegerLiteralType(1)],
             ["b", "a"]
         ),
-        new immutable StructureType([AtomicType.UINT8], ["b"]),
-        TypeConversion.REFERENCE_NARROWING
+        new immutable StructureType([AtomicType.UINT8], ["b"])
     );
     assertSpecializable(
         new immutable StructureLiteralType(

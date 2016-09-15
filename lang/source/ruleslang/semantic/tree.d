@@ -448,8 +448,7 @@ public immutable class TupleLiteralNode : ReferenceNode, LiteralNode {
             immutable(TypedNode)[] specialValues = [];
             foreach (i, value; values) {
                 auto tupleMemberType = tupleType.getMemberType(i);
-                assert (tupleMemberType !is null); // TODO: don't allow un-specialized members
-                specialValues ~= value.addCastNode(tupleMemberType);
+                specialValues ~= value.addCastNode(tupleType.getMemberType(i));
             }
             // Use default values for missing members
             foreach (i; values.length .. tupleType.getMemberCount()) {

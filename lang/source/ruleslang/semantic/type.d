@@ -1193,11 +1193,12 @@ public immutable class TupleLiteralType : TupleType, LiteralType {
         if (cast(LiteralType) type !is null) {
             return false;
         }
-        // The members must be convertible to or specializable to that of the other
+        // The members must be specializable to that of the other type
+        // and we cannot have more members than the other type
         foreach (i, memberType; memberTypes) {
             auto otherMemberType = referenceType.getMemberType(i);
             if (otherMemberType is null) {
-                continue;
+                return false;
             }
             if (!memberType.specializableTo(otherMemberType)) {
                 return false;
@@ -1235,11 +1236,12 @@ public immutable class StructureLiteralType : StructureType, LiteralType {
             return false;
         }
         // Each member must be specializable to that of the other struct
-        foreach (i, otherName; structureType.memberNames) {
-            auto otherMemberType = structureType.getMemberType(i);
-            auto memberType = getMemberType(otherName);
-            if (memberType is null) {
-                continue;
+        // And we cannot have a member not found in the other struct
+        foreach (i, memberName; memberNames) {
+            auto memberType = memberTypes[i];
+            auto otherMemberType = structureType.getMemberType(memberName);
+            if (otherMemberType is null) {
+                return false;
             }
             if (!memberType.specializableTo(otherMemberType)) {
                 return false;

@@ -604,6 +604,7 @@ unittest {
     );
     interpretExpFails("tup1{s: 4}", context);
     interpretExpFails("tup1{0: 4}", context);
+    interpretExpFails("tup1{4, 4}", context);
     assertEqual(
         "TypeDefinition(def strc1: {uint16 s})",
         interpretStmt("def strc1: {uint16 s}", context)
@@ -620,6 +621,9 @@ unittest {
         "StructLiteral({s: UnsignedIntegerLiteral(4)}) | {uint16_lit(4) s}",
         interpretExp("strc1{s: 4}", context)
     );
+    interpretExpFails("strc1{0: 4}", context);
+    interpretExpFails("strc1{4, 4}", context);
+    interpretExpFails("strc1{s: 4, t: 4}", context);
     assertEqual(
         "TypeDefinition(def strc2: {uint16 s, fp32 t})",
         interpretStmt("def strc2: {uint16 s, fp32 t}", context)
