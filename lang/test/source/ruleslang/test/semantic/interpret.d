@@ -588,6 +588,64 @@ unittest {
     );
 }
 
+unittest {
+    auto context = new Context();
+    assertEqual(
+        "TypeDefinition(def tup1: {uint16})",
+        interpretStmt("def tup1: {uint16}", context)
+    );
+    assertEqual(
+        "TupleLiteral({UnsignedIntegerLiteral(0)}) | {uint16_lit(0)}",
+        interpretExp("tup1{}", context)
+    );
+    assertEqual(
+        "TupleLiteral({UnsignedIntegerLiteral(4)}) | {uint16_lit(4)}",
+        interpretExp("tup1{4}", context)
+    );
+    interpretExpFails("tup1{s: 4}", context);
+    interpretExpFails("tup1{0: 4}", context);
+    assertEqual(
+        "TypeDefinition(def strc1: {uint16 s})",
+        interpretStmt("def strc1: {uint16 s}", context)
+    );
+    assertEqual(
+        "StructLiteral({s: UnsignedIntegerLiteral(0)}) | {uint16_lit(0) s}",
+        interpretExp("strc1{}", context)
+    );
+    assertEqual(
+        "StructLiteral({s: UnsignedIntegerLiteral(4)}) | {uint16_lit(4) s}",
+        interpretExp("strc1{4}", context)
+    );
+    assertEqual(
+        "StructLiteral({s: UnsignedIntegerLiteral(4)}) | {uint16_lit(4) s}",
+        interpretExp("strc1{s: 4}", context)
+    );
+    assertEqual(
+        "TypeDefinition(def strc2: {uint16 s, fp32 t})",
+        interpretStmt("def strc2: {uint16 s, fp32 t}", context)
+    );
+    assertEqual(
+        "StructLiteral({s: UnsignedIntegerLiteral(0), t: FloatLiteral(0)}) | {uint16_lit(0) s, fp32_lit(0) t}",
+        interpretExp("strc2{}", context)
+    );
+    assertEqual(
+        "StructLiteral({s: UnsignedIntegerLiteral(4), t: FloatLiteral(0)}) | {uint16_lit(4) s, fp32_lit(0) t}",
+        interpretExp("strc2{4}", context)
+    );
+    assertEqual(
+        "StructLiteral({s: UnsignedIntegerLiteral(4), t: FloatLiteral(0)}) | {uint16_lit(4) s, fp32_lit(0) t}",
+        interpretExp("strc2{s: 4}", context)
+    );
+    assertEqual(
+        "StructLiteral({s: UnsignedIntegerLiteral(4), t: FloatLiteral(2.3)}) | {uint16_lit(4) s, fp32_lit(2.3) t}",
+        interpretExp("strc2{4, 2.3}", context)
+    );
+    assertEqual(
+        "StructLiteral({s: UnsignedIntegerLiteral(4), t: FloatLiteral(2.3)}) | {uint16_lit(4) s, fp32_lit(2.3) t}",
+        interpretExp("strc2{s: 4, t: 2.3}", context)
+    );
+}
+
 private string interpretExp(alias info = getAllInfo)(string source, Context context = new Context()) {
     auto tokenizer = new Tokenizer(new DCharReader(source));
     if (tokenizer.head().getKind() == Kind.INDENTATION) {
