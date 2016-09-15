@@ -18,7 +18,7 @@ unittest {
         interpretExp("null")
     );
     assertEqual(
-        "SignedIntegerLiteral(1) | sint_lit(1)",
+        "SignedIntegerLiteral(1) | sint64_lit(1)",
         interpretExp("+1")
     );
     assertEqual(
@@ -325,23 +325,23 @@ unittest {
     );
     assertEqual(
         "IndexAccess(TupleLiteral({SignedIntegerLiteral(0), FloatLiteral(1)})[UnsignedIntegerLiteral(0)])"
-            ~ " | sint_lit(0)",
+            ~ " | sint64_lit(0)",
         interpretExp("{0, 1.}[0]")
     );
     assertEqual(
         "IndexAccess(TupleLiteral({SignedIntegerLiteral(0), FloatLiteral(1)})[UnsignedIntegerLiteral(0)])"
-            ~ " | sint_lit(0)",
+            ~ " | sint64_lit(0)",
         interpretExp("{0, 1.}[0 + 0]")
     );
     assertEqual(
         "IndexAccess(TupleLiteral({SignedIntegerLiteral(0), FloatLiteral(1)})[UnsignedIntegerLiteral(1)])"
-            ~ " | fp_lit(1)",
+            ~ " | fp64_lit(1)",
         interpretExp("{0, 1.}[1u]")
     );
     interpretExpFails("{0, 1.}[2u]");
     assertEqual(
         "IndexAccess(TupleLiteral({SignedIntegerLiteral(0), FloatLiteral(1)})[UnsignedIntegerLiteral(1)])"
-            ~ " | fp_lit(1)",
+            ~ " | fp64_lit(1)",
         interpretExp("{0, 1.}[0u + 1u]")
     );
     assertEqual(
@@ -388,12 +388,12 @@ unittest {
     );
     assertEqual(
         "ArrayLiteral({0: FloatLiteral(1), 1: FloatLiteral(1)})"
-            ~ " | fp_lit(1)[2]",
+            ~ " | fp64_lit(1)[2]",
         interpretExp("{0: 1, 1: 1.0}")
     );
     assertEqual(
         "ArrayLiteral({0: SignedIntegerLiteral(1), 1: SignedIntegerLiteral(1)})"
-            ~ " | sint_lit(1)[2]",
+            ~ " | sint64_lit(1)[2]",
         interpretExp("{0: 1, 1: 1}")
     );
     assertEqual(
@@ -409,19 +409,19 @@ unittest {
     assertEqual(
         "ArrayLiteral({1: TupleLiteral({SignedIntegerLiteral(1), SignedIntegerLiteral(2)}),"
             ~ " 0: TupleLiteral({SignedIntegerLiteral(1), SignedIntegerLiteral(2), SignedIntegerLiteral(3)})})"
-            ~ " | {sint_lit(1), sint_lit(2)}[2]",
+            ~ " | {sint64_lit(1), sint64_lit(2)}[2]",
         interpretExp("{1: {1, 2}, 0: {1, 2, 3}}")
     );
     assertEqual(
         "ArrayLiteral({1: TupleLiteral({SignedIntegerLiteral(1), SignedIntegerLiteral(2), BooleanLiteral(true)}), "
             ~ "0: TupleLiteral({SignedIntegerLiteral(1), SignedIntegerLiteral(2), SignedIntegerLiteral(3)})})"
-            ~ " | {sint_lit(1), sint_lit(2)}[2]",
+            ~ " | {sint64_lit(1), sint64_lit(2)}[2]",
         interpretExp("{1: {1, 2, true}, 0: {1, 2, 3}}")
     );
     assertEqual(
         "ArrayLiteral({1: TupleLiteral({SignedIntegerLiteral(1), SignedIntegerLiteral(2)}), "
             ~ "0: StructLiteral({a: SignedIntegerLiteral(1), b: SignedIntegerLiteral(2), c: SignedIntegerLiteral(3)})})"
-            ~ " | {sint_lit(1), sint_lit(2)}[2]",
+            ~ " | {sint64_lit(1), sint64_lit(2)}[2]",
         interpretExp("{1: {1, 2}, 0: {a: 1, b: 2, c: 3}}")
     );
     assertEqual(
@@ -445,44 +445,44 @@ unittest {
     assertEqual(
         "ArrayLiteral({0: StructLiteral({a: SignedIntegerLiteral(1), b: SignedIntegerLiteral(1), c: SignedIntegerLiteral(1)}), "
             ~ "1: StructLiteral({a: SignedIntegerLiteral(1), b: SignedIntegerLiteral(1)})})"
-            ~ " | {sint_lit(1) a, sint_lit(1) b}[2]",
+            ~ " | {sint64_lit(1) a, sint64_lit(1) b}[2]",
         interpretExp("{0: {a: 1, b: 1, c: 1}, 1: {a: 1, b: 1}}")
     );
     assertEqual(
         "ArrayLiteral({0: StructLiteral({a: SignedIntegerLiteral(1), b: SignedIntegerLiteral(1), c: SignedIntegerLiteral(1)}), "
             ~ "1: StructLiteral({a: SignedIntegerLiteral(1), b: SignedIntegerLiteral(1), c: SignedIntegerLiteral(1)})})"
-            ~ " | {sint_lit(1) a, sint_lit(1) b, sint_lit(1) c}[2]",
+            ~ " | {sint64_lit(1) a, sint64_lit(1) b, sint64_lit(1) c}[2]",
         interpretExp("{0: {a: 1, b: 1, c: 1}, 1: {a: 1, b: 1, c: 1}}")
     );
     assertEqual(
         "ArrayLiteral({0: StructLiteral({a: SignedIntegerLiteral(1), b: SignedIntegerLiteral(1), c: SignedIntegerLiteral(2)}), "
             ~ "1: StructLiteral({a: SignedIntegerLiteral(1), b: SignedIntegerLiteral(1), c: SignedIntegerLiteral(1)})})"
-            ~ " | {sint_lit(1) a, sint_lit(1) b}[2]",
+            ~ " | {sint64_lit(1) a, sint64_lit(1) b}[2]",
         interpretExp("{0: {a: 1, b: 1, c: 2}, 1: {a: 1, b: 1, c: 1}}")
     );
     assertEqual(
         "ArrayLiteral({0: StructLiteral({a: SignedIntegerLiteral(1), b: SignedIntegerLiteral(2), c: SignedIntegerLiteral(1)}), "
             ~ "1: StructLiteral({a: SignedIntegerLiteral(1), b: SignedIntegerLiteral(1), c: SignedIntegerLiteral(1)})})"
-            ~ " | {sint_lit(1) a, sint_lit(1) c}[2]",
+            ~ " | {sint64_lit(1) a, sint64_lit(1) c}[2]",
         interpretExp("{0: {a: 1, b: 2, c: 1}, 1: {a: 1, b: 1, c: 1}}")
     );
     assertEqual(
         "ArrayLiteral({0: StructLiteral({a: SignedIntegerLiteral(1), b: SignedIntegerLiteral(2), c: SignedIntegerLiteral(3)}), "
             ~ "1: TupleLiteral({SignedIntegerLiteral(1), SignedIntegerLiteral(2), SignedIntegerLiteral(3)})})"
-            ~ " | {sint_lit(1), sint_lit(2), sint_lit(3)}[2]",
+            ~ " | {sint64_lit(1), sint64_lit(2), sint64_lit(3)}[2]",
         interpretExp("{0: {a: 1, b: 2, c: 3}, 1: {1, 2, 3}}")
     );
     assertEqual(
         "ArrayLiteral({0: StructLiteral({a: SignedIntegerLiteral(1), b: SignedIntegerLiteral(2), c: SignedIntegerLiteral(3)}), "
             ~ "1: TupleLiteral({SignedIntegerLiteral(1), SignedIntegerLiteral(2)})})"
-            ~ " | {sint_lit(1), sint_lit(2)}[2]",
+            ~ " | {sint64_lit(1), sint64_lit(2)}[2]",
         interpretExp("{0: {a: 1, b: 2, c: 3}, 1: {1, 2}}")
     );
     assertEqual(
         "ArrayLiteral({0: StructLiteral({a: SignedIntegerLiteral(1), b: SignedIntegerLiteral(2), c: SignedIntegerLiteral(3)}), "
             ~ "1: TupleLiteral({SignedIntegerLiteral(1), SignedIntegerLiteral(2), SignedIntegerLiteral(3), "
             ~ "SignedIntegerLiteral(4)})})"
-            ~ " | {sint_lit(1), sint_lit(2), sint_lit(3)}[2]",
+            ~ " | {sint64_lit(1), sint64_lit(2), sint64_lit(3)}[2]",
         interpretExp("{0: {a: 1, b: 1 + 1, c: 3}, 1: {1, 2, 3, 4}}")
     );
     assertEqual(
@@ -536,7 +536,7 @@ unittest {
 
 unittest {
     assertEqual(
-        "Conditional(BooleanLiteral(true), FloatLiteral(1), FloatLiteral(1)) | fp_lit(1)",
+        "Conditional(BooleanLiteral(true), FloatLiteral(1), FloatLiteral(1)) | fp64_lit(1)",
         interpretExp("1 if true else 1.0")
     );
     assertEqual(
@@ -563,7 +563,7 @@ unittest {
         "Conditional(BooleanLiteral(false), "
             ~ "TupleLiteral({SignedIntegerLiteral(1), SignedIntegerLiteral(2), BooleanLiteral(true)}), "
             ~ "TupleLiteral({SignedIntegerLiteral(1), SignedIntegerLiteral(2), SignedIntegerLiteral(3)})) "
-            ~ "| {sint_lit(1), sint_lit(2)}",
+            ~ "| {sint64_lit(1), sint64_lit(2)}",
         interpretExp("{1, 2, true} if false else {1, 2, 3}")
     );
     interpretExpFails("false if true else 2");

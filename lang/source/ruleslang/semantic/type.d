@@ -516,7 +516,7 @@ public immutable class BooleanLiteralType : AtomicType, AtomicLiteralType {
     }
 
     public override string toString() {
-        return format("bool_lit(%s)", value);
+        return format("%s(%s)", name, value);
     }
 
     public override bool opEquals(immutable Type type) {
@@ -553,11 +553,10 @@ private template IntegerLiteralTypeTemplate(T) {
             assert (!backing.isFloat());
             static if (__traits(isUnsigned, T)) {
                 assert (!backing.isSigned());
-                super("uint_lit", backing.bitCount, backing.isSigned(), backing.isFloat());
             } else {
                 assert (backing.isSigned());
-                super("sint_lit", backing.bitCount, backing.isSigned(), backing.isFloat());
             }
+            super(backing.name ~ "_lit", backing.bitCount, backing.isSigned(), backing.isFloat());
             this.value = value;
             assert (inRange(value));
         }
@@ -643,9 +642,9 @@ private template IntegerLiteralTypeTemplate(T) {
 
         public override string toString() {
             static if (__traits(isUnsigned, T)) {
-                return format("uint_lit(%d)", value);
+                return format("%s(%d)", name, value);
             } else {
-                return format("sint_lit(%d)", value);
+                return format("%s(%d)", name, value);
             }
         }
 
@@ -668,7 +667,7 @@ public immutable class FloatLiteralType : AtomicType, AtomicLiteralType {
 
     public this(immutable AtomicType backing, double value) {
         assert (backing.isFloat());
-        super("fp_lit", backing.bitCount, backing.isSigned(), backing.isFloat());
+        super(backing.name ~ "_lit", backing.bitCount, backing.isSigned(), backing.isFloat());
         this.value = value;
         assert (inRange(value));
     }
@@ -730,7 +729,7 @@ public immutable class FloatLiteralType : AtomicType, AtomicLiteralType {
     }
 
     public override string toString() {
-        return format("fp_lit(%g)", value);
+        return format("%s(%g)", name, value);
     }
 
     public override bool opEquals(immutable Type type) {
