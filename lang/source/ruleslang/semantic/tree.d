@@ -366,6 +366,24 @@ public immutable class EmptyLiteralNode : ReferenceNode, LiteralNode {
             return new immutable ArrayLiteralNode([arrayType.componentType.defaultValue(_start, _end)],
                     [label], _start, _end);
         }
+        auto tupleType = cast(immutable TupleType) specialType;
+        if (tupleType !is null) {
+            // Use default values for all members
+            immutable(TypedNode)[] specialValues = [];
+            foreach (memberType; tupleType.memberTypes) {
+                specialValues ~= memberType.defaultValue(_start, _end);
+            }
+            // If the tuple type is also a structure type then add the labels
+            auto structType = cast(immutable StructureType) tupleType;
+            if (structType !is null) {
+                immutable(StructLabel)[] labels;
+                foreach (i, memberName; structType.memberNames) {
+                    labels ~= immutable StructLabel(memberName, _start, _end);
+                }
+                return new immutable StructLiteralNode(specialValues, labels, _start, _end);
+            }
+            return new immutable TupleLiteralNode(specialValues, _start, _end);
+        }
         return null;
     }
 
@@ -425,6 +443,31 @@ public immutable class TupleLiteralNode : ReferenceNode, LiteralNode {
                 specialValues ~= sizedArrayType.componentType.defaultValue(_start, _end);
             }
             return new immutable ArrayLiteralNode(specialValues, specialLabels, _start, _end);
+        }
+        auto tupleType = cast(immutable TupleType) specialType;
+        if (tupleType !is null) {
+            // Specialize all members
+            immutable(TypedNode)[] specialValues = [];
+            foreach (i, value; values) {
+                auto tupleMemberType = tupleType.getMemberType(i);
+                assert (tupleMemberType !is null); // TODO: don't allow un-specialized members
+                specialValues ~= value.addCastNode(tupleMemberType);
+            }
+            // Use default values for missing members
+            foreach (i; values.length .. tupleType.getMemberCount()) {
+                specialValues ~= tupleType.getMemberType(i).defaultValue(_start, _end);
+            }
+            // If the tuple type is also a structure type then add the labels
+            auto structType = cast(immutable StructureType) tupleType;
+            if (structType !is null) {
+                immutable(StructLabel)[] labels;
+                foreach (i, memberName; structType.memberNames) {
+                    auto value = specialValues[i];
+                    labels ~= immutable StructLabel(memberName, value.start, value.end);
+                }
+                return new immutable StructLiteralNode(specialValues, labels, _start, _end);
+            }
+            return new immutable TupleLiteralNode(specialValues, _start, _end);
         }
         return null;
     }
@@ -503,7 +546,38 @@ public immutable class StructLiteralNode : ReferenceNode, LiteralNode {
         if (type.convertibleTo(specialType, ignored)) {
             return this;
         }
+        auto structType = cast(immutable StructureType) specialType;
+        if (structType !is null) {
+            immutable(TypedNode)[] specialValues;
+            immutable(StructLabel)[] specialLabels;
+            foreach (i, memberName; structType.memberNames) {
+                auto memberType = structType.memberTypes[i];
+                auto index = indexOf(memberName);
+                if (index < size_t.max) {
+                    specialValues ~= values[index].addCastNode(memberType);
+                    specialLabels ~= labels[index];
+                } else {
+                    specialValues ~= memberType.defaultValue(_start, _end);
+                    specialLabels ~= immutable StructLabel(memberName, _start, _end);
+                }
+            }
+            return new immutable StructLiteralNode(specialValues, specialLabels, _start, _end);
+        }
         return null;
+    }
+
+    public immutable(TypedNode) getValueAt(string name) {
+        auto index = indexOf(name);
+        return index < size_t.max ? values[index] : null;
+    }
+
+    private size_t indexOf(string name) {
+        foreach (i, label; labels) {
+            if (label.name == name) {
+                return i;
+            }
+        }
+        return size_t.max;
     }
 
     public override bool isIntrinsicEvaluable() {
