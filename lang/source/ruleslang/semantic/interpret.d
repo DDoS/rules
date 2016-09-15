@@ -44,8 +44,7 @@ public immutable class Interpreter {
             } else {
                 // Check if the size has type uint64
                 auto sizeNodeType = dimension.interpret(context).reduceLiterals().getType();
-                auto conversions = new TypeConversionChain();
-                if (!sizeNodeType.specializableTo(AtomicType.UINT64, conversions)) {
+                if (!sizeNodeType.specializableTo(AtomicType.UINT64)) {
                     throw new SourceException(format("Size type %s is not convertible to uint64", sizeNodeType.toString()),
                             dimension);
                 }
@@ -258,8 +257,7 @@ public immutable class Interpreter {
         auto literalNode = initializer.literal.interpret(context).castOrFail!(immutable LiteralNode);
         // Check if we can initialize the literal as the given type
         auto literalType = literalNode.getType();
-        auto ignored = new TypeConversionChain();
-        if (!literalType.specializableTo(type, ignored)) {
+        if (!literalType.specializableTo(type)) {
             throw new SourceException(format("Cannot specialize %s to %s", literalType.toString(), type.toString()),
                     initializer);
         }
@@ -307,8 +305,7 @@ public immutable class Interpreter {
         }
         // Check if the index type is uint64
         auto indexType = indexNode.getType();
-        auto conversions = new TypeConversionChain();
-        if (!indexType.specializableTo(AtomicType.UINT64, conversions)) {
+        if (!indexType.specializableTo(AtomicType.UINT64)) {
             throw new SourceException(format("Index type %s is not convertible to uint64", indexType.toString()),
                     indexAccess.index);
         }

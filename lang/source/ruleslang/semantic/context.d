@@ -182,9 +182,8 @@ private bool isLesser(immutable Type paramA, ConversionKind convA, immutable Typ
         return true;
     }
     // If A and B require narrowing and A is more specific
-    auto ignored = new TypeConversionChain();
-    auto argSmallerA = paramA.convertibleTo(paramB, ignored);
-    auto argSmallerB = paramB.convertibleTo(paramA, ignored);
+    auto argSmallerA = paramA.convertibleTo(paramB);
+    auto argSmallerB = paramB.convertibleTo(paramA);
     if (narrowingA && narrowingB && argSmallerA && !argSmallerB) {
         return true;
     }

@@ -352,8 +352,7 @@ public immutable class EmptyLiteralNode : ReferenceNode, LiteralNode {
     }
 
     public override immutable(LiteralNode) specializeTo(immutable Type specialType) {
-        auto ignored = new TypeConversionChain();
-        if (AnyType.INSTANCE.convertibleTo(specialType, ignored)) {
+        if (AnyType.INSTANCE.convertibleTo(specialType)) {
             return this;
         }
         auto arrayType = cast(immutable ArrayType) specialType;
@@ -422,8 +421,7 @@ public immutable class TupleLiteralNode : ReferenceNode, LiteralNode {
     }
 
     public override immutable(LiteralNode) specializeTo(immutable Type specialType) {
-        auto ignored = new TypeConversionChain();
-        if (type.convertibleTo(specialType, ignored)) {
+        if (type.convertibleTo(specialType)) {
             return this;
         }
         auto arrayType = cast(immutable ArrayType) specialType;
@@ -542,8 +540,7 @@ public immutable class StructLiteralNode : ReferenceNode, LiteralNode {
     }
 
     public override immutable(LiteralNode) specializeTo(immutable Type specialType) {
-        auto ignored = new TypeConversionChain();
-        if (type.convertibleTo(specialType, ignored)) {
+        if (type.convertibleTo(specialType)) {
             return this;
         }
         auto structType = cast(immutable StructureType) specialType;
@@ -688,8 +685,7 @@ public immutable class ArrayLiteralNode : LiteralNode, ReferenceNode {
     }
 
     public override immutable(LiteralNode) specializeTo(immutable Type specialType) {
-        auto ignored = new TypeConversionChain();
-        if (type.convertibleTo(specialType, ignored)) {
+        if (type.convertibleTo(specialType)) {
             return this;
         }
         auto arrayType = cast(immutable ArrayType) specialType;

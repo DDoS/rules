@@ -243,24 +243,19 @@ public immutable class Evaluator {
                 result = !type.opEquals(compareType);
                 break;
             case SUBTYPE:
-                auto conversions = new TypeConversionChain();
-                result = type.convertibleTo(compareType, conversions);
+                result = type.convertibleTo(compareType);
                 break;
             case SUPERTYPE:
-                auto conversions = new TypeConversionChain();
-                result = compareType.convertibleTo(type, conversions);
+                result = compareType.convertibleTo(type);
                 break;
             case PROPER_SUBTYPE:
-                auto conversions = new TypeConversionChain();
-                result = type.convertibleTo(compareType, conversions) && !compareType.convertibleTo(type, conversions);
+                result = type.convertibleTo(compareType) && !compareType.convertibleTo(type);
                 break;
             case PROPER_SUPERTYPE:
-                auto conversions = new TypeConversionChain();
-                result = !type.convertibleTo(compareType, conversions) && compareType.convertibleTo(type, conversions);
+                result = !type.convertibleTo(compareType) && compareType.convertibleTo(type);
                 break;
             case DISTINCT:
-                auto conversions = new TypeConversionChain();
-                result = !type.convertibleTo(compareType, conversions) && !compareType.convertibleTo(type, conversions);
+                result = !type.convertibleTo(compareType) && !compareType.convertibleTo(type);
                 break;
         }
         // Push the result onto the stack
