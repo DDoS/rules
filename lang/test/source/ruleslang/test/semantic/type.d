@@ -448,10 +448,9 @@ unittest {
         new immutable ArrayType(AtomicType.UINT16),
         TypeConversion.REFERENCE_NARROWING
     );
-    assertSpecializable(
+    assertNotSpecializable(
         new immutable SizedArrayLiteralType([AtomicType.UINT8], 2),
-        new immutable SizedArrayType(AtomicType.UINT16, 1),
-        TypeConversion.REFERENCE_NARROWING
+        new immutable SizedArrayType(AtomicType.UINT16, 1)
     );
     assertSpecializable(
         new immutable SizedArrayLiteralType([AtomicType.UINT8], 2),

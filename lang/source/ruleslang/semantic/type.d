@@ -1305,6 +1305,11 @@ public immutable class SizedArrayLiteralType : SizedArrayType, LiteralType {
         if (cast(LiteralType) type !is null) {
             return false;
         }
+        // If the other array is sized then we cannot have more members
+        auto sizedArrayType = cast(immutable SizedArrayType) arrayType;
+        if (sizedArrayType !is null && size > sizedArrayType.size) {
+            return false;
+        }
         // Each member must be specializable to the component type
         auto componentType = arrayType.componentType;
         foreach (memberType; _memberTypes) {
