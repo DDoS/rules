@@ -1384,21 +1384,22 @@ public immutable class StringLiteralType : SizedArrayLiteralType {
     }
 
     public override immutable(Type) lowestUpperBound(immutable Type other) {
-        // There is a lowest upper bound with a string
-        auto stringLiteralType = cast(immutable StringLiteralType) other;
-        if (stringLiteralType is null) {
-            // Otherwise try the sized array LUB
-            return super.lowestUpperBound(other);
+        if (opEquals(other)) {
+            return this;
         }
-        // Return the shortest matching prefix
-        size_t longest = 0;
-        foreach (i, c; value) {
-            if (i >= stringLiteralType.value.length || c != stringLiteralType.value[i]) {
-                break;
-            }
-            longest += 1;
+        if (convertibleTo(other)) {
+            return other;
         }
-        return new immutable StringLiteralType(value[0 .. longest]);
+        if (other.convertibleTo(this)) {
+            return this;
+        }
+        // If we have another string literal, try without literals
+        auto stringLiteral = cast(immutable StringLiteralType) other;
+        if (stringLiteral !is null) {
+            return withoutLiteral().lowestUpperBound(stringLiteral.withoutLiteral());
+        }
+        // Try the sized array LUB
+        return withoutLiteral().lowestUpperBound(other);
     }
 
     public override string toString() {

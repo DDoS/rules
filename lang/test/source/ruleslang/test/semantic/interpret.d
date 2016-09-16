@@ -519,12 +519,12 @@ unittest {
     );
     assertEqual(
         "ArrayLiteral({0: StringLiteral(\"hello\"), 1: StringLiteral(\"allo\")})"
-            ~ " | string_lit(\"\")[2]",
+            ~ " | uint32[4][2]",
         interpretExp("{0: \"hello\", 1: \"allo\"}")
     );
     assertEqual(
         "ArrayLiteral({0: StringLiteral(\"allo\"), 1: StringLiteral(\"hello\")})"
-            ~ " | string_lit(\"\")[2]",
+            ~ " | uint32[4][2]",
         interpretExp("{0: \"allo\", 1: \"hello\"}")
     );
     assertEqual(
@@ -556,7 +556,7 @@ unittest {
         interpretExp("\"hello\" if false else \"hell\"")
     );
     assertEqual(
-        "Conditional(BooleanLiteral(false), StringLiteral(\"allo\"), StringLiteral(\"hello\")) | string_lit(\"\")",
+        "Conditional(BooleanLiteral(false), StringLiteral(\"allo\"), StringLiteral(\"hello\")) | uint32[4]",
         interpretExp("\"allo\" if false else \"hello\"")
     );
     assertEqual(
