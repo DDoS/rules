@@ -1100,9 +1100,14 @@ public immutable(Type)[] getTypes(immutable(TypedNode)[] values) {
 }
 
 private immutable(TypedNode) addCastNode(immutable TypedNode fromNode, immutable Type toType) {
+    auto fromType = fromNode.getType();
+    // Special case for null, just use reference widening and add nothing
+    if (cast(immutable NullType) fromType !is null) {
+        return fromNode;
+    }
     // Get the conversion chain from the node type to the parameter type
     auto conversions = new TypeConversionChain();
-    bool convertible = fromNode.getType().specializableTo(toType, conversions);
+    bool convertible = fromType.specializableTo(toType, conversions);
     assert (convertible);
     // Wrap the node in casts based on the chain conversion type
     if (conversions.isIdentity() || conversions.isReferenceWidening()) {
@@ -1116,7 +1121,7 @@ private immutable(TypedNode) addCastNode(immutable TypedNode fromNode, immutable
             return specializeNode(fromLiteralNode, toType);
         }
         // Add a call to the appropriate cast function
-        auto castFunc = IntrinsicNameSpace.getExactFunction(toType.toString(), [fromNode.getType()]);
+        auto castFunc = IntrinsicNameSpace.getExactFunction(toType.toString(), [fromType]);
         assert (castFunc !is null);
         return new immutable FunctionCallNode(castFunc, [fromNode], fromNode.start, fromNode.end);
     }
@@ -1127,11 +1132,8 @@ private immutable(TypedNode) addCastNode(immutable TypedNode fromNode, immutable
         return specializeNode(fromLiteralNode, toType);
     }
     // TODO: other conversion kinds
-    throw new SourceException(
-        format("Unknown conversion chain from type %s to %s: %s",
-            fromNode.getType().toString(), toType.toString(), conversions.toString()),
-        fromNode
-    );
+    throw new SourceException(format("Unknown conversion chain from type %s to %s: %s",
+            fromType.toString(), toType.toString(), conversions.toString()), fromNode);
 }
 
 private immutable(LiteralNode) specializeNode(immutable LiteralNode fromNode, immutable Type toType) {

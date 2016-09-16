@@ -176,9 +176,13 @@ public immutable class NullType : Type {
     }
 
     public override immutable(Type) lowestUpperBound(immutable Type other) {
-        // There is only a bound with itself
+        // There is a bound with itself
         if (opEquals(other)) {
             return this;
+        }
+        // If the other type is a reference type, null is always smaller
+        if (cast(immutable ReferenceType) other !is null) {
+            return other;
         }
         return null;
     }
@@ -767,9 +771,8 @@ public immutable class AnyType : CompositeType {
     }
 
     public override immutable(Type) lowestUpperBound(immutable Type other) {
-        auto referenceType = cast(immutable ReferenceType) other;
-        if (referenceType !is null) {
-            // No other reference type can be greater than this, so just return this
+        if (cast(immutable ReferenceType) other !is null || cast(immutable NullType) other !is null) {
+            // No other type can be greater than this, so just return this
             return this;
         }
         return null;
@@ -871,6 +874,10 @@ public immutable class TupleType : CompositeType {
         // Otherwise if the other is a reference type, return the any type
         if (cast(ReferenceType) other !is null) {
             return AnyType.INSTANCE;
+        }
+        // Otherwise if the other is the null type, return this
+        if (cast(NullType) other !is null) {
+            return this;
         }
         return null;
     }
@@ -1042,6 +1049,10 @@ public immutable class ArrayType : ReferenceType {
         // If the other is a reference type, return the any type
         if (cast(ReferenceType) other !is null) {
             return AnyType.INSTANCE;
+        }
+        // Otherwise if the other is the null type, return the null type
+        if (cast(NullType) other !is null) {
+            return this;
         }
         return null;
     }
