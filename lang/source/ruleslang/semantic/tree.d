@@ -357,13 +357,19 @@ public immutable class EmptyLiteralNode : ReferenceNode, LiteralNode {
         }
         auto arrayType = cast(immutable ArrayType) specialType;
         if (arrayType !is null) {
-            // If the other type is sized, use a label for the size minus one
-            // Otherwise label it with "other" for a size of zero
+            immutable(TypedNode)[] specialValues = [];
+            immutable(ArrayLabel)[] labels = [];
+            // If the other type is sized then add a value at the size minus one
+            auto defaultComponent = arrayType.componentType.defaultValue(_start, _end);
             auto sizedArrayType = cast(immutable SizedArrayType) arrayType;
-            immutable ArrayLabel label = sizedArrayType is null ? ArrayLabel.asOther(_start, _end)
-                    : immutable ArrayLabel(sizedArrayType.size - 1, _start, _end);
-            return new immutable ArrayLiteralNode([arrayType.componentType.defaultValue(_start, _end)],
-                    [label], _start, _end);
+            if (sizedArrayType !is null && sizedArrayType.size > 0) {
+                specialValues ~= defaultComponent;
+                labels ~= immutable ArrayLabel(sizedArrayType.size - 1, _start, _end);
+            }
+            // Add a value for "other"
+            specialValues ~= defaultComponent;
+            labels ~= ArrayLabel.asOther(_start, _end);
+            return new immutable ArrayLiteralNode(specialValues, labels, _start, _end);
         }
         auto tupleType = cast(immutable TupleType) specialType;
         if (tupleType !is null) {
@@ -433,12 +439,18 @@ public immutable class TupleLiteralNode : ReferenceNode, LiteralNode {
                 specialValues ~= value.addCastNode(arrayType.componentType);
                 specialLabels ~= immutable ArrayLabel(i, _start, _end);
             }
-            // If the other array is sized and this size is shorter, correct it
+            // For sized arrays we must make sure every component is initialized
             auto sizedArrayType = cast(immutable SizedArrayType) arrayType;
-            if (sizedArrayType !is null && specialValues.length < sizedArrayType.size) {
-                // Add a label for size minus one and a corresponding default value
-                specialLabels ~= immutable ArrayLabel(sizedArrayType.size - 1, _start, _end);
-                specialValues ~= sizedArrayType.componentType.defaultValue(_start, _end);
+            if (sizedArrayType !is null) {
+                auto defaultComponent = sizedArrayType.componentType.defaultValue(_start, _end);
+                // If the array is shorther then add a value at the size minus one
+                if (specialValues.length < sizedArrayType.size) {
+                    specialValues ~= defaultComponent;
+                    specialLabels ~= immutable ArrayLabel(sizedArrayType.size - 1, _start, _end);
+                }
+                // Add an "other" value
+                specialValues ~= defaultComponent;
+                specialLabels ~= ArrayLabel.asOther(_start, _end);
             }
             return new immutable ArrayLiteralNode(specialValues, specialLabels, _start, _end);
         }
@@ -694,13 +706,28 @@ public immutable class ArrayLiteralNode : LiteralNode, ReferenceNode {
             foreach (value; values) {
                 specialValues ~= value.addCastNode(arrayType.componentType);
             }
-            // If the other array is sized and this size is shorter, correct it
+            // For sized arrays we must make sure every component is initialized
             immutable(ArrayLabel)[] specialLabels = labels;
             auto sizedArrayType = cast(immutable SizedArrayType) arrayType;
-            if (sizedArrayType !is null && type.size < sizedArrayType.size) {
-                // Add a label for size minus one and a corresponding default value
-                specialLabels ~= immutable ArrayLabel(sizedArrayType.size - 1, _start, _end);
-                specialValues ~= sizedArrayType.componentType.defaultValue(_start, _end);
+            if (sizedArrayType !is null) {
+                auto defaultComponent = sizedArrayType.componentType.defaultValue(_start, _end);
+                // If the array is shorther then add a value at the size minus one
+                if (type.size < sizedArrayType.size) {
+                    specialValues ~= defaultComponent;
+                    specialLabels ~= immutable ArrayLabel(sizedArrayType.size - 1, _start, _end);
+                }
+                // If we don't have an "other" label then add one
+                bool hasOtherLabel = false;
+                foreach (label; labels) {
+                    if (label.other) {
+                        hasOtherLabel = true;
+                        break;
+                    }
+                }
+                if (!hasOtherLabel) {
+                    specialValues ~= defaultComponent;
+                    specialLabels ~= ArrayLabel.asOther(_start, _end);
+                }
             }
             return new immutable ArrayLiteralNode(specialValues, specialLabels, _start, _end);
         }
@@ -1211,6 +1238,17 @@ public immutable(TypedNode) defaultValue(immutable Type type, size_t start, size
             return new immutable UnsignedIntegerLiteralNode(atomicType, 0, start, end);
         }
     }
-
+    auto referenceType = cast(immutable ReferenceType) type;
+    if (referenceType !is null) {
+        auto sizedArrayType = cast(immutable SizedArrayType) type;
+        if (sizedArrayType !is null) {
+            auto defaultComponent = sizedArrayType.componentType.defaultValue(start, end);
+            immutable(TypedNode)[] values = [defaultComponent, defaultComponent];
+            immutable(ArrayLabel)[] labels = [immutable ArrayLabel(sizedArrayType.size - 1, start, end),
+                    ArrayLabel.asOther(start, end)];
+            return new immutable ArrayLiteralNode(values, labels, start, end);
+        }
+        return new immutable NullLiteralNode(start, end);
+    }
     throw new Exception(format("No default value for type %s", type.toString()));
 }

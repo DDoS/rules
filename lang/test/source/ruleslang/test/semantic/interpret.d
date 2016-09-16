@@ -648,6 +648,67 @@ unittest {
         "StructLiteral({s: UnsignedIntegerLiteral(4), t: FloatLiteral(2.3)}) | {uint16_lit(4) s, fp32_lit(2.3) t}",
         interpretExp("strc2{s: 4, t: 2.3}", context)
     );
+    assertEqual(
+        "TypeDefinition(def tup2: {{bool}})",
+        interpretStmt("def tup2: {{bool}}", context)
+    );
+    assertEqual(
+        "TupleLiteral({NullLiteral(null)}) | {null}",
+        interpretExp("tup2{}", context)
+    );
+    assertEqual(
+        "TypeDefinition(def arr1: uint32[][])",
+        interpretStmt("def arr1: uint32[][]", context)
+    );
+    assertEqual(
+        "ArrayLiteral({other: NullLiteral(null)}) | null[0]",
+        interpretExp("arr1{}", context)
+    );
+    assertEqual(
+        "ArrayLiteral({0: ArrayLiteral({other: UnsignedIntegerLiteral(0)}), "
+            ~ "1: ArrayLiteral({other: UnsignedIntegerLiteral(0)})}) | uint32_lit(0)[0][2]",
+        interpretExp("arr1{{}, {}}", context)
+    );
+    assertEqual(
+        "TypeDefinition(def arr2: fp32[2][3])",
+        interpretStmt("def arr2: fp32[2][3]", context)
+    );
+    assertEqual(
+        "ArrayLiteral({2: ArrayLiteral({1: FloatLiteral(0), other: FloatLiteral(0)}), "
+            ~ "other: ArrayLiteral({1: FloatLiteral(0), other: FloatLiteral(0)})}) | fp32_lit(0)[2][3]",
+        interpretExp("arr2{}", context)
+    );
+    assertEqual(
+        "TypeDefinition(def arr3: fp32[][3])",
+        interpretStmt("def arr3: fp32[][3]", context)
+    );
+    assertEqual(
+        "ArrayLiteral({2: NullLiteral(null), other: NullLiteral(null)}) | null[3]",
+        interpretExp("arr3{}", context)
+    );
+    interpretExpFails("arr3{3: {}}", context);
+    assertEqual(
+        "ArrayLiteral({1: ArrayLiteral({other: FloatLiteral(0)}), 2: NullLiteral(null), other: NullLiteral(null)})"
+            ~ " | fp32_lit(0)[0][3]",
+        interpretExp("arr3{1: {}}", context)
+    );
+    assertEqual(
+        "ArrayLiteral({2: ArrayLiteral({other: FloatLiteral(0)}), other: ArrayLiteral({other: FloatLiteral(0)})})"
+            ~ " | fp32_lit(0)[0][3]",
+        interpretExp("arr3{2: {}, other: {}}", context)
+    );
+    assertEqual(
+        "TypeDefinition(def arr4: fp32[3][])",
+        interpretStmt("def arr4: fp32[3][]", context)
+    );
+    assertEqual(
+        "ArrayLiteral({other: ArrayLiteral({2: FloatLiteral(0), other: FloatLiteral(0)})}) | fp32_lit(0)[3][0]",
+        interpretExp("arr4{}", context)
+    );
+    assertEqual(
+        "ArrayLiteral({0: ArrayLiteral({2: FloatLiteral(0), other: FloatLiteral(0)})}) | fp32_lit(0)[3][1]",
+        interpretExp("arr4{{}}", context)
+    );
 }
 
 private string interpretExp(alias info = getAllInfo)(string source, Context context = new Context()) {
