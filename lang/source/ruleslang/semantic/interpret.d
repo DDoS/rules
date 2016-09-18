@@ -301,7 +301,7 @@ public immutable class Interpreter {
         auto valueType = valueNode.getType();
         auto referenceType = cast(immutable ReferenceType) valueType;
         if (referenceType is null) {
-            throw new SourceException(format("Not a composite type %s", valueType.toString()), indexAccess.value);
+            throw new SourceException(format("Not a reference type %s", valueType.toString()), indexAccess.value);
         }
         // Check if the index type is uint64
         auto indexType = indexNode.getType();
@@ -491,15 +491,13 @@ public immutable class Interpreter {
             case "===": {
                 // The left and right types must be reference types or null
                 auto leftNode = valueCompare.left.interpret(context).reduceLiterals();
-                if (cast(immutable ReferenceType) leftNode.getType() is null
-                        && cast(immutable NullType) leftNode.getType() is null) {
-                    throw new SourceException(format("Left type must be a reference type or null, not %s",
+                if (cast(immutable ReferenceType) leftNode.getType() is null) {
+                    throw new SourceException(format("Left type must be a reference type, not %s",
                             leftNode.getType()), valueCompare.left);
                 }
                 auto rightNode = valueCompare.right.interpret(context).reduceLiterals();
-                if (cast(immutable ReferenceType) rightNode.getType() is null
-                        && cast(immutable NullType) rightNode.getType() is null) {
-                    throw new SourceException(format("Right type must be a reference type or null, not %s",
+                if (cast(immutable ReferenceType) rightNode.getType() is null) {
+                    throw new SourceException(format("Right type must be a reference type, not %s",
                             rightNode.getType()), valueCompare.right);
                 }
                 return new immutable ReferenceCompareNode(leftNode, rightNode, negated, valueCompare.start, valueCompare.end);

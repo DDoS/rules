@@ -1128,10 +1128,6 @@ public immutable(Type)[] getTypes(immutable(TypedNode)[] values) {
 
 private immutable(TypedNode) addCastNode(immutable TypedNode fromNode, immutable Type toType) {
     auto fromType = fromNode.getType();
-    // Special case for null, just use reference widening and add nothing
-    if (cast(immutable NullType) fromType !is null) {
-        return fromNode;
-    }
     // Get the conversion chain from the node type to the parameter type
     auto conversions = new TypeConversionChain();
     bool convertible = fromType.specializableTo(toType, conversions);

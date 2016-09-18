@@ -167,8 +167,7 @@ public class Stack {
                 assert (0);
             }
         } else static if (is(T == void*)) {
-            if (cast(immutable ReferenceType) type !is null
-                    || cast(immutable NullType) type !is null) {
+            if (cast(immutable ReferenceType) type !is null) {
                 push!(void*)(cast(void*) data);
             } else {
                 assert (0);
@@ -335,8 +334,7 @@ public void writeVariant(Variant variant, void* to) {
 
 private string buildTypeSwitch(string op)() {
     return `
-    if (cast(immutable ReferenceType) type !is null
-            || cast(immutable NullType) type !is null) {
+    if (cast(immutable ReferenceType) type !is null) {
         ` ~ op.positionalReplace("void*") ~ `
     } else if (AtomicType.BOOL.opEquals(type)) {
         ` ~ op.positionalReplace("bool") ~ `
