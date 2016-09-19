@@ -7,7 +7,6 @@ import (
 	"github.com/michael-golfi/rules/server/http/compiler"
 	"github.com/michael-golfi/rules/server/http/pipeline"
 	"github.com/michael-golfi/rules/server/http/rule"
-	"github.com/michael-golfi/rules/server/http/inference"
 )
 
 func main() {
@@ -24,5 +23,4 @@ func setRoutes(r *mux.Router) {
 	compiler.SetRoutes(r)
 	pipeline.SetRoutes(r)
 	rule.SetRoutes(r)
-	inference.SetRoutes(r)
 }
