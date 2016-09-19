@@ -1,28 +1,44 @@
-package pipeline_test
+package pipeline
 
 import (
-	"github.com/michael-golfi/rules/http/api"
 	"github.com/stretchr/testify/assert"
 	"testing"
+	"time"
 )
 
-type TestStruct struct {
-	Name string
+func TestNewPipeline(t *testing.T) {
+	in := CreateInput()
+	p := NewPipeline("Default", in)
+
+	assert.NotNil(t, in)
+	assert.NotNil(t, p)
+	assert.Equal(t, STOPPED, p.State())
 }
 
-func TestDataInput(t *testing.T) {
-	state := api.Default.Info()
-	assert.Equal(t, api.UNSTARTED, state)
+func TestPipeline_Start(t *testing.T) {
+	in := CreateInput()
+	p := NewPipeline("Default", in)
 
-	dummyFunc := func(input interface{}) {}
+	assert.NotNil(t, in)
+	assert.NotNil(t, p)
+	assert.Equal(t, STOPPED, p.State())
 
-	api.Default.Run(dummyFunc)
+	p.Start(func(i interface{}) {})
+	assert.Equal(t, RUNNING, p.State())
+}
 
-	state = api.Default.Info()
-	assert.Equal(t, api.RUNNING, state)
+func TestPipeline_Stop(t *testing.T) {
+	in := CreateInput()
+	p := NewPipeline("Default", in)
 
-	api.Default.Stop()
+	assert.NotNil(t, in)
+	assert.NotNil(t, p)
+	assert.Equal(t, STOPPED, p.State())
 
-	state = api.Default.Info()
-	assert.Equal(t, api.STOPPED, state)
+	p.Start(func(i interface{}) {})
+	assert.Equal(t, RUNNING, p.State())
+	p.Stop()
+
+	time.Sleep(1 * time.Second)
+	assert.Equal(t, STOPPED, p.State())
 }

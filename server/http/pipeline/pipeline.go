@@ -3,77 +3,66 @@ package pipeline
 import (
 	"github.com/michael-golfi/log4go"
 	"errors"
-	"sync"
-)
-
-const (
-	UNSTARTED = 0
-	RUNNING = 1
-	STOPPED = 2
 )
 
 type Pipeline struct {
-	Name    string
-	state   int
-	input   chan interface{}
-	process func(interface{})
-	stop    chan bool
+	Name      string
+	state     State
+	pipeInput *PipeInput
+	process   func(interface{})
 }
 
-var (
-	Default = NewPipeline("Default")
-	wait sync.WaitGroup
-)
-
-func NewPipeline(name string) *Pipeline {
+func NewPipeline(name string, in *PipeInput) *Pipeline {
 	return &Pipeline{
 		Name: name,
-		state: UNSTARTED,
-		input: make(chan interface{}, 10),
-		stop:  make(chan bool, 1),
+		state: STOPPED,
+		pipeInput: in,
 	}
 }
 
-func (pipe *Pipeline) Run(processer func(input interface{})) {
-	pipe.state = RUNNING
-	pipe.process = processer
+func (p *Pipeline) Start(processer func(input interface{})) error {
+	if p.State() == RUNNING {
+		return errors.New("Pipeline is already running")
+	}
+
+	p.state = RUNNING
+	p.process = processer
 
 	go func(pipe *Pipeline) {
 		for {
 			select {
-			case input := <-pipe.input:
+			case input := <-pipe.pipeInput.Input:
 				pipe.process(input)
 
-			case <-pipe.stop:
+			case <-pipe.pipeInput.Quit:
 				log4go.Info("Pipeline %s: Stopping", pipe.Name)
 				pipe.state = STOPPED
-				wait.Done()
 				return
 			}
 		}
-	}(pipe)
+	}(p)
+
+	return nil
 }
 
-func (pipe *Pipeline) Input(input interface{}) error {
-	if pipe.state == RUNNING {
-		pipe.input <- input
+func (p *Pipeline) Input(input interface{}) error {
+	if p.state == RUNNING {
+		p.pipeInput.Input <- input
 		return nil
 	} else {
-		return errors.New("Cannot use Pipeline, it isn't running")
+		return errors.New("Pipeline is not running")
 	}
 }
 
-func (pipe *Pipeline) Info() int {
-	return pipe.state
+func (p *Pipeline) State() State {
+	return p.state
 }
 
-func (pipe *Pipeline) Stop() error {
-	if pipe.state == RUNNING {
-		wait.Add(1)
-		pipe.stop <- true
-		wait.Wait()
-		return nil
-	} else {
-		return errors.New("Pipe is already stopped")
+func (p *Pipeline) Stop() error {
+	if p.state == STOPPED {
+		return errors.New("Pipe is stopped")
 	}
+
+	p.pipeInput.Quit <- true
+	return nil
 }

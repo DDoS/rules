@@ -9,16 +9,16 @@ import (
 )
 
 type PipelineHandler struct {
-
+	pipeline *Pipeline
 }
 
 func (p *PipelineHandler) SetRoutes(r *mux.Router) {
-	r.HandleFunc("/pipeline", p.ReadPipelineConfig).Methods("GET")
+	r.HandleFunc("/pipeline", p.ReadPipelineConfig).Methods("HEAD")
 	r.HandleFunc("/pipeline", p.Evaluate).Methods("POST")
 }
 
 func (p *PipelineHandler) ReadPipelineConfig(w http.ResponseWriter, r *http.Request) {
-	if err := json.NewEncoder(w).Encode(Default); err != nil {
+	if err := json.NewEncoder(w).Encode(p.pipeline); err != nil {
 		message := fmt.Sprintf("Could not read Pipeline: %s", err.Error())
 
 		log4go.Error(message)
@@ -28,15 +28,10 @@ func (p *PipelineHandler) ReadPipelineConfig(w http.ResponseWriter, r *http.Requ
 }
 
 func (p *PipelineHandler) Evaluate(w http.ResponseWriter, r *http.Request) {
-	state := Default.Info()
+	state := p.pipeline.State()
 	switch state {
-	case UNSTARTED:
-		Default.Run(func(input interface{}) {
-			log4go.Info("Executing: %s", input)
-		})
-	
 	case RUNNING:
-		Default.Input(r.Body)
+		p.pipeline.Input(r.Body)
 
 	case STOPPED:
 		w.Write([]byte("Pipeline Stopped"))
