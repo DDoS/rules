@@ -5,27 +5,15 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/michael-golfi/rules/server/http/inference"
 	"github.com/go-errors/errors"
+	"io/ioutil"
 )
 
 func TestInferJsonStructure(t *testing.T) {
-	b := []byte(`
-{
-	"id": "0001",
-	"type": "donut",
-	"ppu": 0.55,
-	"batters": {
-			"batter":[
-				{ "id": "1001", "type": "Regular" },
-				{ "id": "1002", "type": "Chocolate" }
-			]
-		},
-	"topping": [
-		{ "id": "5001", "type": "None" }
-	]
-}
-	`)
+	j := JsonHandler{}
 
-	data := ParseSchema(b)
+	b, err := ioutil.ReadFile("./sample.json")
+	assert.NoError(t, err)
+	data := j.Parse(b)
 
 	idTypeObj := []inference.Field{{Name: "id", Type: "string"}, {Name: "type", Type: "string"}}
 	val := []inference.Field{
@@ -52,12 +40,22 @@ func TestInferJsonStructure(t *testing.T) {
 		{Name: "type", Type: "string"},
 	}
 
-	for _, v := range val {
-		dataVal, err := whereKeyEquals(data, v.Name)
+	assertDeepValues(t, val, data)
+}
+
+func assertDeepValues(t *testing.T, expected, actual []inference.Field) {
+	for _, v := range expected {
+		dataVal, err := whereKeyEquals(actual, v.Name)
+
 		if err != nil {
 			assert.FailNow(t, err.Error())
 		}
-		assert.EqualValues(t, v, *dataVal)
+
+		if dataVal.Type == "array" || dataVal.Type == "object" {
+			assertDeepValues(t, v.SubObject, dataVal.SubObject)
+		} else {
+			assert.EqualValues(t, v, *dataVal)
+		}
 	}
 
 }

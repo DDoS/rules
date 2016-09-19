@@ -7,25 +7,25 @@ import (
 	"github.com/michael-golfi/rules/server/http/inference"
 )
 
-func ParseSchema(msg []byte) []inference.Field {
+func (j *JsonHandler) Parse(msg []byte) []inference.Field {
 	var obj interface{}
 
 	if err := json.Unmarshal(msg, &obj); err != nil {
 		log4go.Error(err)
 	}
 
-	data, _ := GetType(obj)
+	data, _ := parse(obj)
 	return data
 }
 
-func GetType(in interface{}) ([]inference.Field, string) {
+func parse(in interface{}) ([]inference.Field, string) {
 	var data []inference.Field
 
 	switch t := in.(type){
 
 	case map[string]interface{}:
 		for k, v := range t {
-			sub, typeStr := GetType(v)
+			sub, typeStr := parse(v)
 			field := inference.Field{
 				Name: k,
 				Type: typeStr,
@@ -36,7 +36,7 @@ func GetType(in interface{}) ([]inference.Field, string) {
 		return data, "object"
 	case []interface{}:
 		for i, v := range t {
-			sub, typeStr := GetType(v)
+			sub, typeStr := parse(v)
 			field := inference.Field{
 				Name: strconv.Itoa(i),
 				Type: typeStr,

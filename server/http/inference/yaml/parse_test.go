@@ -4,49 +4,16 @@ import (
 	"testing"
 	"github.com/stretchr/testify/assert"
 	"github.com/michael-golfi/rules/server/http/inference"
+	"io/ioutil"
 )
-
-const YAML_SAMPLE = `
-- Name: id
-  Type: string
-- Name: type
-  Type: string
-- Name: ppu
-  Type: double
-- Name: batters
-  Type: object
-  SubObject:
-  - Name: batter
-    Type: array
-    SubObject:
-    - Name: '0'
-      Type: object
-      SubObject:
-      - Name: id
-        Type: string
-      - Name: type
-        Type: string
-    - Name: '1'
-      Type: object
-      SubObject:
-      - Name: id
-        Type: string
-      - Name: type
-        Type: string
-- Name: topping
-  Type: array
-  SubObject:
-  - Name: '0'
-    Type: object
-    SubObject:
-    - Name: id
-      Type: string
-    - Name: type
-      Type: string`
 
 func TestYamlHandler_ParseYaml(t *testing.T) {
 	y := YamlHandler{}
-	data := y.ParseYaml([]byte(YAML_SAMPLE))
+
+	b, err := ioutil.ReadFile("./sample.yaml")
+	assert.NoError(t, err)
+	
+	data := y.ParseSchema(b)
 
 	idTypeObj := []inference.Field{{Name: "id", Type: "string"}, {Name: "type", Type: "string"}}
 	val := []inference.Field{
