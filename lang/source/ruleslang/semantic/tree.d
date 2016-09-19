@@ -71,21 +71,12 @@ public immutable class NullNode : TypedNode {
 }
 
 public immutable class NullLiteralNode : LiteralNode {
-    private size_t _start;
-    private size_t _end;
-
     public this(size_t start, size_t end) {
         _start = start;
         _end = end;
     }
 
-    @property public override size_t start() {
-        return _start;
-    }
-
-    @property public override size_t end() {
-        return _end;
-    }
+    mixin sourceIndexFields!false;
 
     public override immutable(TypedNode)[] getChildren() {
         return [];
@@ -117,8 +108,6 @@ public immutable class NullLiteralNode : LiteralNode {
 
 public immutable class BooleanLiteralNode : LiteralNode {
     private BooleanLiteralType type;
-    private size_t _start;
-    private size_t _end;
 
     public this(bool value, size_t start, size_t end) {
         type = new immutable BooleanLiteralType(value);
@@ -126,13 +115,7 @@ public immutable class BooleanLiteralNode : LiteralNode {
         _end = end;
     }
 
-    @property public override size_t start() {
-        return _start;
-    }
-
-    @property public override size_t end() {
-        return _end;
-    }
+    mixin sourceIndexFields!false;
 
     public override immutable(TypedNode)[] getChildren() {
         return [];
@@ -164,8 +147,6 @@ public immutable class BooleanLiteralNode : LiteralNode {
 
 public immutable class StringLiteralNode : ReferenceNode, LiteralNode {
     private StringLiteralType type;
-    private size_t _start;
-    private size_t _end;
 
     public this(dstring value, size_t start, size_t end) {
         type = new immutable StringLiteralType(value);
@@ -173,13 +154,7 @@ public immutable class StringLiteralNode : ReferenceNode, LiteralNode {
         _end = end;
     }
 
-    @property public override size_t start() {
-        return _start;
-    }
-
-    @property public override size_t end() {
-        return _end;
-    }
+    mixin sourceIndexFields!false;
 
     public override immutable(TypedNode)[] getChildren() {
         return [];
@@ -208,8 +183,6 @@ public immutable class StringLiteralNode : ReferenceNode, LiteralNode {
 
 public immutable class SignedIntegerLiteralNode : LiteralNode {
     private SignedIntegerLiteralType type;
-    private size_t _start;
-    private size_t _end;
 
     public this(long value, size_t start, size_t end) {
         type = new immutable SignedIntegerLiteralType(value);
@@ -223,13 +196,7 @@ public immutable class SignedIntegerLiteralNode : LiteralNode {
         _end = end;
     }
 
-    @property public override size_t start() {
-        return _start;
-    }
-
-    @property public override size_t end() {
-        return _end;
-    }
+    mixin sourceIndexFields!false;
 
     public override immutable(TypedNode)[] getChildren() {
         return [];
@@ -245,9 +212,8 @@ public immutable class SignedIntegerLiteralNode : LiteralNode {
             if (atomicSpecial.isInteger()) {
                 if (atomicSpecial.isSigned()) {
                     return new immutable SignedIntegerLiteralNode(atomicSpecial, type.value, _start, _end);
-                } else {
-                    return new immutable UnsignedIntegerLiteralNode(atomicSpecial, type.value, _start, _end);
                 }
+                return new immutable UnsignedIntegerLiteralNode(atomicSpecial, type.value, _start, _end);
             }
             if (atomicSpecial.isFloat()) {
                 return new immutable FloatLiteralNode(atomicSpecial, type.value, _start, _end);
@@ -271,8 +237,6 @@ public immutable class SignedIntegerLiteralNode : LiteralNode {
 
 public immutable class UnsignedIntegerLiteralNode : LiteralNode {
     private UnsignedIntegerLiteralType type;
-    private size_t _start;
-    private size_t _end;
 
     public this(ulong value, size_t start, size_t end) {
         type = new immutable UnsignedIntegerLiteralType(value);
@@ -286,13 +250,7 @@ public immutable class UnsignedIntegerLiteralNode : LiteralNode {
         _end = end;
     }
 
-    @property public override size_t start() {
-        return _start;
-    }
-
-    @property public override size_t end() {
-        return _end;
-    }
+    mixin sourceIndexFields!false;
 
     public override immutable(TypedNode)[] getChildren() {
         return [];
@@ -308,9 +266,8 @@ public immutable class UnsignedIntegerLiteralNode : LiteralNode {
             if (atomicSpecial.isInteger()) {
                 if (atomicSpecial.isSigned()) {
                     return new immutable SignedIntegerLiteralNode(atomicSpecial, type.value, _start, _end);
-                } else {
-                    return new immutable UnsignedIntegerLiteralNode(atomicSpecial, type.value, _start, _end);
                 }
+                return new immutable UnsignedIntegerLiteralNode(atomicSpecial, type.value, _start, _end);
             }
             if (atomicSpecial.isFloat()) {
                 return new immutable FloatLiteralNode(atomicSpecial, type.value, _start, _end);
@@ -334,8 +291,6 @@ public immutable class UnsignedIntegerLiteralNode : LiteralNode {
 
 public immutable class FloatLiteralNode : LiteralNode {
     private FloatLiteralType type;
-    private size_t _start;
-    private size_t _end;
 
     public this(double value, size_t start, size_t end) {
         type = new immutable FloatLiteralType(value);
@@ -349,13 +304,7 @@ public immutable class FloatLiteralNode : LiteralNode {
         _end = end;
     }
 
-    @property public override size_t start() {
-        return _start;
-    }
-
-    @property public override size_t end() {
-        return _end;
-    }
+    mixin sourceIndexFields!false;
 
     public override immutable(TypedNode)[] getChildren() {
         return [];
@@ -387,21 +336,12 @@ public immutable class FloatLiteralNode : LiteralNode {
 }
 
 public immutable class EmptyLiteralNode : ReferenceNode, LiteralNode {
-    private size_t _start;
-    private size_t _end;
-
     public this(size_t start, size_t end) {
         _start = start;
         _end = end;
     }
 
-    @property public override size_t start() {
-        return _start;
-    }
-
-    @property public override size_t end() {
-        return _end;
-    }
+    mixin sourceIndexFields!false;
 
     public override immutable(TypedNode)[] getChildren() {
         return [];
@@ -412,19 +352,42 @@ public immutable class EmptyLiteralNode : ReferenceNode, LiteralNode {
     }
 
     public override immutable(LiteralNode) specializeTo(immutable Type specialType) {
-        auto ignored = new TypeConversionChain();
-        if (AnyType.INSTANCE.convertibleTo(specialType, ignored)) {
+        if (AnyType.INSTANCE.convertibleTo(specialType)) {
             return this;
         }
         auto arrayType = cast(immutable ArrayType) specialType;
         if (arrayType !is null) {
-            // If the other type is sized, use a label for the size minus one
-            // Otherwise label it with "other" for a size of zero
+            immutable(TypedNode)[] specialValues = [];
+            immutable(ArrayLabel)[] labels = [];
+            // If the other type is sized then add a value at the size minus one
+            auto defaultComponent = arrayType.componentType.defaultValue(_start, _end);
             auto sizedArrayType = cast(immutable SizedArrayType) arrayType;
-            immutable ArrayLabel label = sizedArrayType is null ? ArrayLabel.asOther(_start, _end)
-                    : immutable ArrayLabel(sizedArrayType.size - 1, _start, _end);
-            return new immutable ArrayLiteralNode([arrayType.componentType.defaultValue(_start, _end)],
-                    [label], _start, _end);
+            if (sizedArrayType !is null && sizedArrayType.size > 0) {
+                specialValues ~= defaultComponent;
+                labels ~= immutable ArrayLabel(sizedArrayType.size - 1, _start, _end);
+            }
+            // Add a value for "other"
+            specialValues ~= defaultComponent;
+            labels ~= ArrayLabel.asOther(_start, _end);
+            return new immutable ArrayLiteralNode(specialValues, labels, _start, _end);
+        }
+        auto tupleType = cast(immutable TupleType) specialType;
+        if (tupleType !is null) {
+            // Use default values for all members
+            immutable(TypedNode)[] specialValues = [];
+            foreach (memberType; tupleType.memberTypes) {
+                specialValues ~= memberType.defaultValue(_start, _end);
+            }
+            // If the tuple type is also a structure type then add the labels
+            auto structType = cast(immutable StructureType) tupleType;
+            if (structType !is null) {
+                immutable(StructLabel)[] labels;
+                foreach (i, memberName; structType.memberNames) {
+                    labels ~= immutable StructLabel(memberName, _start, _end);
+                }
+                return new immutable StructLiteralNode(specialValues, labels, _start, _end);
+            }
+            return new immutable TupleLiteralNode(specialValues, _start, _end);
         }
         return null;
     }
@@ -445,8 +408,6 @@ public immutable class EmptyLiteralNode : ReferenceNode, LiteralNode {
 public immutable class TupleLiteralNode : ReferenceNode, LiteralNode {
     public TypedNode[] values;
     private TupleLiteralType type;
-    private size_t _start;
-    private size_t _end;
 
     public this(immutable(TypedNode)[] values, size_t start, size_t end) {
         this.values = values;
@@ -455,13 +416,7 @@ public immutable class TupleLiteralNode : ReferenceNode, LiteralNode {
         _end = end;
     }
 
-    @property public override size_t start() {
-        return _start;
-    }
-
-    @property public override size_t end() {
-        return _end;
-    }
+    mixin sourceIndexFields!false;
 
     public override immutable(TypedNode)[] getChildren() {
         return values;
@@ -472,8 +427,7 @@ public immutable class TupleLiteralNode : ReferenceNode, LiteralNode {
     }
 
     public override immutable(LiteralNode) specializeTo(immutable Type specialType) {
-        auto ignored = new TypeConversionChain();
-        if (type.convertibleTo(specialType, ignored)) {
+        if (type.convertibleTo(specialType)) {
             return this;
         }
         auto arrayType = cast(immutable ArrayType) specialType;
@@ -485,14 +439,44 @@ public immutable class TupleLiteralNode : ReferenceNode, LiteralNode {
                 specialValues ~= value.addCastNode(arrayType.componentType);
                 specialLabels ~= immutable ArrayLabel(i, _start, _end);
             }
-            // If the other array is sized and this size is shorter, correct it
+            // For sized arrays we must make sure every component is initialized
             auto sizedArrayType = cast(immutable SizedArrayType) arrayType;
-            if (sizedArrayType !is null && specialValues.length < sizedArrayType.size) {
-                // Add a label for size minus one and a corresponding default value
-                specialLabels ~= immutable ArrayLabel(sizedArrayType.size - 1, _start, _end);
-                specialValues ~= sizedArrayType.componentType.defaultValue(_start, _end);
+            if (sizedArrayType !is null) {
+                auto defaultComponent = sizedArrayType.componentType.defaultValue(_start, _end);
+                // If the array is shorther then add a value at the size minus one
+                if (specialValues.length < sizedArrayType.size) {
+                    specialValues ~= defaultComponent;
+                    specialLabels ~= immutable ArrayLabel(sizedArrayType.size - 1, _start, _end);
+                }
+                // Add an "other" value
+                specialValues ~= defaultComponent;
+                specialLabels ~= ArrayLabel.asOther(_start, _end);
             }
             return new immutable ArrayLiteralNode(specialValues, specialLabels, _start, _end);
+        }
+        auto tupleType = cast(immutable TupleType) specialType;
+        if (tupleType !is null) {
+            // Specialize all members
+            immutable(TypedNode)[] specialValues = [];
+            foreach (i, value; values) {
+                auto tupleMemberType = tupleType.getMemberType(i);
+                specialValues ~= value.addCastNode(tupleType.getMemberType(i));
+            }
+            // Use default values for missing members
+            foreach (i; values.length .. tupleType.getMemberCount()) {
+                specialValues ~= tupleType.getMemberType(i).defaultValue(_start, _end);
+            }
+            // If the tuple type is also a structure type then add the labels
+            auto structType = cast(immutable StructureType) tupleType;
+            if (structType !is null) {
+                immutable(StructLabel)[] labels;
+                foreach (i, memberName; structType.memberNames) {
+                    auto value = specialValues[i];
+                    labels ~= immutable StructLabel(memberName, value.start, value.end);
+                }
+                return new immutable StructLiteralNode(specialValues, labels, _start, _end);
+            }
+            return new immutable TupleLiteralNode(specialValues, _start, _end);
         }
         return null;
     }
@@ -530,8 +514,6 @@ public immutable class StructLiteralNode : ReferenceNode, LiteralNode {
     public TypedNode[] values;
     private StructLabel[] labels;
     private StructureLiteralType type;
-    private size_t _start;
-    private size_t _end;
 
     public this(immutable(TypedNode)[] values, immutable(StructLabel)[] labels, size_t start, size_t end) {
         assert(values.length > 0);
@@ -558,13 +540,7 @@ public immutable class StructLiteralNode : ReferenceNode, LiteralNode {
         _end = end;
     }
 
-    @property public override size_t start() {
-        return _start;
-    }
-
-    @property public override size_t end() {
-        return _end;
-    }
+    mixin sourceIndexFields!false;
 
     public override immutable(TypedNode)[] getChildren() {
         return values;
@@ -575,11 +551,41 @@ public immutable class StructLiteralNode : ReferenceNode, LiteralNode {
     }
 
     public override immutable(LiteralNode) specializeTo(immutable Type specialType) {
-        auto ignored = new TypeConversionChain();
-        if (type.convertibleTo(specialType, ignored)) {
+        if (type.convertibleTo(specialType)) {
             return this;
         }
+        auto structType = cast(immutable StructureType) specialType;
+        if (structType !is null) {
+            immutable(TypedNode)[] specialValues;
+            immutable(StructLabel)[] specialLabels;
+            foreach (i, memberName; structType.memberNames) {
+                auto memberType = structType.memberTypes[i];
+                auto index = indexOf(memberName);
+                if (index < size_t.max) {
+                    specialValues ~= values[index].addCastNode(memberType);
+                    specialLabels ~= labels[index];
+                } else {
+                    specialValues ~= memberType.defaultValue(_start, _end);
+                    specialLabels ~= immutable StructLabel(memberName, _start, _end);
+                }
+            }
+            return new immutable StructLiteralNode(specialValues, specialLabels, _start, _end);
+        }
         return null;
+    }
+
+    public immutable(TypedNode) getValueAt(string name) {
+        auto index = indexOf(name);
+        return index < size_t.max ? values[index] : null;
+    }
+
+    private size_t indexOf(string name) {
+        foreach (i, label; labels) {
+            if (label.name == name) {
+                return i;
+            }
+        }
+        return size_t.max;
     }
 
     public override bool isIntrinsicEvaluable() {
@@ -634,8 +640,6 @@ public immutable class ArrayLiteralNode : LiteralNode, ReferenceNode {
     public TypedNode[] values;
     public ArrayLabel[] labels;
     private SizedArrayLiteralType type;
-    private size_t _start;
-    private size_t _end;
 
     public this(immutable(TypedNode)[] values, immutable(ArrayLabel)[] labels, size_t start, size_t end) {
         assert(values.length > 0);
@@ -681,13 +685,7 @@ public immutable class ArrayLiteralNode : LiteralNode, ReferenceNode {
         _end = end;
     }
 
-    @property public override size_t start() {
-        return _start;
-    }
-
-    @property public override size_t end() {
-        return _end;
-    }
+    mixin sourceIndexFields!false;
 
     public override immutable(TypedNode)[] getChildren() {
         return values;
@@ -698,8 +696,7 @@ public immutable class ArrayLiteralNode : LiteralNode, ReferenceNode {
     }
 
     public override immutable(LiteralNode) specializeTo(immutable Type specialType) {
-        auto ignored = new TypeConversionChain();
-        if (type.convertibleTo(specialType, ignored)) {
+        if (type.convertibleTo(specialType)) {
             return this;
         }
         auto arrayType = cast(immutable ArrayType) specialType;
@@ -709,13 +706,28 @@ public immutable class ArrayLiteralNode : LiteralNode, ReferenceNode {
             foreach (value; values) {
                 specialValues ~= value.addCastNode(arrayType.componentType);
             }
-            // If the other array is sized and this size is shorter, correct it
+            // For sized arrays we must make sure every component is initialized
             immutable(ArrayLabel)[] specialLabels = labels;
             auto sizedArrayType = cast(immutable SizedArrayType) arrayType;
-            if (sizedArrayType !is null && type.size < sizedArrayType.size) {
-                // Add a label for size minus one and a corresponding default value
-                specialLabels ~= immutable ArrayLabel(sizedArrayType.size - 1, _start, _end);
-                specialValues ~= sizedArrayType.componentType.defaultValue(_start, _end);
+            if (sizedArrayType !is null) {
+                auto defaultComponent = sizedArrayType.componentType.defaultValue(_start, _end);
+                // If the array is shorther then add a value at the size minus one
+                if (type.size < sizedArrayType.size) {
+                    specialValues ~= defaultComponent;
+                    specialLabels ~= immutable ArrayLabel(sizedArrayType.size - 1, _start, _end);
+                }
+                // If we don't have an "other" label then add one
+                bool hasOtherLabel = false;
+                foreach (label; labels) {
+                    if (label.other) {
+                        hasOtherLabel = true;
+                        break;
+                    }
+                }
+                if (!hasOtherLabel) {
+                    specialValues ~= defaultComponent;
+                    specialLabels ~= ArrayLabel.asOther(_start, _end);
+                }
             }
             return new immutable ArrayLiteralNode(specialValues, specialLabels, _start, _end);
         }
@@ -756,8 +768,6 @@ public immutable class ArrayLiteralNode : LiteralNode, ReferenceNode {
 
 public immutable class FieldAccessNode : TypedNode {
     private Field field;
-    private size_t _start;
-    private size_t _end;
 
     public this(immutable Field field, size_t start, size_t end) {
         this.field = field;
@@ -765,13 +775,7 @@ public immutable class FieldAccessNode : TypedNode {
         _end = end;
     }
 
-    @property public override size_t start() {
-        return _start;
-    }
-
-    @property public override size_t end() {
-        return _end;
-    }
+    mixin sourceIndexFields!false;
 
     public override immutable(TypedNode)[] getChildren() {
         return [];
@@ -798,8 +802,6 @@ public immutable class MemberAccessNode : TypedNode {
     public TypedNode value;
     public string name;
     private Type type;
-    private size_t _start;
-    private size_t _end;
 
     public this(immutable TypedNode value, string name, size_t start, size_t end) {
         this.value = value;
@@ -810,13 +812,7 @@ public immutable class MemberAccessNode : TypedNode {
         _end = end;
     }
 
-    @property public override size_t start() {
-        return _start;
-    }
-
-    @property public override size_t end() {
-        return _end;
-    }
+    mixin sourceIndexFields!false;
 
     public override immutable(TypedNode)[] getChildren() {
         return [value];
@@ -843,8 +839,6 @@ public immutable class IndexAccessNode : TypedNode {
     public TypedNode value;
     public TypedNode index;
     private Type type;
-    private size_t _start;
-    private size_t _end;
 
     public this(immutable TypedNode value, immutable TypedNode index, size_t start, size_t end) {
         this.value = value;
@@ -883,13 +877,7 @@ public immutable class IndexAccessNode : TypedNode {
         throw new SourceException(format("Index must be known at compile time for type %s", referenceType.toString()), index);
     }
 
-    @property public override size_t start() {
-        return _start;
-    }
-
-    @property public override size_t end() {
-        return _end;
-    }
+    mixin sourceIndexFields!false;
 
     public override immutable(TypedNode)[] getChildren() {
         return [value, index];
@@ -915,8 +903,6 @@ public immutable class IndexAccessNode : TypedNode {
 public immutable class FunctionCallNode : TypedNode {
     public Function func;
     public TypedNode[] arguments;
-    private size_t _start;
-    private size_t _end;
 
     public this(immutable Function func, immutable(TypedNode)[] arguments, size_t start, size_t end) {
         assert (func.parameterCount == arguments.length);
@@ -931,13 +917,7 @@ public immutable class FunctionCallNode : TypedNode {
         _end = end;
     }
 
-    @property public override size_t start() {
-        return _start;
-    }
-
-    @property public override size_t end() {
-        return _end;
-    }
+    mixin sourceIndexFields!false;
 
     public override immutable(TypedNode)[] getChildren() {
         return arguments;
@@ -964,8 +944,6 @@ public immutable class ReferenceCompareNode : TypedNode {
     public TypedNode left;
     public TypedNode right;
     public bool negated;
-    private size_t _start;
-    private size_t _end;
 
     public this(immutable TypedNode left, immutable TypedNode right, bool negated, size_t start, size_t end) {
         this.left = left;
@@ -975,13 +953,7 @@ public immutable class ReferenceCompareNode : TypedNode {
         _end = end;
     }
 
-    @property public override size_t start() {
-        return _start;
-    }
-
-    @property public override size_t end() {
-        return _end;
-    }
+    mixin sourceIndexFields!false;
 
     public override immutable(TypedNode)[] getChildren() {
         return [left, right];
@@ -1012,8 +984,6 @@ public immutable class TypeCompareNode : TypedNode {
     public TypedNode value;
     public ReferenceType compareType;
     public TypeCompareNode.Kind kind;
-    private size_t _start;
-    private size_t _end;
 
     public this(immutable TypedNode value, immutable ReferenceType compareType, TypeCompareNode.Kind kind,
             size_t start, size_t end) {
@@ -1024,13 +994,7 @@ public immutable class TypeCompareNode : TypedNode {
         _end = end;
     }
 
-    @property public override size_t start() {
-        return _start;
-    }
-
-    @property public override size_t end() {
-        return _end;
-    }
+    mixin sourceIndexFields!false;
 
     public override immutable(TypedNode)[] getChildren() {
         return [value];
@@ -1082,8 +1046,6 @@ public immutable class ConditionalNode : TypedNode {
     public TypedNode whenTrue;
     public TypedNode whenFalse;
     private Type type;
-    private size_t _start;
-    private size_t _end;
 
     public this(immutable TypedNode condition, immutable TypedNode whenTrue, immutable TypedNode whenFalse,
             size_t start, size_t end) {
@@ -1106,13 +1068,7 @@ public immutable class ConditionalNode : TypedNode {
         _end = end;
     }
 
-    @property public override size_t start() {
-        return _start;
-    }
-
-    @property public override size_t end() {
-        return _end;
-    }
+    mixin sourceIndexFields!false;
 
     public override immutable(TypedNode)[] getChildren() {
         return [condition, whenTrue, whenFalse];
@@ -1138,8 +1094,6 @@ public immutable class ConditionalNode : TypedNode {
 public immutable class TypeDefinitionNode : Node {
     public string name;
     public Type type;
-    private size_t _start;
-    private size_t _end;
 
     public this(string name, immutable Type type, size_t start, size_t end) {
         this.name = name;
@@ -1148,13 +1102,7 @@ public immutable class TypeDefinitionNode : Node {
         _end = end;
     }
 
-    @property public override size_t start() {
-        return _start;
-    }
-
-    @property public override size_t end() {
-        return _end;
-    }
+    mixin sourceIndexFields!false;
 
     public override immutable(TypedNode)[] getChildren() {
         return [];
@@ -1179,9 +1127,10 @@ public immutable(Type)[] getTypes(immutable(TypedNode)[] values) {
 }
 
 private immutable(TypedNode) addCastNode(immutable TypedNode fromNode, immutable Type toType) {
+    auto fromType = fromNode.getType();
     // Get the conversion chain from the node type to the parameter type
     auto conversions = new TypeConversionChain();
-    bool convertible = fromNode.getType().specializableTo(toType, conversions);
+    bool convertible = fromType.specializableTo(toType, conversions);
     assert (convertible);
     // Wrap the node in casts based on the chain conversion type
     if (conversions.isIdentity() || conversions.isReferenceWidening()) {
@@ -1195,7 +1144,7 @@ private immutable(TypedNode) addCastNode(immutable TypedNode fromNode, immutable
             return specializeNode(fromLiteralNode, toType);
         }
         // Add a call to the appropriate cast function
-        auto castFunc = IntrinsicNameSpace.getExactFunction(toType.toString(), [fromNode.getType()]);
+        auto castFunc = IntrinsicNameSpace.getExactFunction(toType.toString(), [fromType]);
         assert (castFunc !is null);
         return new immutable FunctionCallNode(castFunc, [fromNode], fromNode.start, fromNode.end);
     }
@@ -1206,11 +1155,8 @@ private immutable(TypedNode) addCastNode(immutable TypedNode fromNode, immutable
         return specializeNode(fromLiteralNode, toType);
     }
     // TODO: other conversion kinds
-    throw new SourceException(
-        format("Unknown conversion chain from type %s to %s: %s",
-            fromNode.getType().toString(), toType.toString(), conversions.toString()),
-        fromNode
-    );
+    throw new SourceException(format("Unknown conversion chain from type %s to %s: %s",
+            fromType.toString(), toType.toString(), conversions.toString()), fromNode);
 }
 
 private immutable(LiteralNode) specializeNode(immutable LiteralNode fromNode, immutable Type toType) {
@@ -1288,6 +1234,17 @@ public immutable(TypedNode) defaultValue(immutable Type type, size_t start, size
             return new immutable UnsignedIntegerLiteralNode(atomicType, 0, start, end);
         }
     }
-
+    auto referenceType = cast(immutable ReferenceType) type;
+    if (referenceType !is null) {
+        auto sizedArrayType = cast(immutable SizedArrayType) type;
+        if (sizedArrayType !is null) {
+            auto defaultComponent = sizedArrayType.componentType.defaultValue(start, end);
+            immutable(TypedNode)[] values = [defaultComponent, defaultComponent];
+            immutable(ArrayLabel)[] labels = [immutable ArrayLabel(sizedArrayType.size - 1, start, end),
+                    ArrayLabel.asOther(start, end)];
+            return new immutable ArrayLiteralNode(values, labels, start, end);
+        }
+        return new immutable NullLiteralNode(start, end);
+    }
     throw new Exception(format("No default value for type %s", type.toString()));
 }

@@ -50,6 +50,8 @@ public enum Kind {
 public interface Token {
     @property public size_t start();
     @property public size_t end();
+    @property public void start(size_t start);
+    @property public void end(size_t end);
     public string getSource();
     public Kind getKind();
     public bool opEquals(const string source);
@@ -57,10 +59,9 @@ public interface Token {
 }
 
 public class Terminator : Token {
-    private size_t _start;
-
     public this(size_t start) {
         _start = start;
+        _end = start;
     }
 
     public override string getSource() {
@@ -71,13 +72,7 @@ public class Terminator : Token {
         return Kind.TERMINATOR;
     }
 
-    @property public override size_t start() {
-        return _start;
-    }
-
-    @property public override size_t end() {
-        return _start;
-    }
+    mixin sourceIndexFields;
 
     public override bool opEquals(const string source) {
         return ";" == source;
@@ -91,8 +86,6 @@ public class Terminator : Token {
 public template SourceToken(Kind kind) {
     public class SourceToken : Token {
         private string source;
-        private size_t _start;
-        private size_t _end;
 
         public this(dstring source, size_t start) {
             this(source, start, start + source.length - 1);
@@ -119,13 +112,7 @@ public template SourceToken(Kind kind) {
             return kind;
         }
 
-        @property public override size_t start() {
-            return _start;
-        }
-
-        @property public override size_t end() {
-            return _end;
-        }
+        mixin sourceIndexFields;
 
         public override bool opEquals(const string source) {
             return getSource() == source;
@@ -175,6 +162,14 @@ public class NullLiteral : SourceToken!(Kind.NULL_LITERAL), Expression {
         return super.end;
     }
 
+    @property public override void start(size_t start) {
+        super.start(start);
+    }
+
+    @property public override void end(size_t end) {
+        super.end(end);
+    }
+
     public override Expression map(ExpressionMapper mapper) {
         return mapper.mapNullLiteral(this);
     }
@@ -212,6 +207,14 @@ public class BooleanLiteral : SourceToken!(Kind.BOOLEAN_LITERAL), Expression {
 
     @property public override size_t end() {
         return super.end;
+    }
+
+    @property public override void start(size_t start) {
+        super.start(start);
+    }
+
+    @property public override void end(size_t end) {
+        super.end(end);
     }
 
     public override Expression map(ExpressionMapper mapper) {
@@ -261,6 +264,14 @@ public class StringLiteral : SourceToken!(Kind.STRING_LITERAL), Expression {
 
     @property public override size_t end() {
         return super.end;
+    }
+
+    @property public override void start(size_t start) {
+        super.start(start);
+    }
+
+    @property public override void end(size_t end) {
+        super.end(end);
     }
 
     public override Expression map(ExpressionMapper mapper) {
@@ -314,6 +325,14 @@ public class CharacterLiteral : SourceToken!(Kind.CHARACTER_LITERAL), Expression
 
     @property public override size_t end() {
         return super.end;
+    }
+
+    @property public override void start(size_t start) {
+        super.start(start);
+    }
+
+    @property public override void end(size_t end) {
+        super.end(end);
     }
 
     public override Expression map(ExpressionMapper mapper) {
@@ -401,6 +420,14 @@ public class SignedIntegerLiteral : SourceToken!(Kind.SIGNED_INTEGER_LITERAL), E
         return super.end;
     }
 
+    @property public override void start(size_t start) {
+        super.start(start);
+    }
+
+    @property public override void end(size_t end) {
+        super.end(end);
+    }
+
     public override Expression map(ExpressionMapper mapper) {
         return mapper.mapSignedIntegerLiteral(this);
     }
@@ -483,6 +510,14 @@ public class UnsignedIntegerLiteral : SourceToken!(Kind.UNSIGNED_INTEGER_LITERAL
         return super.end;
     }
 
+    @property public override void start(size_t start) {
+        super.start(start);
+    }
+
+    @property public override void end(size_t end) {
+        super.end(end);
+    }
+
     public override Expression map(ExpressionMapper mapper) {
         return mapper.mapUnsignedIntegerLiteral(this);
     }
@@ -558,6 +593,14 @@ public class FloatLiteral : SourceToken!(Kind.FLOAT_LITERAL), Expression {
         return super.end;
     }
 
+    @property public override void start(size_t start) {
+        super.start(start);
+    }
+
+    @property public override void end(size_t end) {
+        super.end(end);
+    }
+
     public override Expression map(ExpressionMapper mapper) {
         return mapper.mapFloatLiteral(this);
     }
@@ -619,10 +662,9 @@ public class FloatLiteral : SourceToken!(Kind.FLOAT_LITERAL), Expression {
 }
 
 public class Eof : Token {
-    private size_t _start;
-
     public this(size_t start) {
         _start = start;
+        _end = start;
     }
 
     public override string getSource() {
@@ -633,13 +675,7 @@ public class Eof : Token {
         return Kind.EOF;
     }
 
-    @property public override size_t start() {
-        return _start;
-    }
-
-    @property public override size_t end() {
-        return _start;
-    }
+    mixin sourceIndexFields;
 
     public override bool opEquals(const string source) {
         return "\u0004" == source;

@@ -16,6 +16,8 @@ import ruleslang.util;
 public interface Expression {
     @property public size_t start();
     @property public size_t end();
+    @property public void start(size_t start);
+    @property public void end(size_t end);
     public Expression map(ExpressionMapper mapper);
     public immutable(TypedNode) interpret(Context context);
     public string toString();
@@ -30,19 +32,15 @@ public class NameReference : Reference {
     public this(Identifier[] name) {
         assert (name.length > 0);
         _name = name;
-    }
-
-    @property public override size_t start() {
-        return _name[0].start;
-    }
-
-    @property public override size_t end() {
-        return _name[$ - 1].end;
+        _start = name[0].start;
+        _end = name[$ - 1].end;
     }
 
     @property public Identifier[] name() {
         return _name;
     }
+
+    mixin sourceIndexFields;
 
     public override Expression map(ExpressionMapper mapper) {
         return mapper.mapNameReference(this);
@@ -64,14 +62,8 @@ public class LabeledExpression {
     public this(Token label, Expression expression) {
         _label = label;
         _expression = expression;
-    }
-
-    @property public size_t start() {
-        return _label is null ? _expression.start : _label.start;
-    }
-
-    @property public size_t end() {
-        return _expression.end;
+        _start = label is null ? expression.start : label.start;
+        _end = expression.end;
     }
 
     @property public Token label() {
@@ -82,6 +74,8 @@ public class LabeledExpression {
         return _expression;
     }
 
+    mixin sourceIndexFields;
+
     public override string toString() {
         return (_label is null ? "" : _label.getSource() ~ ": ") ~ _expression.toString();
     }
@@ -89,8 +83,6 @@ public class LabeledExpression {
 
 public class CompositeLiteral : Expression {
     private LabeledExpression[] _values;
-    private size_t _start;
-    private size_t _end;
 
     public this(LabeledExpression[] values, size_t start, size_t end) {
         _values = values;
@@ -98,17 +90,11 @@ public class CompositeLiteral : Expression {
         _end = end;
     }
 
-    @property public override size_t start() {
-        return _start;
-    }
-
-    @property public override size_t end() {
-        return _end;
-    }
-
     @property public LabeledExpression[] values() {
         return _values;
     }
+
+    mixin sourceIndexFields;
 
     public override Expression map(ExpressionMapper mapper) {
         foreach (i, value; _values) {
@@ -127,25 +113,29 @@ public class CompositeLiteral : Expression {
 }
 
 public class Initializer : Expression {
-    private NamedTypeAst type;
-    private CompositeLiteral literal;
+    private NamedTypeAst _type;
+    private CompositeLiteral _literal;
 
     public this(NamedTypeAst type, CompositeLiteral literal) {
-        this.type = type;
-        this.literal = literal;
+        _type = type;
+        _literal = literal;
+        _start = type.start;
+        _end = literal.end;
     }
 
-    @property public override size_t start() {
-        return type.start;
+    @property public NamedTypeAst type() {
+        return _type;
     }
 
-    @property public override size_t end() {
-        return literal.end;
+    @property public CompositeLiteral literal() {
+        return _literal;
     }
+
+    mixin sourceIndexFields;
 
     public override Expression map(ExpressionMapper mapper) {
-        type = type.map(mapper).castOrFail!NamedTypeAst();
-        literal = literal.map(mapper).castOrFail!CompositeLiteral();
+        _type = _type.map(mapper).castOrFail!NamedTypeAst();
+        _literal = _literal.map(mapper).castOrFail!CompositeLiteral();
         return mapper.mapInitializer(this);
     }
 
@@ -154,26 +144,20 @@ public class Initializer : Expression {
     }
 
     public override string toString() {
-        return format("Initializer(%s{%s})", type.toString(), literal.values.join!", "());
+        return format("Initializer(%s{%s})", _type.toString(), _literal.values.join!", "());
     }
 }
 
 public class ContextMemberAccess : Reference {
     private Identifier name;
-    private size_t _start;
 
     public this(Identifier name, size_t start) {
         this.name = name;
         _start = start;
+        _end = name.end;
     }
 
-    @property public override size_t start() {
-        return _start;
-    }
-
-    @property public override size_t end() {
-        return name.end;
-    }
+    mixin sourceIndexFields;
 
     public override Expression map(ExpressionMapper mapper) {
         return mapper.mapContextMemberAccess(this);
@@ -195,14 +179,8 @@ public class MemberAccess : Reference {
     public this(Expression value, Identifier name) {
         _value = value;
         _name = name;
-    }
-
-    @property public override size_t start() {
-        return _value.start;
-    }
-
-    @property public override size_t end() {
-        return _name.end;
+        _start = value.start;
+        _end = name.end;
     }
 
     @property public Expression value() {
@@ -212,6 +190,8 @@ public class MemberAccess : Reference {
     @property public Identifier name() {
         return _name;
     }
+
+    mixin sourceIndexFields;
 
     public override Expression map(ExpressionMapper mapper) {
         _value = _value.map(mapper);
@@ -230,20 +210,12 @@ public class MemberAccess : Reference {
 public class IndexAccess : Reference {
     private Expression _value;
     private Expression _index;
-    private size_t _end;
 
     public this(Expression value, Expression index, size_t end) {
         _value = value;
         _index = index;
+        _start = value.start;
         _end = end;
-    }
-
-    @property public override size_t start() {
-        return value.start;
-    }
-
-    @property public override size_t end() {
-        return _end;
     }
 
     @property public Expression value() {
@@ -253,6 +225,8 @@ public class IndexAccess : Reference {
     @property public Expression index() {
         return _index;
     }
+
+    mixin sourceIndexFields;
 
     public override Expression map(ExpressionMapper mapper) {
         _value = _value.map(mapper);
@@ -272,8 +246,6 @@ public class IndexAccess : Reference {
 public class FunctionCall : Expression, Statement {
     private Expression _value;
     private Expression[] _arguments;
-    private size_t _start;
-    private size_t _end;
 
     public this(Expression value, Expression[] arguments, size_t end) {
         this(value, arguments, value.start, end);
@@ -286,14 +258,6 @@ public class FunctionCall : Expression, Statement {
         _end = end;
     }
 
-    @property public override size_t start() {
-        return _start;
-    }
-
-    @property public override size_t end() {
-        return _end;
-    }
-
     @property public Expression value() {
         return _value;
     }
@@ -301,6 +265,8 @@ public class FunctionCall : Expression, Statement {
     @property public Expression[] arguments() {
         return _arguments;
     }
+
+    mixin sourceIndexFields;
 
     public override Expression map(ExpressionMapper mapper) {
         _value = _value.map(mapper);
@@ -331,6 +297,8 @@ public template Unary(string name, Op) {
         public this(Expression inner, Op operator) {
             _inner = inner;
             _operator = operator;
+            _start = operator.start;
+            _end = inner.end;
         }
 
         @property public Expression inner() {
@@ -341,13 +309,7 @@ public template Unary(string name, Op) {
             return _operator;
         }
 
-        @property public override size_t start() {
-            return _operator.start;
-        }
-
-        @property public override size_t end() {
-            return _inner.end;
-        }
+        mixin sourceIndexFields;
 
         public override Expression map(ExpressionMapper mapper) {
             _inner = _inner.map(mapper);
@@ -378,6 +340,8 @@ public template Binary(string name, Op) {
             _left = left;
             _right = right;
             _operator = operator;
+            _start = left.start;
+            _end = right.end;
         }
 
         @property public Expression left() {
@@ -392,13 +356,7 @@ public template Binary(string name, Op) {
             return _operator;
         }
 
-        @property public override size_t start() {
-            return _left.start;
-        }
-
-        @property public override size_t end() {
-            return _right.end;
-        }
+        mixin sourceIndexFields;
 
         public override Expression map(ExpressionMapper mapper) {
             _left = _left.map(mapper);
@@ -442,6 +400,8 @@ public class Compare : Expression {
         _valueOperators = valueOperators;
         _type = type;
         _typeOperator = typeOperator;
+        _start = values[0].start;
+        _end = type is null ? values[$ - 1].end : type.end;
     }
 
     @property public Expression[] values() {
@@ -460,13 +420,7 @@ public class Compare : Expression {
         return _typeOperator;
     }
 
-    @property public override size_t start() {
-        return _values[0].start;
-    }
-
-    @property public override size_t end() {
-        return _type is null ? _values[$ - 1].end : _type.end;
-    }
+    mixin sourceIndexFields;
 
     public override Expression map(ExpressionMapper mapper) {
         foreach (i, value; _values) {
@@ -504,6 +458,8 @@ public class TypeCompare : Expression {
         _value = value;
         _type = type;
         _operator = operator;
+        _start = value.start;
+        _end = type.end;
     }
 
     @property public Expression value() {
@@ -518,13 +474,7 @@ public class TypeCompare : Expression {
         return _operator;
     }
 
-    @property public override size_t start() {
-        return _value.start;
-    }
-
-    @property public override size_t end() {
-        return _type.end;
-    }
+    mixin sourceIndexFields;
 
     public override Expression map(ExpressionMapper mapper) {
         _value = _value.map(mapper);
@@ -550,6 +500,8 @@ public class Conditional : Expression {
         _condition = condition;
         _trueValue = trueValue;
         _falseValue = falseValue;
+        _start = trueValue.start;
+        _end = falseValue.end;
     }
 
     @property public Expression condition() {
@@ -564,13 +516,7 @@ public class Conditional : Expression {
         return _falseValue;
     }
 
-    @property public override size_t start() {
-        return _trueValue.start;
-    }
-
-    @property public override size_t end() {
-        return _falseValue.end;
-    }
+    mixin sourceIndexFields;
 
     public override Expression map(ExpressionMapper mapper) {
         _condition = _condition.map(mapper);

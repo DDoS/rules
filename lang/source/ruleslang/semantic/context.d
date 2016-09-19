@@ -2,6 +2,7 @@ module ruleslang.semantic.context;
 
 import std.exception : assumeUnique;
 import std.meta : AliasSeq;
+import std.typecons : Rebindable;
 import std.format : format;
 
 import ruleslang.syntax.source;
@@ -181,9 +182,8 @@ private bool isLesser(immutable Type paramA, ConversionKind convA, immutable Typ
         return true;
     }
     // If A and B require narrowing and A is more specific
-    auto ignored = new TypeConversionChain();
-    auto argSmallerA = paramA.convertibleTo(paramB, ignored);
-    auto argSmallerB = paramB.convertibleTo(paramA, ignored);
+    auto argSmallerA = paramA.convertibleTo(paramB);
+    auto argSmallerB = paramB.convertibleTo(paramA);
     if (narrowingA && narrowingB && argSmallerA && !argSmallerB) {
         return true;
     }
@@ -247,8 +247,8 @@ public class ImportedNameSpace : NameSpace {
 public class SourceNameSpace : NameSpace {
     private SourceNameSpace _parent;
     public immutable ScopeKind scopeKind;
-    private immutable(Type)*[string] typesByName;
-    private immutable(Field)*[string] fieldsByName;
+    private Rebindable!(immutable Type)[string] typesByName;
+    private Rebindable!(immutable Field)[string] fieldsByName;
     private immutable(Function)[][string] functionsByName;
 
     public this(ScopeKind scopeKind, SourceNameSpace parent) {
@@ -265,18 +265,18 @@ public class SourceNameSpace : NameSpace {
         if (existing !is null) {
             throw new Exception(format("Cannot redeclare type %s", name));
         }
-        typesByName[name] = &type;
+        typesByName[name] = type;
     }
 
     public override immutable(Type) getType(string name) {
         auto type = name in typesByName;
         if (type is null) {
-            if (parent is null) {
+            if (_parent is null) {
                 return null;
             }
-            return parent.getType(name);
+            return _parent.getType(name);
         }
-        return **type;
+        return *type;
     }
 
     public override immutable(Field) getField(string name) {

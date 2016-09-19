@@ -17,6 +17,8 @@ import ruleslang.util;
 public interface TypeAst {
     @property public size_t start();
     @property public size_t end();
+    @property public void start(size_t start);
+    @property public void end(size_t end);
     public TypeAst map(ExpressionMapper mapper);
     public immutable(Type) interpret(Context context);
     public string toString();
@@ -25,11 +27,11 @@ public interface TypeAst {
 public class NamedTypeAst : TypeAst {
     private Identifier[] _name;
     private Expression[] _dimensions;
-    private size_t _end;
 
     public this(Identifier[] name, Expression[] dimensions, size_t end) {
         _name = name;
         _dimensions = dimensions;
+        _start = name[0].start;
         _end = end;
     }
 
@@ -41,13 +43,7 @@ public class NamedTypeAst : TypeAst {
         return _dimensions;
     }
 
-    @property public override size_t start() {
-        return _name[0].start;
-    }
-
-    @property public override size_t end() {
-        return _end;
-    }
+    mixin sourceIndexFields;
 
     public override TypeAst map(ExpressionMapper mapper) {
         foreach (i, dimension; _dimensions) {
@@ -68,21 +64,12 @@ public class NamedTypeAst : TypeAst {
 }
 
 public class AnyTypeAst : TypeAst {
-    private size_t _start;
-    private size_t _end;
-
     public this(size_t start, size_t end) {
         _start = start;
         _end = end;
     }
 
-    @property public override size_t start() {
-        return _start;
-    }
-
-    @property public override size_t end() {
-        return _end;
-    }
+    mixin sourceIndexFields;
 
     public override TypeAst map(ExpressionMapper mapper) {
         return mapper.mapAnyType(this);
@@ -99,8 +86,6 @@ public class AnyTypeAst : TypeAst {
 
 public class TupleTypeAst : TypeAst {
     private TypeAst[] _memberTypes;
-    private size_t _start;
-    private size_t _end;
 
     public this(TypeAst[] memberTypes, size_t start, size_t end) {
         _memberTypes = memberTypes;
@@ -112,13 +97,7 @@ public class TupleTypeAst : TypeAst {
         return _memberTypes;
     }
 
-    @property public override size_t start() {
-        return _start;
-    }
-
-    @property public override size_t end() {
-        return _end;
-    }
+    mixin sourceIndexFields;
 
     public override TypeAst map(ExpressionMapper mapper) {
         foreach (i, memberType; _memberTypes) {
@@ -139,8 +118,6 @@ public class TupleTypeAst : TypeAst {
 public class StructTypeAst : TypeAst {
     private TypeAst[] _memberTypes;
     private Identifier[] _memberNames;
-    private size_t _start;
-    private size_t _end;
 
     public this(TypeAst[] memberTypes, Identifier[] memberNames, size_t start, size_t end) {
         assert (memberTypes.length == memberNames.length);
@@ -158,13 +135,7 @@ public class StructTypeAst : TypeAst {
         return _memberNames;
     }
 
-    @property public override size_t start() {
-        return _start;
-    }
-
-    @property public override size_t end() {
-        return _end;
-    }
+    mixin sourceIndexFields;
 
     public override TypeAst map(ExpressionMapper mapper) {
         foreach (i, memberType; _memberTypes) {

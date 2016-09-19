@@ -15,6 +15,8 @@ import ruleslang.util;
 public interface Statement {
     @property public size_t start();
     @property public size_t end();
+    @property public void start(size_t start);
+    @property public void end(size_t end);
     public Statement map(StatementMapper mapper);
     public immutable(Node) interpret(Context context);
     public string toString();
@@ -23,12 +25,12 @@ public interface Statement {
 public class TypeDefinition : Statement {
     private Identifier _name;
     private TypeAst _type;
-    private size_t _start;
 
     public this(Identifier name, TypeAst type, size_t start) {
         _name = name;
         _type = type;
         _start = start;
+        _end = type.end;
     }
 
     @property public Identifier name() {
@@ -39,13 +41,7 @@ public class TypeDefinition : Statement {
         return _type;
     }
 
-    @property public override size_t start() {
-        return _start;
-    }
-
-    @property public override size_t end() {
-        return _type.end;
-    }
+    mixin sourceIndexFields;
 
     public override Statement map(StatementMapper mapper) {
         _type = _type.map(mapper);
@@ -70,6 +66,8 @@ public class Assignment : Statement {
         _target = target;
         _value = value;
         _operator = operator;
+        _start = target.start;
+        _end = value.end;
     }
 
     @property public Expression target() {
@@ -84,13 +82,7 @@ public class Assignment : Statement {
         return _operator;
     }
 
-    @property public override size_t start() {
-        return _target.start;
-    }
-
-    @property public override size_t end() {
-        return _value.end;
-    }
+    mixin sourceIndexFields;
 
     public override Statement map(StatementMapper mapper) {
         _target = _target.map(mapper);

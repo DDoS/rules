@@ -81,6 +81,34 @@ unittest {
     assert(!combining.has());
 }
 
+public mixin template sourceIndexFields(bool mutable = true) {
+    static if (mutable) {
+        private size_t _start;
+        private size_t _end;
+    } else {
+        private immutable size_t _start;
+        private immutable size_t _end;
+    }
+
+    @property public size_t start() {
+        return _start;
+    }
+
+    @property public size_t end() {
+        return _end;
+    }
+
+    static if (mutable) {
+        @property public void start(size_t start) {
+            _start = start;
+        }
+
+        @property public void end(size_t end) {
+            _end = end;
+        }
+    }
+}
+
 public class SourceException : Exception {
     // This is a duck typing trick: "is(type)" only returns true if the type is valid.
     // The type can be that of a lambda, so we declare one and get the type using typeof(lambda).

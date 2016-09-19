@@ -2,6 +2,7 @@ module ruleslang.semantic.symbol;
 
 import std.conv : to;
 import std.exception : assumeUnique;
+import std.format : format;
 
 import ruleslang.semantic.type;
 import ruleslang.util;
@@ -29,7 +30,7 @@ public immutable class Field : Symbol {
     }
 
     public string toString() {
-        return type.toString() ~ " " ~ _name;
+        return format("%s %s", type.toString(), _name);
     }
 
     public bool opEquals(immutable Field other) {
@@ -90,7 +91,7 @@ public immutable class Function : Symbol {
     }
 
     public string toString() {
-        return _name ~ "(" ~ parameterTypes.join!", "() ~ ") " ~ returnType.toString();
+        return format("%s(%s) %s", _name, parameterTypes.join!", "(), returnType.toString());
     }
 
     public bool opEquals(immutable Function other) {
