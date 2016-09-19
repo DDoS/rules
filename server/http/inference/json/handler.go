@@ -8,12 +8,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-type Field struct {
-	Name      string `yaml:"Name"`
-	Type      string `yaml:"Type"`
-	SubObject []Field `yaml:"SubObject,omitempty"`
-}
-
 func SetRoutes(r *mux.Router) {
 	r.HandleFunc("/infer", InferJsonStructure)
 }
