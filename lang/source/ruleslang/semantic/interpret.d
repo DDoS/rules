@@ -2,6 +2,7 @@ module ruleslang.semantic.interpret;
 
 import std.format : format;
 import std.typecons : Rebindable;
+import std.algorithm.searching : any;
 
 import ruleslang.syntax.source;
 import ruleslang.syntax.token;
@@ -21,6 +22,12 @@ public immutable class Interpreter {
     }
 
     public immutable(Type) interpretNamedType(Context context, NamedTypeAst namedType) {
+        immutable(TypedNode)[] runtimeSizes;
+        return interpretNamedType!false(context, namedType, runtimeSizes);
+    }
+
+    private static immutable(Type) interpretNamedType(bool allowRuntimeSize)(Context context, NamedTypeAst namedType,
+            out immutable(TypedNode)[] runtimeSizes) {
         auto name = namedType.name;
         if (name.length != 1) {
             throw new SourceException("Multi-part type names are not supported right now", namedType);
@@ -41,20 +48,35 @@ public immutable class Interpreter {
             if (dimension is null) {
                 // Null means unsized
                 wrapped = new immutable ArrayType(wrapped);
+                static if (allowRuntimeSize) {
+                    // Append null to indicate that the size doesn't matter
+                    runtimeSizes ~= null;
+                }
             } else {
                 // Check if the size has type uint64
-                auto sizeNodeType = dimension.interpret(context).reduceLiterals().getType();
+                auto sizeNode = dimension.interpret(context).reduceLiterals();
+                auto sizeNodeType = sizeNode.getType();
                 if (!sizeNodeType.specializableTo(AtomicType.UINT64)) {
                     throw new SourceException(format("Size type %s is not convertible to uint64", sizeNodeType.toString()),
                             dimension);
                 }
-                // Try to get the size (should be available as a literal)
-                auto literalSizeNodeType = cast(immutable IntegerLiteralType) sizeNodeType;
-                if (literalSizeNodeType is null) {
-                    throw new SourceException("Array size must be known at compile time", dimension);
+                // Try to get the size (it might be available as a literal)
+                if (auto literalSizeNodeType = cast(immutable IntegerLiteralType) sizeNodeType) {
+                    wrapped = new immutable SizedArrayType(wrapped, literalSizeNodeType.unsignedValue());
+                    static if (allowRuntimeSize) {
+                        // Append null to indicate that the size doesn't matter
+                        runtimeSizes ~= null;
+                    }
+                } else {
+                    static if (allowRuntimeSize) {
+                        // We can evaluate the size at runtime instead, so we'll use a size of zero temporarily
+                        wrapped = new immutable SizedArrayType(wrapped, 0);
+                        // Append the size node so we know where to get the size at runtime
+                        runtimeSizes ~= sizeNode;
+                    } else {
+                        throw new SourceException("Array size must be known at compile time", dimension);
+                    }
                 }
-                auto size = literalSizeNodeType.unsignedValue();
-                wrapped = new immutable SizedArrayType(wrapped, size);
             }
         }
         return wrapped;
@@ -252,8 +274,10 @@ public immutable class Interpreter {
     }
 
     public immutable(TypedNode) interpretInitializer(Context context, Initializer initializer) {
-        // Interpret the type and the composite literal
-        auto type = initializer.type.interpret(context);
+        // Interpret the type, allowing runtime sizes
+        immutable(TypedNode)[] runtimeSizes;
+        auto type = interpretNamedType!true(context, initializer.type, runtimeSizes);
+        // Interpret the composite literal
         auto literalNode = initializer.literal.interpret(context).castOrFail!(immutable LiteralNode);
         // Check if we can initialize the literal as the given type
         auto literalType = literalNode.getType();
@@ -267,7 +291,36 @@ public immutable class Interpreter {
             throw new SourceException(format("Specialization from %s to %s is not implemented",
                     literalType.toString(), type.toString()), initializer);
         }
+        // If we have an array literal then we must add array initializers for runtime-sized arrays
+        if (runtimeSizes.any!(a => a !is null)) {
+            if (auto arrayLiteral = cast(immutable ArrayLiteralNode) specialized) {
+                return addArrayInitializers(arrayLiteral, runtimeSizes);
+            }
+        }
         return specialized;
+    }
+
+    private static immutable(TypedNode) addArrayInitializers(immutable ArrayLiteralNode literal,
+            immutable(TypedNode)[] runtimeSizes, size_t depth = 0) {
+        // Check that we're not recursing past the array depth
+        if (depth >= runtimeSizes.length) {
+            return literal;
+        }
+        // Wrapped recursively all array literals in this literal
+        immutable(TypedNode)[] wrappedValues;
+        foreach (value; literal.values) {
+            if (auto nestedLiteral = cast(immutable ArrayLiteralNode) value) {
+                wrappedValues ~= addArrayInitializers(nestedLiteral, runtimeSizes, depth + 1);
+            } else {
+                wrappedValues ~= value;
+            }
+        }
+        auto wrapped = new immutable ArrayLiteralNode(wrappedValues, literal.labels, literal.start, literal.end);
+        // If the arrays has a runtime size then we wrap it in an array initializer
+        if (auto size = runtimeSizes[runtimeSizes.length - 1 - depth]) {
+            return new immutable ArrayInitializer(size, wrapped, wrapped.start, wrapped.end);
+        }
+        return wrapped;
     }
 
     public immutable(TypedNode) interpretContextMemberAccess(Context context, ContextMemberAccess expression) {

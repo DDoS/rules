@@ -766,6 +766,46 @@ public immutable class ArrayLiteralNode : LiteralNode, ReferenceNode {
     }
 }
 
+public immutable class ArrayInitializer : TypedNode {
+    public ArrayType type;
+    public TypedNode size;
+    public ArrayLiteralNode literal;
+
+    public this(immutable TypedNode size, immutable ArrayLiteralNode literal, size_t start, size_t end) {
+        if (literal.labels.length != 1 || !literal.labels[0].other) {
+            throw new SourceException("Runtime arrays must have an empty literal", literal);
+        }
+        this.type = literal.getType().withoutSize();
+        this.size = size;
+        this.literal = literal;
+        _start = start;
+        _end = end;
+    }
+
+    mixin sourceIndexFields!false;
+
+    public override immutable(TypedNode)[] getChildren() {
+        return [size, literal];
+    }
+
+    public override immutable(ArrayType) getType() {
+        return type;
+    }
+
+    public override bool isIntrinsicEvaluable() {
+        return size.isIntrinsicEvaluable() && literal.isIntrinsicEvaluable();
+    }
+
+    public override void evaluate(Runtime runtime) {
+        Evaluator.INSTANCE.evaluateArrayInitializer(runtime, this);
+    }
+
+    public override string toString() {
+        return format("ArrayInitializer(%s[%s]{%s})", type.componentType.toString(), size.toString(),
+                stringZip!": "(literal.labels, literal.values).join!", "());
+    }
+}
+
 public immutable class FieldAccessNode : TypedNode {
     private Field field;
 
@@ -1239,12 +1279,14 @@ public immutable(TypedNode) defaultValue(immutable Type type, size_t start, size
         auto sizedArrayType = cast(immutable SizedArrayType) type;
         if (sizedArrayType !is null) {
             auto defaultComponent = sizedArrayType.componentType.defaultValue(start, end);
-            immutable(TypedNode)[] values = [defaultComponent];
-            immutable(ArrayLabel)[] labels = [ArrayLabel.asOther(start, end)];
+            immutable(TypedNode)[] values;
+            immutable(ArrayLabel)[] labels;
             if (sizedArrayType.size > 0) {
                 values ~= defaultComponent;
                 labels ~= immutable ArrayLabel(sizedArrayType.size - 1, start, end);
             }
+            values ~= defaultComponent;
+            labels ~= ArrayLabel.asOther(start, end);
             return new immutable ArrayLiteralNode(values, labels, start, end);
         }
         return new immutable NullLiteralNode(start, end);

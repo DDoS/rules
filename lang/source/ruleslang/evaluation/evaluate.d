@@ -115,6 +115,10 @@ public immutable class Evaluator {
         runtime.stack.push(address);
     }
 
+    public void evaluateArrayInitializer(Runtime runtime, immutable ArrayInitializer fieldAccess) {
+        throw new NotImplementedException();
+    }
+
     public void evaluateFieldAccess(Runtime runtime, immutable FieldAccessNode fieldAccess) {
         throw new NotImplementedException();
     }

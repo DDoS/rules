@@ -716,7 +716,19 @@ unittest {
     assertEqual(
         "ArrayLiteral({other: ArrayLiteral({other: NullLiteral(null)})}) | null[0][0]",
         interpretExp("any[0][0]{}", context)
-    )
+    );
+}
+
+unittest {
+    /*
+        def Any: {}
+        Any[+1u]{}
+        Any[+1u][+1u]{}
+        Any[1][+1u]{}
+        Any[+1u][1]{}
+        Any[][+1u]{}
+        Any[+1u][]{}
+    */
 }
 
 private string interpretExp(alias info = getAllInfo)(string source, Context context = new Context()) {
