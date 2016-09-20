@@ -709,6 +709,14 @@ unittest {
         "ArrayLiteral({0: ArrayLiteral({2: FloatLiteral(0), other: FloatLiteral(0)})}) | fp32_lit(0)[3][1]",
         interpretExp("arr4{{}}", context)
     );
+    assertEqual(
+        "TypeDefinition(def any: {})",
+        interpretStmt("def any: {}", context)
+    );
+    assertEqual(
+        "ArrayLiteral({other: ArrayLiteral({other: NullLiteral(null)})}) | null[0][0]",
+        interpretExp("any[0][0]{}", context)
+    )
 }
 
 private string interpretExp(alias info = getAllInfo)(string source, Context context = new Context()) {

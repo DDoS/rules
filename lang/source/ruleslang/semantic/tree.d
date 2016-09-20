@@ -1239,9 +1239,12 @@ public immutable(TypedNode) defaultValue(immutable Type type, size_t start, size
         auto sizedArrayType = cast(immutable SizedArrayType) type;
         if (sizedArrayType !is null) {
             auto defaultComponent = sizedArrayType.componentType.defaultValue(start, end);
-            immutable(TypedNode)[] values = [defaultComponent, defaultComponent];
-            immutable(ArrayLabel)[] labels = [immutable ArrayLabel(sizedArrayType.size - 1, start, end),
-                    ArrayLabel.asOther(start, end)];
+            immutable(TypedNode)[] values = [defaultComponent];
+            immutable(ArrayLabel)[] labels = [ArrayLabel.asOther(start, end)];
+            if (sizedArrayType.size > 0) {
+                values ~= defaultComponent;
+                labels ~= immutable ArrayLabel(sizedArrayType.size - 1, start, end);
+            }
             return new immutable ArrayLiteralNode(values, labels, start, end);
         }
         return new immutable NullLiteralNode(start, end);
