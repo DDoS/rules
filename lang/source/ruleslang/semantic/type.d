@@ -1514,11 +1514,11 @@ public immutable class StringLiteralType : SizedArrayLiteralType {
     public override string toString() {
         final switch (encoding) with (StringLiteralType.Encoding) {
             case UTF8:
-                return format("string_lit(\"%s\")", utf8Value);
+                return format("str8_lit(\"%s\")", utf8Value);
             case UTF16:
-                return format("string_lit(\"%s\")", utf16Value);
+                return format("str16_lit(\"%s\")", utf16Value);
             case UTF32:
-                return format("string_lit(\"%s\")", utf32Value);
+                return format("str32_lit(\"%s\")", utf32Value);
         }
     }
 
