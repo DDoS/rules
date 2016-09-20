@@ -148,6 +148,18 @@ public immutable class BooleanLiteralNode : LiteralNode {
 public immutable class StringLiteralNode : ReferenceNode, LiteralNode {
     private StringLiteralType type;
 
+    public this(string value, size_t start, size_t end) {
+        type = new immutable StringLiteralType(value);
+        _start = start;
+        _end = end;
+    }
+
+    public this(wstring value, size_t start, size_t end) {
+        type = new immutable StringLiteralType(value);
+        _start = start;
+        _end = end;
+    }
+
     public this(dstring value, size_t start, size_t end) {
         type = new immutable StringLiteralType(value);
         _start = start;
@@ -177,7 +189,14 @@ public immutable class StringLiteralNode : ReferenceNode, LiteralNode {
     }
 
     public override string toString() {
-        return format("StringLiteral(\"%s\")", type.value);
+        final switch (type.encoding) with (StringLiteralType.Encoding) {
+            case UTF8:
+                return format("StringLiteral(\"%s\")", type.utf8Value);
+            case UTF16:
+                return format("StringLiteral(\"%s\")", type.utf16Value);
+            case UTF32:
+                return format("StringLiteral(\"%s\")", type.utf32Value);
+        }
     }
 }
 

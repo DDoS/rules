@@ -117,8 +117,19 @@ private string asString(Runtime runtime, immutable Type type, void* address) {
     if (stringLiteral !is null) {
         auto length = *(cast(size_t*) dataSegment);
         dataSegment += size_t.sizeof;
-        dchar[] stringData = (cast(dchar*) dataSegment)[0 .. length];
-        return '"' ~ stringData.idup.to!string() ~ '"';
+        string value;
+        final switch (stringLiteral.encoding) with (StringLiteralType.Encoding) {
+            case UTF8:
+                value = (cast(char*) dataSegment)[0 .. length].idup;
+                break;
+            case UTF16:
+                value = (cast(wchar*) dataSegment)[0 .. length].idup.to!string();
+                break;
+            case UTF32:
+                value = (cast(dchar*) dataSegment)[0 .. length].idup.to!string();
+                break;
+        }
+        return '"' ~ value ~ '"';
     }
 
     auto arrayType = cast(immutable ArrayType) referenceType;

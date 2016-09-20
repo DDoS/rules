@@ -24,11 +24,22 @@ public immutable class Evaluator {
 
     public void evaluateStringLiteral(Runtime runtime, immutable StringLiteralNode stringLiteral) {
         // Allocate the string
-        auto value = stringLiteral.getType().value;
-        auto address = runtime.allocateArray(stringLiteral.getType(), value.length);
+        auto type = stringLiteral.getType();
+        auto length = type.size;
+        auto address = runtime.allocateArray(type, length);
         // Then place the string data
-        auto dataSegment = cast(dchar*) (address + TypeIndex.sizeof + size_t.sizeof);
-        dataSegment[0 .. value.length] = value;
+        auto dataSegment = address + TypeIndex.sizeof + size_t.sizeof;
+        final switch (type.encoding) with (StringLiteralType.Encoding) {
+            case UTF8:
+                (cast(char*) dataSegment)[0 .. length] = type.utf8Value;
+                break;
+            case UTF16:
+                (cast(wchar*) dataSegment)[0 .. length] = type.utf16Value;
+                break;
+            case UTF32:
+                (cast(dchar*) dataSegment)[0 .. length] = type.utf32Value;
+                break;
+        }
         // Finally push the address to the stack
         runtime.stack.push(address);
     }

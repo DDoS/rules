@@ -610,7 +610,7 @@ unittest {
             new immutable StringLiteralType("he"));
     assertLUB(new immutable StringLiteralType("hello"), new immutable StringLiteralType("hell"),
             new immutable StringLiteralType("hell"));
-    assertLUB(new immutable StringLiteralType("hello"), new immutable StringLiteralType("allo"),
+    assertLUB(new immutable StringLiteralType("hello"d), new immutable StringLiteralType("allo"d),
             new immutable SizedArrayType(AtomicType.UINT32, 4));
     assertLUB(new immutable ArrayType(AtomicType.SINT16), new immutable SizedArrayType(AtomicType.SINT16, 3),
             new immutable ArrayType(AtomicType.SINT16));
