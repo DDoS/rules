@@ -87,6 +87,8 @@ public immutable class Evaluator {
         // Then place the array data
         auto dataLayout = type.getDataLayout();
         auto dataSegment = address + TypeIndex.sizeof + size_t.sizeof;
+        // Some caching when possible for efficiency
+        bool otherCachable = cast(immutable AtomicType) type.componentType !is null;
         bool foundOther = false;
         Variant otherCache;
         for (size_t i = 0; i < length; i += 1, dataSegment += dataLayout.componentSize) {
@@ -97,13 +99,13 @@ public immutable class Evaluator {
                 continue;
             }
             // If the value has the "other" label then we must only evaluate it a single time
-            if (isOther && foundOther) {
+            if (otherCachable && isOther && foundOther) {
                 otherCache.writeVariant(dataSegment);
                 continue;
             }
             // Evaluate the data to place the value on the stack
             value.evaluate(runtime);
-            if (isOther && !foundOther) {
+            if (otherCachable && isOther && !foundOther) {
                 // If it is the first labeled with "other" cache it for reuse
                 otherCache = runtime.stack.peek(type.componentType);
                 foundOther = true;
