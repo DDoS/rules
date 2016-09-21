@@ -64,9 +64,8 @@ void main() {
 }
 
 private void evaluate(Expression expression, Context context, Runtime runtime) {
-    expression = expression.expandOperators();
     stdout.writeln("syntax: ", expression.toString());
-    auto node = expression.interpret(context);
+    auto node = expression.expandOperators().interpret(context);
     if (cast(NullNode) node !is null) {
         return;
     }
@@ -84,9 +83,8 @@ private void evaluate(Expression expression, Context context, Runtime runtime) {
 }
 
 private void evaluate(Statement statement, Context context, Runtime runtime) {
-    statement = statement.expandOperators();
     stdout.writeln("syntax: ", statement.toString());
-    auto node = statement.interpret(context);
+    auto node = statement.expandOperators().interpret(context);
     if (cast(NullNode) node !is null) {
         return;
     }
