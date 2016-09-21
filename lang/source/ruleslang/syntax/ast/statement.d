@@ -1,6 +1,8 @@
 module ruleslang.syntax.ast.statement;
 
 import std.format : format;
+import std.conv : to;
+import std.uni : toLower;
 
 import ruleslang.syntax.source;
 import ruleslang.syntax.token;
@@ -54,6 +56,78 @@ public class TypeDefinition : Statement {
 
     public override string toString() {
         return format("TypeDefinition(def %s: %s)", _name.getSource(), _type.toString());
+    }
+}
+
+public class VariableDeclaration : Statement {
+    public enum Kind {
+        LET, VAR
+    }
+
+    VariableDeclaration.Kind _kind;
+    private NamedTypeAst _type;
+    private Identifier _name;
+    private Expression _value;
+
+    public this(VariableDeclaration.Kind kind, NamedTypeAst type, Identifier name, size_t start) {
+        this(kind, type, name, null, start);
+    }
+
+    public this(VariableDeclaration.Kind kind, Identifier name, Expression value, size_t start) {
+        this(kind, null, name, value, start);
+    }
+
+    public this(VariableDeclaration.Kind kind, NamedTypeAst type, Identifier name, Expression value, size_t start) {
+        assert (type !is null || value !is null);
+        _kind = kind;
+        _type = type;
+        _name = name;
+        _value = value;
+        _start = start;
+        _end = value is null ? name.end : value.end;
+    }
+
+    @property public VariableDeclaration.Kind kind() {
+        return _kind;
+    }
+
+    @property public NamedTypeAst type() {
+        return _type;
+    }
+
+    @property public Identifier name() {
+        return _name;
+    }
+
+    @property public Expression value() {
+        return _value;
+    }
+
+    mixin sourceIndexFields;
+
+    public override Statement map(StatementMapper mapper) {
+        if (_type !is null) {
+            _type = _type.map(mapper).castOrFail!NamedTypeAst();
+        }
+        if (_value !is null) {
+            _value = _value.map(mapper);
+        }
+        return mapper.mapVariableDeclaration(this);
+    }
+
+    public override immutable(Node) interpret(Context context) {
+        return Interpreter.INSTANCE.interpretVariableDeclaration(context, this);
+    }
+
+    public override string toString() {
+        auto kindString = _kind.to!string().toLower();
+        if (_type is null) {
+            return format("VariableDeclaration(%s %s = %s)", kindString, _name.getSource(), _value.toString());
+        }
+        if (_value is null) {
+            return format("VariableDeclaration(%s %s %s)", kindString, _type.toString(), _name.getSource());
+        }
+        return format("VariableDeclaration(%s %s %s = %s)", kindString, _type.toString(), _name.getSource(), _value.toString());
     }
 }
 

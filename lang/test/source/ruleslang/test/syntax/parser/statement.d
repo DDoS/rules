@@ -21,6 +21,55 @@ unittest {
 
 unittest {
     assertEqual(
+        "VariableDeclaration(let Test t)",
+        parse("let Test t")
+    );
+    assertEqual(
+        "VariableDeclaration(let Test[] t)",
+        parse("let Test[] t")
+    );
+    assertEqual(
+        "VariableDeclaration(let Test t = Add(SignedIntegerLiteral(1) + SignedIntegerLiteral(1)))",
+        parse("let Test t = 1 + 1")
+    );
+    assertEqual(
+        "VariableDeclaration(let Test[] t = Add(SignedIntegerLiteral(1) + SignedIntegerLiteral(1)))",
+        parse("let Test[] t = 1 + 1")
+    );
+    assertEqual(
+        "VariableDeclaration(let t = Add(SignedIntegerLiteral(1) + SignedIntegerLiteral(1)))",
+        parse("let t = 1 + 1")
+    );
+    assertParseFail("let");
+    assertParseFail("let t");
+    assertParseFail("let Test[]");
+    assertEqual(
+        "VariableDeclaration(var Test t)",
+        parse("var Test t")
+    );
+    assertEqual(
+        "VariableDeclaration(var Test[] t)",
+        parse("var Test[] t")
+    );
+    assertEqual(
+        "VariableDeclaration(var Test t = Add(SignedIntegerLiteral(1) + SignedIntegerLiteral(1)))",
+        parse("var Test t = 1 + 1")
+    );
+    assertEqual(
+        "VariableDeclaration(var Test[] t = Add(SignedIntegerLiteral(1) + SignedIntegerLiteral(1)))",
+        parse("var Test[] t = 1 + 1")
+    );
+    assertEqual(
+        "VariableDeclaration(var t = Add(SignedIntegerLiteral(1) + SignedIntegerLiteral(1)))",
+        parse("var t = 1 + 1")
+    );
+    assertParseFail("var");
+    assertParseFail("var t");
+    assertParseFail("var Test[]");
+}
+
+unittest {
+    assertEqual(
         "Assignment(a = SignedIntegerLiteral(1))",
         parse("a = 1")
     );
@@ -78,4 +127,16 @@ unittest {
 
 private string parse(string source) {
     return new Tokenizer(new DCharReader(source)).parseStatements().join!"\n"();
+}
+
+private void assertParseFail(string source) {
+    try {
+        auto statements = parse(source);
+        throw new AssertionError("Expected a source exception, but got statements:\n" ~ statements);
+    } catch (SourceException exception) {
+        debug (verboseTests) {
+            import std.stdio : stderr;
+            stderr.writeln(exception.getErrorInformation(source).toString());
+        }
+    }
 }

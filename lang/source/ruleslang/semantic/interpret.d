@@ -676,6 +676,10 @@ public immutable class Interpreter {
         return new immutable TypeDefinitionNode(name, type, typeDefinition.start, typeDefinition.end);
     }
 
+    public immutable(Node) interpretVariableDeclaration(Context context, VariableDeclaration variableDeclaration) {
+        return NullNode.INSTANCE;
+    }
+
     public immutable(Node) interpretAssignment(Context context, Assignment typeDefinition) {
         return NullNode.INSTANCE;
     }

@@ -6,6 +6,7 @@ import ruleslang.syntax.dchars;
 import ruleslang.syntax.source;
 import ruleslang.syntax.token;
 import ruleslang.syntax.tokenizer;
+import ruleslang.syntax.ast.type;
 import ruleslang.syntax.ast.expression;
 import ruleslang.syntax.ast.statement;
 import ruleslang.syntax.parser.type;
@@ -57,6 +58,50 @@ private TypeDefinition parseTypeDefinition(Tokenizer tokens) {
     return new TypeDefinition(name, type, start);
 }
 
+private VariableDeclaration parseVariableDeclaration(Tokenizer tokens) {
+    // Try to parse "let" or "var" first
+    VariableDeclaration.Kind kind;
+    if (tokens.head() == "let") {
+        kind = VariableDeclaration.Kind.LET;
+    } else if (tokens.head() == "var") {
+        kind = VariableDeclaration.Kind.VAR;
+    } else {
+        throw new SourceException("Expected \"let\" or \"var\"", tokens.head());
+    }
+    auto start = tokens.head().start;
+    tokens.advance();
+    // Now we can parse an optional named type, which starts with an identifier
+    tokens.savePosition();
+    auto type = parseNamedType(tokens);
+    auto furthestPosition = tokens.head().start;
+    // We need another identifier for the variable name which comes after
+    if (tokens.head().getKind() == Kind.IDENTIFIER) {
+        tokens.discardPosition();
+    } else {
+        // If we don't have one then back off: the identifier we parsed as a type is the name
+        type = null;
+        tokens.restorePosition();
+    }
+    // Now parse the identifier for the name
+    if (tokens.head().getKind() != Kind.IDENTIFIER) {
+        throw new SourceException("Expected an identifier", tokens.head());
+    }
+    auto name = tokens.head().castOrFail!Identifier();
+    tokens.advance();
+    // If we don't have an "=" operator then there isn't any value
+    if (tokens.head() != "=") {
+        // In this case having a named type is mandatory, not having one means the name is missing
+        if (type is null) {
+            throw new SourceException("Expected an identifier", furthestPosition);
+        }
+        return new VariableDeclaration(kind, type, name, start);
+    }
+    tokens.advance();
+    // Otherwise parse and expression for the value
+    auto value = parseExpression(tokens);
+    return new VariableDeclaration(kind, type, name, value, start);
+}
+
 private Statement parseAssigmnentOrFunctionCall(Tokenizer tokens) {
     auto access = parseAccess(tokens);
     auto call = cast(FunctionCall) access;
@@ -78,6 +123,9 @@ private Statement parseAssigmnentOrFunctionCall(Tokenizer tokens) {
 public Statement parseStatement(Tokenizer tokens) {
     if (tokens.head() == "def") {
         return parseTypeDefinition(tokens);
+    }
+    if (tokens.head() == "let" || tokens.head() == "var") {
+        return parseVariableDeclaration(tokens);
     }
     return parseAssigmnentOrFunctionCall(tokens);
 }
