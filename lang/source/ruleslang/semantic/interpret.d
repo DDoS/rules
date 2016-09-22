@@ -703,9 +703,13 @@ public immutable class Interpreter {
                 value = null;
             }
         }
-        // Now attempt to declare the field
+        // Get the field name
         auto name = variableDeclaration.name.getSource();
-        auto field = new immutable Field(name, type);
+        // A field is re-assignable if it is a "var" field
+        auto reAssignable = variableDeclaration.kind == VariableDeclaration.Kind.VAR;
+        // Create the field
+        auto field = new immutable Field(name, type, reAssignable);
+        // Now attempt to declare the field
         try {
             context.declareField(name, field);
         } catch (Exception exception) {
