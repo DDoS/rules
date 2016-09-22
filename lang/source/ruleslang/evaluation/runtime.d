@@ -16,11 +16,11 @@ public abstract class Runtime {
     private Stack _stack;
     private Heap _heap;
     private immutable(ReferenceType)[] types;
+    private void*[string] fieldsByName;
 
     public this() {
         _stack = new Stack(4 * 1024);
         _heap = new Heap();
-        types = [];
     }
 
     @property public Stack stack() {
@@ -48,6 +48,14 @@ public abstract class Runtime {
     public immutable(ReferenceType) getType(TypeIndex index) {
         assert (index < types.length);
         return types[index];
+    }
+
+    public void registerField(immutable Field field, void* address) {
+        fieldsByName[field.symbolicName] = address;
+    }
+
+    public void* getField(immutable Field field) {
+        return fieldsByName[field.symbolicName];
     }
 
     public void* allocateComposite(immutable ReferenceType type) {

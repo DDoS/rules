@@ -293,6 +293,11 @@ public immutable class Evaluator {
     }
 
     public void evaluateVariableDeclaration(Runtime runtime, immutable VariableDeclarationNode variableDeclaration) {
+        // First evaluate the declaration value
+        variableDeclaration.value.evaluate(runtime);
+        // Then we declare a field using the top of the stack (the value stays on the stack)
+        auto address = runtime.stack.peekAddress(variableDeclaration.getType());
+        runtime.registerField(variableDeclaration.field, address);
     }
 }
 
