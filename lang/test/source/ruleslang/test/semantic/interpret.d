@@ -743,6 +743,46 @@ unittest {
 }
 
 unittest {
+    auto context = new Context();
+    assertEqual(
+        "VariableDeclaration(bool a = BooleanLiteral(true))",
+        interpretStmt("var a = true", context)
+    );
+    assertEqual(
+        "Assignment(FieldAccess(a) = BooleanLiteral(false))",
+        interpretStmt("a = false", context)
+    );
+    interpretStmtFails("a = 2", context);
+    assertEqual(
+        "TypeDefinition(def Vec2d: {fp64 x, fp64 y})",
+        interpretStmt("def Vec2d: {fp64 x, fp64 y}", context)
+    );
+    assertEqual(
+        "VariableDeclaration({fp64 x, fp64 y} b = StructLiteral({x: FloatLiteral(-1), y: FloatLiteral(3.6)}))",
+        interpretStmt("let Vec2d b = {-1, 3.6}", context)
+    );
+    assertEqual(
+        "Assignment(MemberAccess(FieldAccess(b).x) = FunctionCall(opDivide(MemberAccess(FieldAccess(b).x), FloatLiteral(-2))))",
+        interpretStmt("b.x /= -2", context)
+    );
+    interpretStmtFails("b.y = \"lol\"", context);
+    assertEqual(
+        "VariableDeclaration(sint32[2] c = ArrayLiteral({1: SignedIntegerLiteral(0), other: SignedIntegerLiteral(0)}))",
+        interpretStmt("var sint32[2] c", context)
+    );
+    assertEqual(
+        "Assignment(IndexAccess(FieldAccess(c)[UnsignedIntegerLiteral(1)]) = SignedIntegerLiteral(2))",
+        interpretStmt("c[1] = 2", context)
+    );
+    interpretStmtFails("c[0] = \"no\"", context);
+    assertEqual(
+        "VariableDeclaration(bool d = BooleanLiteral(true))",
+        interpretStmt("let d = true", context)
+    );
+    interpretStmtFails("d = false", context);
+}
+
+unittest {
     /*
         def Any: {}
         Any[+1u]{}
