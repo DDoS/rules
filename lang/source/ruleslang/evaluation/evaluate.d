@@ -291,6 +291,9 @@ public immutable class Evaluator {
             conditional.whenFalse.evaluate(runtime);
         }
     }
+
+    public void evaluateVariableDeclaration(Runtime runtime, immutable VariableDeclarationNode variableDeclaration) {
+    }
 }
 
 public class NotImplementedException : Exception {

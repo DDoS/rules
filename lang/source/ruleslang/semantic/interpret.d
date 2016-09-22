@@ -671,13 +671,47 @@ public immutable class Interpreter {
         try {
             context.defineType(name, type);
         } catch (Exception exception) {
-            throw new SourceException(exception.msg, typeDefinition);
+            throw new SourceException(exception.msg, typeDefinition.name);
         }
         return new immutable TypeDefinitionNode(name, type, typeDefinition.start, typeDefinition.end);
     }
 
     public immutable(Node) interpretVariableDeclaration(Context context, VariableDeclaration variableDeclaration) {
-        return NullNode.INSTANCE;
+        // Get the type and value, which will vary depending on whether or not type inference is used
+        Rebindable!(immutable Type) type;
+        Rebindable!(immutable TypedNode) value;
+        if (variableDeclaration.type is null) {
+            // Use type inference, the type is the same as the value, but without literals
+            value = variableDeclaration.value.interpret(context).reduceLiterals();
+            type = value.getType().withoutLiteral();
+        } else {
+            // Use the given type
+            type = variableDeclaration.type.interpret(context);
+            // Interpret the value if present
+            if (variableDeclaration.value !is null) {
+                value = variableDeclaration.value.interpret(context).reduceLiterals();
+                // Check if the types are compatible
+                if (!value.getType().specializableTo(type)) {
+                    throw new SourceException(format("Value type %s is not convertible to %s",
+                            value.getType().toString(), type.toString()), variableDeclaration.value);
+                }
+            } else {
+                // TODO: allow later initialization of "let" declarations
+                if (variableDeclaration.kind == VariableDeclaration.Kind.LET) {
+                    throw new SourceException("\"let\" variable declarations must have a value", variableDeclaration);
+                }
+                value = null;
+            }
+        }
+        // Now attempt to declare the field
+        auto name = variableDeclaration.name.getSource();
+        auto field = new immutable Field(name, type);
+        try {
+            context.declareField(name, field);
+        } catch (Exception exception) {
+            throw new SourceException(exception.msg, variableDeclaration.name);
+        }
+        return new immutable VariableDeclarationNode(field, value, variableDeclaration.start, variableDeclaration.end);
     }
 
     public immutable(Node) interpretAssignment(Context context, Assignment typeDefinition) {

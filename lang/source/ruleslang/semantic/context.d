@@ -72,6 +72,16 @@ public class Context {
         return types.length <= 0 ? null : types[0];
     }
 
+    public void declareField(string name, immutable(Field) field) {
+        // Field declarations are done in the source name space
+        // and are allowed to shadow higher priority ones
+        auto existing = intrisicNames.getField(name);
+        if (existing !is null) {
+            throw new Exception(format("Cannot re-declare field %s", name));
+        }
+        sourceNames.declareField(name, field);
+    }
+
     public immutable(Field) resolveField(string name) {
         // Search the name spaces in order of priority
         // Allowing higher priority ones to shadow the others
@@ -279,8 +289,23 @@ public class SourceNameSpace : NameSpace {
         return *type;
     }
 
+    public void declareField(string name, immutable Field field) {
+        auto existing = getField(name);
+        if (existing !is null) {
+            throw new Exception(format("Cannot redeclare field %s", name));
+        }
+        fieldsByName[name] = field;
+    }
+
     public override immutable(Field) getField(string name) {
-        return null;
+        auto field = name in fieldsByName;
+        if (field is null) {
+            if (_parent is null) {
+                return null;
+            }
+            return _parent.getField(name);
+        }
+        return *field;
     }
 
     public override immutable(ApplicableFunction)[] getFunctions(string name, immutable(Type)[] argumentTypes) {

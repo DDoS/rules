@@ -795,7 +795,7 @@ public immutable class ArrayInitializer : TypedNode {
             throw new SourceException("Runtime arrays must have an empty literal", literal);
         }
         this.type = literal.getType().withoutSize();
-        this.size = size;
+        this.size = size.addCastNode(AtomicType.UINT64);
         this.literal = literal;
         _start = start;
         _end = end;
@@ -865,7 +865,7 @@ public immutable class MemberAccessNode : TypedNode {
     public this(immutable TypedNode value, string name, size_t start, size_t end) {
         this.value = value;
         this.name = name;
-        type = this.value.getType().castOrFail!(immutable StructureType)().getMemberType(name);
+        type = this.value.getType().castOrFail!(immutable StructureType).getMemberType(name);
         assert (type !is null);
         _start = start;
         _end = end;
@@ -1116,7 +1116,7 @@ public immutable class ConditionalNode : TypedNode {
         type = reducedTrue.getType().lowestUpperBound(reducedFalse.getType());
         if (type is null) {
             throw new SourceException(
-                format("No lowest upper bound for types %s and %s", reducedTrue.getType(), reducedFalse.getType()),
+                format("No common supertype for %s and %s", reducedTrue.getType(), reducedFalse.getType()),
                 start, end
             );
         }
@@ -1173,6 +1173,32 @@ public immutable class TypeDefinitionNode : Node {
 
     public override string toString() {
         return format("TypeDefinition(def %s: %s)", name, type.toString());
+    }
+}
+
+public immutable class VariableDeclarationNode : Node {
+    public Field field;
+    public TypedNode value;
+
+    public this(immutable Field field, immutable TypedNode value, size_t start, size_t end) {
+        this.field = field;
+        this.value = value is null ? field.type.defaultValue(end, end) : value.addCastNode(field.type);
+        _start = start;
+        _end = end;
+    }
+
+    mixin sourceIndexFields!false;
+
+    public override immutable(TypedNode)[] getChildren() {
+        return [value];
+    }
+
+    public override void evaluate(Runtime runtime) {
+        Evaluator.INSTANCE.evaluateVariableDeclaration(runtime, this);
+    }
+
+    public override string toString() {
+        return format("VariableDeclaration(%s = %s)", field.toString(), value.toString());
     }
 }
 

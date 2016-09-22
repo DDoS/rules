@@ -720,6 +720,29 @@ unittest {
 }
 
 unittest {
+    auto context = new Context();
+    assertEqual(
+        "VariableDeclaration(bool a = BooleanLiteral(true))",
+        interpretStmt("let a = true", context)
+    );
+    interpretStmtFails("let a = 1", context);
+    assertEqual(
+        "VariableDeclaration(sint64 b = SignedIntegerLiteral(2))",
+        interpretStmt("var b = 1 + 1", context)
+    );
+    assertEqual(
+        "VariableDeclaration(uint32[2] array = ArrayLiteral({1: UnsignedIntegerLiteral(0), other: UnsignedIntegerLiteral(0)}))",
+        interpretStmt("var uint32[2] array = {}", context)
+    );
+    interpretStmtFails("var bool b = 1 + 1", context);
+    interpretStmtFails("let uint8 c", context);
+    assertEqual(
+        "VariableDeclaration(fp32 f = FloatLiteral(0))",
+        interpretStmt("var fp32 f", context)
+    );
+}
+
+unittest {
     /*
         def Any: {}
         Any[+1u]{}
