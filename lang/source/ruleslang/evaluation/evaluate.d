@@ -133,13 +133,25 @@ public immutable class Evaluator {
     }
 
     public void evaluateFieldAccess(Runtime runtime, immutable FieldAccessNode fieldAccess) {
-        // Lookup the field address in the runtime
-        auto address = runtime.getField(fieldAccess.field);
+        // Get the address of the field
+        auto address = evaluateFieldAccessAddress(runtime, fieldAccess);
         // Copy the value at that address to the top of the stack
         runtime.stack.pushFrom(fieldAccess.getType(), address);
     }
 
+    public void* evaluateFieldAccessAddress(Runtime runtime, immutable FieldAccessNode fieldAccess) {
+        // Lookup the field address in the runtime
+        return runtime.getField(fieldAccess.field);
+    }
+
     public void evaluateMemberAccess(Runtime runtime, immutable MemberAccessNode memberAccess) {
+        // Get the member address
+        auto address = evaluateMemberAccessAddress(runtime, memberAccess);
+        // Push the member's data onto the stack
+        runtime.stack.pushFrom(memberAccess.getType(), address);
+    }
+
+    public void* evaluateMemberAccessAddress(Runtime runtime, immutable MemberAccessNode memberAccess) {
         // Evaluate the member access value to place it on the stack
         memberAccess.value.evaluate(runtime);
         // Now get its address from the stack and do a null check
@@ -151,13 +163,18 @@ public immutable class Evaluator {
         auto type = runtime.getType(*(cast(TypeIndex*) address));
         // From the type data layout, get the member offset
         auto memberOffset = type.getDataLayout().memberOffsetByName[memberAccess.name];
-        // Get the member address
-        auto memberAddress = address + TypeIndex.sizeof + memberOffset;
-        // Finally push the member's data onto the stack
-        runtime.stack.pushFrom(memberAccess.getType(), memberAddress);
+        // Calculate the member address
+        return address + TypeIndex.sizeof + memberOffset;
     }
 
     public void evaluateIndexAccess(Runtime runtime, immutable IndexAccessNode indexAccess) {
+        // Get the member address
+        auto address = evaluateIndexAccessAddress(runtime, indexAccess);
+        // Push the member's data onto the stack
+        runtime.stack.pushFrom(indexAccess.getType(), address);
+    }
+
+    public void* evaluateIndexAccessAddress(Runtime runtime, immutable IndexAccessNode indexAccess) {
         // Evaluate the index access value to place it on the stack
         indexAccess.value.evaluate(runtime);
         // Now get its address from the stack and do a null check
@@ -213,10 +230,8 @@ public immutable class Evaluator {
                 break;
             }
         }
-        // Get the member address
-        auto memberAddress = dataSegment + memberOffset;
-        // Finally push the member's data onto the stack
-        runtime.stack.pushFrom(indexAccess.getType(), memberAddress);
+        // Calculate the member address
+        return dataSegment + memberOffset;
     }
 
     public void evaluateFunctionCall(Runtime runtime, immutable FunctionCallNode functionCall) {
@@ -299,7 +314,7 @@ public immutable class Evaluator {
         // First evaluate the declaration value
         variableDeclaration.value.evaluate(runtime);
         // Then we declare a field using the top of the stack (the value stays on the stack)
-        auto address = runtime.stack.peekAddress(variableDeclaration.field.type);
+        auto address = runtime.stack.peekAddress(variableDeclaration.value.getType());
         runtime.registerField(variableDeclaration.field, address);
     }
 }

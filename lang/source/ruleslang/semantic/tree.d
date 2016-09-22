@@ -26,6 +26,10 @@ public immutable interface TypedNode : Node {
     public bool isIntrinsicEvaluable();
 }
 
+public immutable interface AssignableNode : TypedNode {
+    public void* evaluateAddress(Runtime runtime);
+}
+
 public immutable interface LiteralNode : TypedNode {
     public immutable(LiteralType) getType();
     public immutable(LiteralNode) specializeTo(immutable Type type);
@@ -825,7 +829,7 @@ public immutable class ArrayInitializer : TypedNode {
     }
 }
 
-public immutable class FieldAccessNode : TypedNode {
+public immutable class FieldAccessNode : AssignableNode {
     public Field field;
 
     public this(immutable Field field, size_t start, size_t end) {
@@ -852,12 +856,16 @@ public immutable class FieldAccessNode : TypedNode {
         Evaluator.INSTANCE.evaluateFieldAccess(runtime, this);
     }
 
+    public override void* evaluateAddress(Runtime runtime) {
+        return Evaluator.INSTANCE.evaluateFieldAccessAddress(runtime, this);
+    }
+
     public override string toString() {
         return format("FieldAccess(%s)", field.name);
     }
 }
 
-public immutable class MemberAccessNode : TypedNode {
+public immutable class MemberAccessNode : AssignableNode {
     public TypedNode value;
     public string name;
     private Type type;
@@ -889,12 +897,16 @@ public immutable class MemberAccessNode : TypedNode {
         Evaluator.INSTANCE.evaluateMemberAccess(runtime, this);
     }
 
+    public override void* evaluateAddress(Runtime runtime) {
+        return Evaluator.INSTANCE.evaluateMemberAccessAddress(runtime, this);
+    }
+
     public override string toString() {
         return format("MemberAccess(%s.%s)", value.toString(), name);
     }
 }
 
-public immutable class IndexAccessNode : TypedNode {
+public immutable class IndexAccessNode : AssignableNode {
     public TypedNode value;
     public TypedNode index;
     private Type type;
@@ -952,6 +964,10 @@ public immutable class IndexAccessNode : TypedNode {
 
     public override void evaluate(Runtime runtime) {
         Evaluator.INSTANCE.evaluateIndexAccess(runtime, this);
+    }
+
+    public override void* evaluateAddress(Runtime runtime) {
+        return Evaluator.INSTANCE.evaluateIndexAccessAddress(runtime, this);
     }
 
     public override string toString() {

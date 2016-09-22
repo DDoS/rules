@@ -108,16 +108,16 @@ private Statement parseAssigmnentOrFunctionCall(Tokenizer tokens) {
     if (call !is null) {
         return call;
     }
-    auto reference = cast(Reference) access;
+    auto reference = cast(AssignableExpression) access;
     if (reference is null) {
-        throw new SourceException("Not a reference expression", access);
+        throw new SourceException("Not an assignable expression", access);
     }
     if (tokens.head().getKind() != Kind.ASSIGNMENT_OPERATOR) {
         throw new SourceException("Expected an assignment operator", tokens.head());
     }
     auto operator = tokens.head().castOrFail!AssignmentOperator();
     tokens.advance();
-    return new Assignment(access, parseExpression(tokens), operator);
+    return new Assignment(reference, parseExpression(tokens), operator);
 }
 
 public Statement parseStatement(Tokenizer tokens) {

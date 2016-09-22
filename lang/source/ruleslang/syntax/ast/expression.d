@@ -23,10 +23,10 @@ public interface Expression {
     public string toString();
 }
 
-public interface Reference : Expression {
+public interface AssignableExpression : Expression {
 }
 
-public class NameReference : Reference {
+public class NameReference : AssignableExpression {
     private Identifier[] _name;
 
     public this(Identifier[] name) {
@@ -148,7 +148,7 @@ public class Initializer : Expression {
     }
 }
 
-public class ContextMemberAccess : Reference {
+public class ContextMemberAccess : AssignableExpression {
     private Identifier name;
 
     public this(Identifier name, size_t start) {
@@ -172,7 +172,7 @@ public class ContextMemberAccess : Reference {
     }
 }
 
-public class MemberAccess : Reference {
+public class MemberAccess : AssignableExpression {
     private Expression _value;
     private Identifier _name;
 
@@ -207,7 +207,7 @@ public class MemberAccess : Reference {
     }
 }
 
-public class IndexAccess : Reference {
+public class IndexAccess : AssignableExpression {
     private Expression _value;
     private Expression _index;
 

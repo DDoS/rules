@@ -132,11 +132,11 @@ public class VariableDeclaration : Statement {
 }
 
 public class Assignment : Statement {
-    private Expression _target;
+    private AssignableExpression _target;
     private Expression _value;
     private AssignmentOperator _operator;
 
-    public this(Expression target, Expression value, AssignmentOperator operator) {
+    public this(AssignableExpression target, Expression value, AssignmentOperator operator) {
         _target = target;
         _value = value;
         _operator = operator;
@@ -144,7 +144,7 @@ public class Assignment : Statement {
         _end = value.end;
     }
 
-    @property public Expression target() {
+    @property public AssignableExpression target() {
         return _target;
     }
 
@@ -159,7 +159,7 @@ public class Assignment : Statement {
     mixin sourceIndexFields;
 
     public override Statement map(StatementMapper mapper) {
-        _target = _target.map(mapper);
+        _target = _target.map(mapper).castOrFail!AssignableExpression();
         _value = _value.map(mapper);
         return mapper.mapAssignment(this);
     }
