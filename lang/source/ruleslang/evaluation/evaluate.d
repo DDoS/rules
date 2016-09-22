@@ -133,7 +133,10 @@ public immutable class Evaluator {
     }
 
     public void evaluateFieldAccess(Runtime runtime, immutable FieldAccessNode fieldAccess) {
-        throw new NotImplementedException();
+        // Lookup the field address in the runtime
+        auto address = runtime.getField(fieldAccess.field);
+        // Copy the value at that address to the top of the stack
+        runtime.stack.pushFrom(fieldAccess.getType(), address);
     }
 
     public void evaluateMemberAccess(Runtime runtime, immutable MemberAccessNode memberAccess) {
@@ -296,7 +299,7 @@ public immutable class Evaluator {
         // First evaluate the declaration value
         variableDeclaration.value.evaluate(runtime);
         // Then we declare a field using the top of the stack (the value stays on the stack)
-        auto address = runtime.stack.peekAddress(variableDeclaration.getType());
+        auto address = runtime.stack.peekAddress(variableDeclaration.field.type);
         runtime.registerField(variableDeclaration.field, address);
     }
 }

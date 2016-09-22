@@ -826,7 +826,7 @@ public immutable class ArrayInitializer : TypedNode {
 }
 
 public immutable class FieldAccessNode : TypedNode {
-    private Field field;
+    public Field field;
 
     public this(immutable Field field, size_t start, size_t end) {
         this.field = field;
