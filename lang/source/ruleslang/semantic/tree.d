@@ -1218,6 +1218,32 @@ public immutable class VariableDeclarationNode : Node {
     }
 }
 
+public immutable class AssignmentNode : Node {
+    public AssignableNode target;
+    public TypedNode value;
+
+    public this(immutable AssignableNode target, immutable TypedNode value, size_t start, size_t end) {
+        this.target = target;
+        this.value = value.addCastNode(target.getType());
+        _start = start;
+        _end = end;
+    }
+
+    mixin sourceIndexFields!false;
+
+    public override immutable(TypedNode)[] getChildren() {
+        return [target, value];
+    }
+
+    public override void evaluate(Runtime runtime) {
+        Evaluator.INSTANCE.evaluateAssignment(runtime, this);
+    }
+
+    public override string toString() {
+        return format("Assignment(%s = %s)", target.toString(), value.toString());
+    }
+}
+
 public immutable(Type)[] getTypes(immutable(TypedNode)[] values) {
     immutable(Type)[] valueTypes = [];
     valueTypes.reserve(values.length);

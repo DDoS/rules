@@ -317,6 +317,15 @@ public immutable class Evaluator {
         auto address = runtime.stack.peekAddress(variableDeclaration.value.getType());
         runtime.registerField(variableDeclaration.field, address);
     }
+
+    public void evaluateAssignment(Runtime runtime, immutable AssignmentNode assignment) {
+        // First evaluate the target address
+        auto address = assignment.target.evaluateAddress(runtime);
+        // Then evaluate the value
+        assignment.value.evaluate(runtime);
+        // Finally copy the value to the target
+        runtime.stack.popTo(assignment.value.getType(), address);
+    }
 }
 
 public class NotImplementedException : Exception {

@@ -718,7 +718,22 @@ public immutable class Interpreter {
         return new immutable VariableDeclarationNode(field, value, variableDeclaration.start, variableDeclaration.end);
     }
 
-    public immutable(Node) interpretAssignment(Context context, Assignment typeDefinition) {
-        return NullNode.INSTANCE;
+    public immutable(Node) interpretAssignment(Context context, Assignment assignment) {
+        assert (assignment.operator == "=");
+        auto target = assignment.target.interpret(context).castOrFail!(immutable AssignableNode);
+        // Check if the target is assignable (for a field)
+        if (auto fieldAccess = cast(immutable FieldAccessNode) target) {
+            if (!fieldAccess.field.reAssignable) {
+                throw new SourceException(format("Cannot re-assign field %s", fieldAccess.field.name), fieldAccess);
+            }
+        }
+        // Interpret the value node
+        auto value = assignment.value.interpret(context);
+        // Check if the types are compatible
+        if (!value.getType().specializableTo(target.getType())) {
+            throw new SourceException(format("Value type %s is not convertible to %s",
+                    value.getType().toString(), target.getType().toString()), assignment.value);
+        }
+        return new immutable AssignmentNode(target, value, assignment.start, assignment.end);
     }
 }
