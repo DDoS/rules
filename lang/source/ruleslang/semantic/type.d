@@ -193,20 +193,11 @@ public immutable class AtomicType : Type {
     public static immutable immutable(AtomicType)[] ALL_TYPES = BOOL ~ NUMERIC_TYPES;
     public static immutable immutable(AtomicType)[] NUMERIC_TYPES = INTEGER_TYPES ~ FLOATING_POINT_TYPES;
     public static immutable immutable(AtomicType)[] INTEGER_TYPES = SIGNED_INTEGER_TYPES ~ UNSIGNED_INTEGER_TYPES;
-    public static immutable immutable(AtomicType)[] SIGNED_INTEGER_TYPES = [
-        SINT8, SINT16, SINT32, SINT64
-    ];
-    public static immutable immutable(AtomicType)[] UNSIGNED_INTEGER_TYPES = [
-        UINT8, UINT16, UINT32, UINT64
-    ];
-    public static immutable immutable(AtomicType)[] FLOATING_POINT_TYPES = [
-        FP32, FP64
-    ];
+    public static immutable immutable(AtomicType)[] SIGNED_INTEGER_TYPES = [SINT8, SINT16, SINT32, SINT64];
+    public static immutable immutable(AtomicType)[] UNSIGNED_INTEGER_TYPES = [UINT8, UINT16, UINT32, UINT64];
+    public static immutable immutable(AtomicType)[] FLOATING_POINT_TYPES = [FP32, FP64];
     private static immutable immutable(AtomicType)[][immutable(DataInfo)] SUPERTYPES;
     private static immutable immutable(AtomicType)[][immutable(DataInfo)] CONVERSIONS;
-    private static immutable immutable(AtomicType)[immutable(DataInfo)] UNSIGNED_TO_SIGNED;
-    private static immutable immutable(AtomicType)[immutable(DataInfo)] SIGNED_TO_UNSIGNED;
-    private static immutable immutable(AtomicType)[immutable(DataInfo)] INTEGER_TO_FLOAT;
     private static immutable immutable(AtomicType)[immutable(DataInfo)] INFO_TO_SINGLETON;
     public static immutable immutable(AtomicType)[string] BY_NAME;
     public string name;
@@ -236,22 +227,6 @@ public immutable class AtomicType : Type {
         auto conversions = supertypes.transitiveClosure().mapKeys!getInfo();
         conversions.rehash;
         CONVERSIONS = conversions.assumeUnique();
-
-        immutable(AtomicType)[immutable(DataInfo)] unsignedToSigned = [
-           UINT8.info: SINT8, UINT16.info: SINT16, UINT32.info: SINT32, UINT64.info: SINT64,
-        ];
-        UNSIGNED_TO_SIGNED = unsignedToSigned.assumeUnique();
-
-        immutable(AtomicType)[immutable(DataInfo)] signedToUnsigned = [
-           SINT8.info: UINT8, SINT16.info: UINT16, SINT32.info: UINT32, SINT64.info: UINT64,
-        ];
-        SIGNED_TO_UNSIGNED = signedToUnsigned.assumeUnique();
-
-        immutable(AtomicType)[immutable(DataInfo)] integerToFloat = [
-           UINT8.info: FP32, SINT8.info: FP32, UINT16.info: FP32, SINT16.info: FP32,
-           UINT32.info: FP32, SINT32.info: FP32, UINT64.info: FP64, SINT64.info: FP64,
-        ];
-        INTEGER_TO_FLOAT = integerToFloat.assumeUnique();
 
         immutable(AtomicType)[immutable(DataInfo)] infoToSingleton = [
             BOOL.info: BOOL,
@@ -425,13 +400,6 @@ public immutable class AtomicType : Type {
         return SUPERTYPES[info];
     }
 
-    public immutable(AtomicType) asSigned() {
-        if (isSigned()) {
-            return this;
-        }
-        return UNSIGNED_TO_SIGNED[info];
-    }
-
     public override string toString() {
         return name;
     }
@@ -506,7 +474,6 @@ public immutable class BooleanLiteralType : AtomicType, AtomicLiteralType {
 public immutable interface IntegerLiteralType : AtomicLiteralType {
     public ulong unsignedValue();
     public long signedValue();
-    public immutable(FloatLiteralType) toFloatLiteral();
 }
 
 public alias SignedIntegerLiteralType = IntegerLiteralTypeTemplate!long;
@@ -604,10 +571,6 @@ private template IntegerLiteralTypeTemplate(T) {
 
         public override long signedValue() {
             return cast(long) value;
-        }
-
-        public override immutable(FloatLiteralType) toFloatLiteral() {
-            return new immutable FloatLiteralType(AtomicType.INTEGER_TO_FLOAT[info], value);
         }
 
         public override immutable(AtomicType) withoutLiteral() {
