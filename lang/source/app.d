@@ -19,9 +19,7 @@ import ruleslang.evaluation.evaluate;
 void main() {
     /*
         TODO:
-            Parse variable declarations
-            Interpret variable declarations
-            Interpret assignments
+            Escape string literals in type and nodes
             Parse control flow
             Interpret control flow
     */

@@ -783,6 +783,22 @@ unittest {
 }
 
 unittest {
+    auto context = new Context();
+    assertEqual(
+        "VariableDeclaration(uint32[3] s32 = StringLiteral(\"hey\"))",
+        interpretStmt("let s32 = \"hey\"", context)
+    );
+    assertEqual(
+        "VariableDeclaration(uint16[] s16 = StringLiteral(\"hey\"))",
+        interpretStmt("let uint16[] s16 = \"hey\"", context)
+    );
+    assertEqual(
+        "VariableDeclaration(uint8[] s8 = StringLiteral(\"hey\"))",
+        interpretStmt("let uint8[] s8 = \"hey\"", context)
+    );
+}
+
+unittest {
     /*
         def Any: {}
         Any[+1u]{}

@@ -7,7 +7,7 @@ import std.algorithm.searching : canFind;
 import std.typecons : Rebindable;
 import std.exception : assumeUnique;
 import std.math: isNaN, isInfinity;
-import std.utf : codeLength;
+import std.utf : codeLength, toUTF8, toUTF16, toUTF32;
 
 import ruleslang.util;
 
@@ -94,25 +94,39 @@ public class TypeConversionChain {
         return chain.length == 1 && chain[0] == TypeConversion.IDENTITY;
     }
 
-    public alias isNumericWidening = checkConversions!"INTEGER_WIDEN INTEGER_TO_FLOAT FLOAT_WIDEN";
-    public alias isNumericNarrowing = checkConversions!"INTEGER_LITERAL_NARROW FLOAT_LITERAL_NARROW";
-    public alias isReferenceWidening = checkConversions!"REFERENCE_WIDENING";
-    public alias isReferenceNarrowing = checkConversions!"REFERENCE_NARROWING";
+    public alias isNumericWidening = checkConversions!("INTEGER_WIDEN INTEGER_TO_FLOAT FLOAT_WIDEN", false);
+    public alias isNumericNarrowing = checkConversions!("INTEGER_LITERAL_NARROW FLOAT_LITERAL_NARROW", true);
+    public alias isReferenceWidening = checkConversions!("REFERENCE_WIDENING", false);
+    public alias isReferenceNarrowing = checkConversions!(
+            "REFERENCE_NARROWING STRING_LITERAL_TO_UTF32 STRING_LITERAL_TO_UTF16 STRING_LITERAL_TO_UTF8", true
+    );
 
-    private bool checkConversions(string cases)() {
+    private bool checkConversions(string cases, bool any)() {
         if (chain.length <= 0 || isIdentity()) {
             return false;
         }
         foreach (conversion; chain) {
             switch (conversion) with (TypeConversion) {
-                case IDENTITY:
-                mixin ("case " ~ cases.split().join!":\ncase "() ~ ":\n");
-                    continue;
-                default:
-                    return false;
+                static if (any) {
+                    mixin ("case " ~ cases.split().join!":\ncase "() ~ ":\n");
+                        return true;
+                    case IDENTITY:
+                    default:
+                        continue;
+                } else {
+                    case IDENTITY:
+                    mixin ("case " ~ cases.split().join!":\ncase "() ~ ":\n");
+                        continue;
+                    default:
+                        return false;
+                }
             }
         }
-        return true;
+        static if (any) {
+            return false;
+        } else {
+            return true;
+        }
     }
 
     public override string toString() {
@@ -1509,6 +1523,38 @@ public immutable class StringLiteralType : SizedArrayLiteralType {
         }
         // Try the sized array LUB
         return withoutLiteral().lowestUpperBound(other);
+    }
+
+    public immutable(StringLiteralType) convert(StringLiteralType.Encoding newEncoding)() {
+        final switch (encoding) with (StringLiteralType.Encoding) {
+            case UTF8:
+                final switch (newEncoding) {
+                    case UTF8:
+                        return this;
+                    case UTF16:
+                        return new immutable StringLiteralType(utf8Value.toUTF16());
+                    case UTF32:
+                        return new immutable StringLiteralType(utf8Value.toUTF32());
+                }
+            case UTF16:
+                final switch (newEncoding) {
+                    case UTF8:
+                        return new immutable StringLiteralType(utf16Value.toUTF8());
+                    case UTF16:
+                        return this;
+                    case UTF32:
+                        return new immutable StringLiteralType(utf16Value.toUTF32());
+                }
+            case UTF32:
+                final switch (newEncoding) {
+                    case UTF8:
+                        return new immutable StringLiteralType(utf32Value.toUTF8());
+                    case UTF16:
+                        return new immutable StringLiteralType(utf32Value.toUTF16());
+                    case UTF32:
+                        return this;
+                }
+        }
     }
 
     public override string toString() {

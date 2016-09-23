@@ -3,6 +3,7 @@ module ruleslang.semantic.tree;
 import std.conv : to;
 import std.algorithm.searching : all;
 import std.format : format;
+import std.typecons : Rebindable;
 
 import ruleslang.syntax.source;
 import ruleslang.semantic.type;
@@ -153,19 +154,19 @@ public immutable class StringLiteralNode : ReferenceNode, LiteralNode {
     private StringLiteralType type;
 
     public this(string value, size_t start, size_t end) {
-        type = new immutable StringLiteralType(value);
-        _start = start;
-        _end = end;
+        this(new immutable StringLiteralType(value), start, end);
     }
 
     public this(wstring value, size_t start, size_t end) {
-        type = new immutable StringLiteralType(value);
-        _start = start;
-        _end = end;
+        this(new immutable StringLiteralType(value), start, end);
     }
 
     public this(dstring value, size_t start, size_t end) {
-        type = new immutable StringLiteralType(value);
+        this(new immutable StringLiteralType(value), start, end);
+    }
+
+    public this(immutable StringLiteralType type, size_t start, size_t end) {
+        this.type = type;
         _start = start;
         _end = end;
     }
@@ -181,6 +182,23 @@ public immutable class StringLiteralNode : ReferenceNode, LiteralNode {
     }
 
     public override immutable(LiteralNode) specializeTo(immutable Type specialType) {
+        if (type.convertibleTo(specialType)) {
+            return this;
+        }
+        auto arrayType = cast(immutable ArrayType) specialType;
+        if (arrayType !is null) {
+            Rebindable!(immutable StringLiteralType) newType;
+            if (arrayType.componentType.opEquals(AtomicType.UINT32)) {
+                newType = type.convert!(StringLiteralType.Encoding.UTF32);
+            } else if (arrayType.componentType.opEquals(AtomicType.UINT16)) {
+                newType = type.convert!(StringLiteralType.Encoding.UTF16);
+            } else if (arrayType.componentType.opEquals(AtomicType.UINT8)) {
+                newType = type.convert!(StringLiteralType.Encoding.UTF8);
+            } else {
+                return null;
+            }
+            return new immutable StringLiteralNode(newType, _start, _end);
+        }
         return null;
     }
 
@@ -1281,7 +1299,6 @@ private immutable(TypedNode) addCastNode(immutable TypedNode fromNode, immutable
         assert (fromLiteralNode !is null);
         return specializeNode(fromLiteralNode, toType);
     }
-    // TODO: other conversion kinds
     throw new SourceException(format("Unknown conversion chain from type %s to %s: %s",
             fromType.toString(), toType.toString(), conversions.toString()), fromNode);
 }
