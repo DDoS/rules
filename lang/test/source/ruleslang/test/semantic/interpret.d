@@ -799,15 +799,42 @@ unittest {
 }
 
 unittest {
-    /*
-        def Any: {}
-        Any[+1u]{}
-        Any[+1u][+1u]{}
-        Any[1][+1u]{}
-        Any[+1u][1]{}
-        Any[][+1u]{}
-        Any[+1u][]{}
-    */
+    auto context = new Context();
+    assertEqual(
+        "VariableDeclaration(uint64 a = UnsignedIntegerLiteral(1))",
+        interpretStmt("let a = 1u", context)
+    );
+    assertEqual(
+        "TypeDefinition(def Any: {})",
+        interpretStmt("def Any: {}", context)
+    );
+    assertEqual(
+        "ArrayInitializer(null[FieldAccess(a)]{other: NullLiteral(null)}) | null[]",
+        interpretExp("Any[a]{}", context)
+    );
+    assertEqual(
+        "ArrayInitializer(null[][FieldAccess(a)]{other: ArrayInitializer(null[FieldAccess(a)]{other: NullLiteral(null)})})"
+            ~ " | null[][]",
+        interpretExp("Any[a][a]{}", context)
+    );
+    assertEqual(
+        "ArrayInitializer(null[1][FieldAccess(a)]{other: ArrayLiteral({0: NullLiteral(null), other: NullLiteral(null)})})"
+            ~ " | null[1][]",
+        interpretExp("Any[1][a]{}", context)
+    );
+    assertEqual(
+        "ArrayLiteral({0: ArrayInitializer(null[FieldAccess(a)]{other: NullLiteral(null)}), "
+            ~ "other: ArrayInitializer(null[FieldAccess(a)]{other: NullLiteral(null)})}) | null[][1]",
+        interpretExp("Any[a][1]{}", context)
+    );
+    assertEqual(
+        "ArrayInitializer(null[FieldAccess(a)]{other: NullLiteral(null)}) | null[]",
+        interpretExp("Any[][a]{}", context)
+    );
+    assertEqual(
+        "ArrayLiteral({other: ArrayInitializer(null[FieldAccess(a)]{other: NullLiteral(null)})}) | null[][0]",
+        interpretExp("Any[a][]{}", context)
+    );
 }
 
 private string interpretExp(alias info = getAllInfo)(string source, Context context = new Context()) {

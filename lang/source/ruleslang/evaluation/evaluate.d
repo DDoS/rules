@@ -92,8 +92,20 @@ public immutable class Evaluator {
 
     public void evaluateArrayLiteral(Runtime runtime, immutable ArrayLiteralNode arrayLiteral) {
         auto type = arrayLiteral.getType();
+        evaluateArrayLiteral(runtime, arrayLiteral, type, type.size);
+    }
+
+    public void evaluateArrayInitializer(Runtime runtime, immutable ArrayInitializer arrayInitializer) {
+        // Evaluate the size node
+        arrayInitializer.size.evaluate(runtime);
+        // Get the length from the top of the stack
+        auto length = runtime.stack.pop!ulong();
+        evaluateArrayLiteral(runtime, arrayInitializer.literal, arrayInitializer.getType(), length);
+    }
+
+    private static void evaluateArrayLiteral(Runtime runtime, immutable ArrayLiteralNode arrayLiteral,
+            immutable ArrayType type, size_t length) {
         // Allocate the string
-        auto length = type.size;
         auto address = runtime.allocateArray(type, length);
         // Then place the array data
         auto dataLayout = type.getDataLayout();
@@ -126,10 +138,6 @@ public immutable class Evaluator {
         }
         // Finally push the address to the stack
         runtime.stack.push(address);
-    }
-
-    public void evaluateArrayInitializer(Runtime runtime, immutable ArrayInitializer fieldAccess) {
-        throw new NotImplementedException();
     }
 
     public void evaluateFieldAccess(Runtime runtime, immutable FieldAccessNode fieldAccess) {
