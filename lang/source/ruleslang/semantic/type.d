@@ -9,6 +9,7 @@ import std.exception : assumeUnique;
 import std.math: isNaN, isInfinity;
 import std.utf : codeLength, toUTF8, toUTF16, toUTF32;
 
+import ruleslang.syntax.dchars;
 import ruleslang.util;
 
 public enum ConversionKind {
@@ -1396,6 +1397,39 @@ public immutable class StringLiteralType : SizedArrayLiteralType {
         return value.utf32Value;
     }
 
+    @property public auto valueAs(StringLiteralType.Encoding newEncoding)() {
+        static if (newEncoding == StringLiteralType.Encoding.UTF8) {
+            final switch (encoding) with (StringLiteralType.Encoding) {
+                case UTF8:
+                    return utf8Value;
+                case UTF16:
+                    return utf16Value.toUTF8();
+                case UTF32:
+                    return utf32Value.toUTF8();
+            }
+        } else static if (newEncoding == StringLiteralType.Encoding.UTF16) {
+            final switch (encoding) with (StringLiteralType.Encoding) {
+                case UTF8:
+                    return utf8Value.toUTF16();
+                case UTF16:
+                    return utf16Value;
+                case UTF32:
+                    return utf32Value.toUTF16();
+            }
+        } else static if (newEncoding == StringLiteralType.Encoding.UTF32) {
+            final switch (encoding) with (StringLiteralType.Encoding) {
+                case UTF8:
+                    return utf8Value.toUTF32();
+                case UTF16:
+                    return utf16Value.toUTF32();
+                case UTF32:
+                    return utf32Value;
+            }
+        } else {
+            static assert (0);
+        }
+    }
+
     public override bool convertibleTo(immutable Type type, TypeConversionChain conversions = new TypeConversionChain()) {
         // Allow identity conversion
         if (opEquals(type)) {
@@ -1489,46 +1523,12 @@ public immutable class StringLiteralType : SizedArrayLiteralType {
     }
 
     public immutable(StringLiteralType) convert(StringLiteralType.Encoding newEncoding)() {
-        final switch (encoding) with (StringLiteralType.Encoding) {
-            case UTF8:
-                final switch (newEncoding) {
-                    case UTF8:
-                        return this;
-                    case UTF16:
-                        return new immutable StringLiteralType(utf8Value.toUTF16());
-                    case UTF32:
-                        return new immutable StringLiteralType(utf8Value.toUTF32());
-                }
-            case UTF16:
-                final switch (newEncoding) {
-                    case UTF8:
-                        return new immutable StringLiteralType(utf16Value.toUTF8());
-                    case UTF16:
-                        return this;
-                    case UTF32:
-                        return new immutable StringLiteralType(utf16Value.toUTF32());
-                }
-            case UTF32:
-                final switch (newEncoding) {
-                    case UTF8:
-                        return new immutable StringLiteralType(utf32Value.toUTF8());
-                    case UTF16:
-                        return new immutable StringLiteralType(utf32Value.toUTF16());
-                    case UTF32:
-                        return this;
-                }
-        }
+        return new immutable StringLiteralType(valueAs!newEncoding());
     }
 
     public override string toString() {
-        final switch (encoding) with (StringLiteralType.Encoding) {
-            case UTF8:
-                return format("str8_lit(\"%s\")", utf8Value);
-            case UTF16:
-                return format("str16_lit(\"%s\")", utf16Value);
-            case UTF32:
-                return format("str32_lit(\"%s\")", utf32Value);
-        }
+        auto width = componentType.castOrFail!(immutable AtomicType).bitCount;
+        return format("str%d_lit(\"%s\")", width, valueAs!(StringLiteralType.Encoding.UTF32).escapeString());
     }
 
     public override bool opEquals(immutable Type type) {

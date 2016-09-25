@@ -5,6 +5,7 @@ import std.algorithm.searching : all;
 import std.format : format;
 import std.typecons : Rebindable;
 
+import ruleslang.syntax.dchars;
 import ruleslang.syntax.source;
 import ruleslang.semantic.type;
 import ruleslang.semantic.symbol;
@@ -211,14 +212,7 @@ public immutable class StringLiteralNode : ReferenceNode, LiteralNode {
     }
 
     public override string toString() {
-        final switch (type.encoding) with (StringLiteralType.Encoding) {
-            case UTF8:
-                return format("StringLiteral(\"%s\")", type.utf8Value);
-            case UTF16:
-                return format("StringLiteral(\"%s\")", type.utf16Value);
-            case UTF32:
-                return format("StringLiteral(\"%s\")", type.utf32Value);
-        }
+        return format("StringLiteral(\"%s\")", type.valueAs!(StringLiteralType.Encoding.UTF32).escapeString());
     }
 }
 
