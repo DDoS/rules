@@ -19,7 +19,6 @@ import ruleslang.evaluation.evaluate;
 void main() {
     /*
         TODO:
-            Escape string literals in type and nodes
             Parse control flow
             Interpret control flow
     */
@@ -48,7 +47,12 @@ void main() {
                     tokenizer.advance();
                 }
                 if (tokenizer.head().getKind() != Kind.EOF) {
-                    tokenizer.parseExpression().evaluate(context, runtime);
+                    auto expression = tokenizer.parseExpression();
+                    auto lastKind = tokenizer.head().getKind();
+                    if (lastKind != Kind.EOF && lastKind != Kind.INDENTATION) {
+                        throw new SourceException("Expected end of expression", tokenizer.head());
+                    }
+                    expression.evaluate(context, runtime);
                 }
             } else {
                 foreach (statement; tokenizer.parseStatements()) {
