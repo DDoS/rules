@@ -172,3 +172,52 @@ public class Assignment : Statement {
         return format("Assignment(%s %s %s)", _target.toString(), _operator.getSource(), _value.toString());
     }
 }
+
+public class ConditionalStatement : Statement {
+    private Expression _condition;
+    private Statement[] _trueStatements;
+    private Statement[] _falseStatements;
+
+    public this(Expression condition, Statement[] trueStatements, Statement[] falseStatements, size_t start, size_t end) {
+        _condition = condition;
+        _trueStatements = trueStatements;
+        _falseStatements = falseStatements;
+        _start = start;
+        _end = end;
+    }
+
+    @property public Expression condition() {
+        return _condition;
+    }
+
+    @property public Statement[] trueStatements() {
+        return _trueStatements;
+    }
+
+    @property public Statement[] falseStatements() {
+        return _falseStatements;
+    }
+
+    mixin sourceIndexFields;
+
+    public override Statement map(StatementMapper mapper) {
+        _condition = _condition.map(mapper);
+        foreach (i, statement; _trueStatements) {
+            _trueStatements[i] = statement.map(mapper);
+        }
+        foreach (i, statement; _falseStatements) {
+            _falseStatements[i] = statement.map(mapper);
+        }
+        return mapper.mapConditionalStatement(this);
+    }
+
+    public override immutable(Node) interpret(Context context) {
+        //return Interpreter.INSTANCE.interpretAssignment(context, this);
+        return NullNode.INSTANCE;
+    }
+
+    public override string toString() {
+        return format("ConditionalStatement(if %s: %s%s)", _condition.toString(), _trueStatements.join!"; "(),
+                falseStatements.length > 0 ? format(" else: %s", _falseStatements.join!"; ") : "");
+    }
+}

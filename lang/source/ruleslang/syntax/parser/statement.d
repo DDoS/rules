@@ -14,10 +14,11 @@ import ruleslang.syntax.parser.expression;
 import ruleslang.util;
 
 private struct IndentSpec {
-    private dchar w;
-    private uint count;
+    private size_t count;
+    private char w;
+    private bool nextIndentIgnored = false;
 
-    private this(dchar w, uint count) {
+    private this(char w, size_t count) {
         this.w = w;
         this.count = count;
     }
@@ -33,10 +34,42 @@ private struct IndentSpec {
         }
         return true;
     }
+
+    private IndentSpec opBinary(string op)(Indentation indentation) {
+        static if (op == "+") {
+            void mixedError(char w, char c) {
+                throw new SourceException(format("Mixed indentation: should be '%s', but got '%s'",
+                        this.w.escapeChar(), c.escapeChar()), indentation);
+            }
+            auto source = indentation.getSource();
+            if (source.length <= 0) {
+                throw new SourceException("Expected some indentation", indentation);
+            }
+            char w = source[0];
+            if (count > 0 && this.w != w) {
+                mixedError(this.w, w);
+            }
+            foreach (c; source) {
+                if (w != c) {
+                    mixedError(w, c);
+                }
+            }
+            return IndentSpec(w, count + source.length);
+        } else {
+            static assert(0);
+        }
+    }
+
+    private string toString() {
+        if (count == 0) {
+            return "no indentation";
+        }
+        return format("%d of '%s' of indentation", count, w.escapeChar());
+    }
 }
 
-private IndentSpec* noIndentation() {
-    return new IndentSpec(' ', 0);
+private IndentSpec noIndent() {
+    return IndentSpec(' ', 0);
 }
 
 private TypeDefinition parseTypeDefinition(Tokenizer tokens) {
@@ -120,50 +153,87 @@ private Statement parseAssigmnentOrFunctionCall(Tokenizer tokens) {
     return new Assignment(reference, parseExpression(tokens), operator);
 }
 
-public Statement parseStatement(Tokenizer tokens) {
-    if (tokens.head() == "def") {
-        return parseTypeDefinition(tokens);
+private ConditionalStatement parseConditionalStatement(Tokenizer tokens, IndentSpec indentSpec = noIndent()) {
+    if (tokens.head() != "if") {
+        throw new SourceException("Expected \"def\"", tokens.head());
     }
-    if (tokens.head() == "let" || tokens.head() == "var") {
-        return parseVariableDeclaration(tokens);
+    auto start = tokens.head().start;
+    auto end = tokens.head().end;
+    tokens.advance();
+    // Parse the condition expression
+    auto condition = parseExpression(tokens);
+    if (tokens.head() != ":") {
+        throw new SourceException("Expected ':'", tokens.head());
     }
-    return parseAssigmnentOrFunctionCall(tokens);
-}
-
-public Statement[] parseStatements(Tokenizer tokens) {
-    return parseStatements(tokens, noIndentation());
-}
-
-private Statement[] parseStatements(Tokenizer tokens, IndentSpec* indentSpec) {
-    Statement[] statements = [];
-    auto nextIndentIgnored = false;
-    while (tokens.has()) {
-        Indentation lastIndent = null;
-        // Consume indentation preceding the statement
-        while (tokens.head().getKind() == Kind.INDENTATION) {
-            lastIndent = tokens.head().castOrFail!Indentation();
-            tokens.advance();
+    tokens.advance();
+    // The indentation of the block will be that of the first statement
+    if (tokens.head().getKind() != Kind.INDENTATION) {
+        throw new SourceException("Expected some indentation", tokens.head());
+    }
+    auto blockIndentSpec = indentSpec + tokens.head().castOrFail!Indentation();
+    auto trueStatements = parseStatements(tokens, blockIndentSpec);
+    if (trueStatements.length > 0) {
+        end = trueStatements[$ - 1].end;
+    }
+    // Try to follow it with an else block
+    Statement[] falseStatements = null;
+    tokens.savePosition();
+    if (validateIndentation(tokens, indentSpec) && tokens.head() == "else") {
+        tokens.discardPosition();
+        end = tokens.head().end;
+        tokens.advance();
+        if (tokens.head() != ":") {
+            throw new SourceException("Expected ':'", tokens.head());
         }
-        // Indentation could precede end of source
-        if (!tokens.has()) {
+        tokens.advance();
+        // Reuse the indentation of the "if" block
+        falseStatements = parseStatements(tokens, blockIndentSpec);
+        if (falseStatements.length > 0) {
+            end = falseStatements[$ - 1].end;
+        }
+    } else {
+        tokens.restorePosition();
+        falseStatements = [];
+    }
+    return new ConditionalStatement(condition, trueStatements, falseStatements, start, end);
+}
+
+public Statement parseStatement(Tokenizer tokens, IndentSpec indentSpec = noIndent()) {
+    switch (tokens.head().getSource()) {
+        case "def":
+            return parseTypeDefinition(tokens);
+        case "let":
+        case "var":
+            return parseVariableDeclaration(tokens);
+        case "if":
+            return parseConditionalStatement(tokens, indentSpec);
+        default:
+            return parseAssigmnentOrFunctionCall(tokens);
+    }
+}
+
+public Statement[] parseStatements(Tokenizer tokens, IndentSpec indentSpec = noIndent()) {
+    Statement[] statements = [];
+    while (tokens.has()) {
+        // Check if the indentation is valid for the current spec
+        if (!validateIndentation(tokens, indentSpec)) {
+            if (indentSpec.count <= 0) {
+                // This is a top level statement, the indentation needs to be correct
+                throw new SourceException(format("Expected %s", indentSpec.toString()), tokens.head());
+            }
             break;
         }
-        // Only the last indentation before the statement matters
-        if (!nextIndentIgnored && (lastIndent is null || !indentSpec.validate(lastIndent))) {
-            auto problem = lastIndent is null ? tokens.head() : lastIndent;
-            throw new SourceException(
-                format("Expected %d of '%s' as indentation", indentSpec.count, indentSpec.w.escapeChar()),
-                problem
-            );
+        indentSpec.nextIndentIgnored = false;
+        // Check if this isn't an empty statement
+        if (tokens.has() && tokens.head().getKind != Kind.TERMINATOR) {
+            // Parse the statement
+            statements ~= parseStatement(tokens, indentSpec);
         }
-        nextIndentIgnored = false;
-        // Parse the statement
-        statements ~= parseStatement(tokens);
         // Check for termination
         if (tokens.head().getKind() == Kind.TERMINATOR) {
             tokens.advance();
             // Can ignore indentation for the next statement if on the same line
-            nextIndentIgnored = true;
+            indentSpec.nextIndentIgnored = true;
             continue;
         }
         if (tokens.head().getKind() == Kind.INDENTATION) {
@@ -177,4 +247,20 @@ private Statement[] parseStatements(Tokenizer tokens, IndentSpec* indentSpec) {
         throw new SourceException("Expected end of statement", tokens.head());
     }
     return statements;
+}
+
+private bool validateIndentation(Tokenizer tokens, IndentSpec indentSpec) {
+    Indentation lastIndent = null;
+    // Consume indentation preceding the statement
+    while (tokens.head().getKind() == Kind.INDENTATION) {
+        indentSpec.nextIndentIgnored = false;
+        lastIndent = tokens.head().castOrFail!Indentation();
+        tokens.advance();
+    }
+    // Indentation could precede end of source
+    if (!tokens.has()) {
+        return true;
+    }
+    // Only the last indentation before the statement matters
+    return indentSpec.nextIndentIgnored || lastIndent !is null && indentSpec.validate(lastIndent);
 }

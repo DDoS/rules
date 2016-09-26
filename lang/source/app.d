@@ -1,6 +1,7 @@
 import std.stdio;
 import std.conv : to;
 
+import ruleslang.syntax.dchars;
 import ruleslang.syntax.source;
 import ruleslang.syntax.token;
 import ruleslang.syntax.tokenizer;
@@ -27,11 +28,7 @@ void main() {
     auto runtime = new IntrinsicRuntime();
     bool expressionMode = false;
     while (true) {
-        if (expressionMode) {
-            stdout.write(">>");
-        }
-        stdout.write("> ");
-        auto source = stdin.readln();
+        auto source = readSource(expressionMode);
         if (source.length <= 0) {
             stdout.writeln();
             break;
@@ -63,6 +60,35 @@ void main() {
             writeln(exception.getErrorInformation(source).toString());
         }
     }
+}
+
+private string readSource(bool expressionMode) {
+    if (expressionMode) {
+        stdout.write(">>");
+    }
+    stdout.write("> ");
+    auto source = stdin.readln();
+    while (!expressionMode && source.endsWithIgnoreWhiteSpace(':')) {
+        string nextLine;
+        do {
+            stdout.write("> ");
+            nextLine = stdin.readln();
+            source ~= nextLine;
+        } while (nextLine.length > 0 && nextLine[0].isLineWhiteSpace());
+    }
+    return source;
+}
+
+private bool endsWithIgnoreWhiteSpace(string s, char c) {
+    foreach_reverse (cs; s) {
+        if (!cs.isWhiteSpace()) {
+            if (cs == c) {
+                return true;
+            }
+            break;
+        }
+    }
+    return false;
 }
 
 private void evaluate(Expression expression, Context context, Runtime runtime) {

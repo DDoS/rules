@@ -173,4 +173,8 @@ public abstract class StatementMapper : ExpressionMapper {
     public Statement mapAssignment(Assignment statement) {
         return statement;
     }
+
+    public Statement mapConditionalStatement(ConditionalStatement statement) {
+        return statement;
+    }
 }

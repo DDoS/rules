@@ -123,6 +123,8 @@ unittest {
             "Assignment(a.b *= v)",
         parse("a()\na = 1; a.b();\n\t\ra.b *= v")
     );
+    assertParseFail("a()\na = 1; a.b()\n\ta.b *= v");
+    assertParseFail("a()\na = 1; a.b();\n\ta.b *= v");
 }
 
 private string parse(string source) {
