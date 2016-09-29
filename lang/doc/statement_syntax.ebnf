@@ -47,8 +47,12 @@ variableDecl = ("let" | "var"), (
 referenceExpression = name | fieldAccess | indexAccess ;
 assignment = referenceExpression, assignmentOperator, expression ;
 
+ifStatement = "if", expression, ":", indentation, statements,
+    {"else", "if", expression, ":", indentation, statements},
+    ["else", ":", indentation, statements] ;
+
 indentation = indentationToken, {indentationToken} ;
 
-statement = functionCall | typeDef | variableDecl | assignment ;
+statement = functionCall | typeDef | variableDecl | assignment | ifStatement ;
 
 statements = {indentation, (EOF | (statement, (indentation | ";" | EOF)))} ;
