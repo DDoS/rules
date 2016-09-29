@@ -214,21 +214,28 @@ public Statement parseStatement(Tokenizer tokens, IndentSpec indentSpec = noInde
 
 public Statement[] parseStatements(Tokenizer tokens, IndentSpec indentSpec = noIndent()) {
     Statement[] statements = [];
+    bool empty = true;
     while (tokens.has()) {
         // Check if the indentation is valid for the current spec
+        tokens.savePosition();
         if (!validateIndentation(tokens, indentSpec)) {
-            if (indentSpec.count <= 0) {
-                // This is a top level statement, the indentation needs to be correct
+            if (indentSpec.count <= 0 || empty) {
+                // This is a top level statement and the indentation needs to be correct
+                // Or the block does not start with the proper indentation, which is also invalid
+                tokens.discardPosition();
                 throw new SourceException(format("Expected %s", indentSpec.toString()), tokens.head());
             }
+            tokens.restorePosition();
             break;
         }
+        tokens.discardPosition();
         indentSpec.nextIndentIgnored = false;
         // Check if this isn't an empty statement
         if (tokens.has() && tokens.head().getKind != Kind.TERMINATOR) {
             // Parse the statement
             statements ~= parseStatement(tokens, indentSpec);
         }
+        empty = false;
         // Check for termination
         if (tokens.head().getKind() == Kind.TERMINATOR) {
             tokens.advance();
