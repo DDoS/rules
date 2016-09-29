@@ -1,5 +1,8 @@
 module ruleslang.test.syntax.parser.statement;
 
+import std.format : format;
+import std.stdio : stderr;
+
 import ruleslang.syntax.source;
 import ruleslang.syntax.tokenizer;
 import ruleslang.syntax.ast.statement;
@@ -127,17 +130,56 @@ unittest {
     assertParseFail("a()\na = 1; a.b();\n\ta.b *= v");
 }
 
-private string parse(string source) {
-    return new Tokenizer(new DCharReader(source)).parseStatements().join!"\n"();
+unittest {
+    assertEqual(
+        "ConditionalStatement(if Compare(a == SignedIntegerLiteral(0)): VariableDeclaration(let b = SignedIntegerLiteral(12));)",
+        parse("if a == 0:\n  let b = 12")
+    );
+    assertEqual(
+        "ConditionalStatement(if Compare(a == SignedIntegerLiteral(0)): VariableDeclaration(let b = SignedIntegerLiteral(12));"
+             ~ " else: Assignment(d = SignedIntegerLiteral(1));)",
+        parse("if a == 0:\n  let b = 12\nelse:\n  d = 1")
+    );
+    assertEqual(
+        "ConditionalStatement(if a: FunctionCall(b()); else if c: FunctionCall(d());)",
+        parse("if a:\n b()\nelse if c:\n d()")
+    );
+    assertEqual(
+        "ConditionalStatement(if a: FunctionCall(b()); else if c: FunctionCall(d()); else: FunctionCall(e());)",
+        parse("if a:\n b()\nelse if c:\n d()\nelse:\n e()\n")
+    );
+
+    assertParseFail("if a == 0:\nlet b = 12");
+    assertParseFail("if a == 0:let b = 12");
+    assertParseFail("if a == 0:\n\nlet b = 12");
+    assertParseFail("if a == 0:\n  \nlet b = 12");
+    assertParseFail("if a == 0:\n  let b = 12\nelse:\nd = 1");
+    assertParseFail("if a == 0:\n  let b = 12\nelse:d = 1");
+    assertParseFail("if a == 0:\n  let b = 12\nelse:\n\nd = 1");
+    assertParseFail("if a == 0:\n  let b = 12\nelse:\n  \nd = 1");
+    assertParseFail("if a == 0:\n  let b = 12\nelse if a:\nc()");
+    assertParseFail("if a == 0:\n  let b = 12\nelse if a:c()");
+    assertParseFail("if a == 0:\n  let b = 12\nelse if a:\n\nc()");
+    assertParseFail("if a == 0:\n  let b = 12\nelse:\n  \nc()");
 }
 
-private void assertParseFail(string source) {
+private string parse(string source) {
     try {
-        auto statements = parse(source);
-        throw new AssertionError("Expected a source exception, but got statements:\n" ~ statements);
+        auto statements = new Tokenizer(new DCharReader(source)).parseStatements();
+        return statements.join!"\n"();
+    } catch (SourceException exception) {
+        stderr.writeln(exception.getErrorInformation(source).toString());
+        assert (0);
+    }
+}
+
+private void assertParseFail(string source, string file = __FILE__, size_t line = __LINE__) {
+    try {
+        auto statements = new Tokenizer(new DCharReader(source)).parseStatements();
+        throw new AssertionError(format("Expected a source exception at %s line %d, but got statements:\n%s",
+                file, line, statements.join!"\n"()));
     } catch (SourceException exception) {
         debug (verboseTests) {
-            import std.stdio : stderr;
             stderr.writeln(exception.getErrorInformation(source).toString());
         }
     }

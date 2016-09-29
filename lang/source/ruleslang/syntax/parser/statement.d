@@ -162,6 +162,7 @@ private ConditionalStatement parseConditionalStatement(Tokenizer tokens, IndentS
     tokens.advance();
     // Parse the condition expression
     auto condition = parseExpression(tokens);
+    // Terminate the block header
     if (tokens.head() != ":") {
         throw new SourceException("Expected ':'", tokens.head());
     }
@@ -176,26 +177,47 @@ private ConditionalStatement parseConditionalStatement(Tokenizer tokens, IndentS
         end = trueStatements[$ - 1].end;
     }
     // Try to follow it with an else block
-    Statement[] falseStatements = null;
+    auto conditionBlocks = [ConditionalStatement.Block(condition, trueStatements)];
+    auto falseStatements = parseConditionBlocks(tokens, indentSpec, blockIndentSpec, end, conditionBlocks);
+    return new ConditionalStatement(conditionBlocks, falseStatements, start, end);
+}
+
+private Statement[] parseConditionBlocks(Tokenizer tokens, IndentSpec indentSpec, IndentSpec blockIndentSpec, ref size_t end,
+        ref ConditionalStatement.Block[] conditionBlocks) {
+    // Look for the parent indentation followed by "else"
     tokens.savePosition();
-    if (validateIndentation(tokens, indentSpec) && tokens.head() == "else") {
-        tokens.discardPosition();
+    if (!validateIndentation(tokens, indentSpec) || tokens.head() != "else") {
+        // Otherwise return an empty else block
+        tokens.restorePosition();
+        return [];
+    }
+    tokens.discardPosition();
+    end = tokens.head().end;
+    tokens.advance();
+    // This can also be an "else if" block
+    Expression condition = null;
+    if (tokens.head() == "if") {
         end = tokens.head().end;
         tokens.advance();
-        if (tokens.head() != ":") {
-            throw new SourceException("Expected ':'", tokens.head());
-        }
-        tokens.advance();
-        // Reuse the indentation of the "if" block
-        falseStatements = parseStatements(tokens, blockIndentSpec);
-        if (falseStatements.length > 0) {
-            end = falseStatements[$ - 1].end;
-        }
-    } else {
-        tokens.restorePosition();
-        falseStatements = [];
+        // Parse the condition expression
+        condition = parseExpression(tokens);
     }
-    return new ConditionalStatement(condition, trueStatements, falseStatements, start, end);
+    // Terminate the block header
+    if (tokens.head() != ":") {
+        throw new SourceException("Expected ':'", tokens.head());
+    }
+    tokens.advance();
+    // Reuse the indentation of the "if" block
+    auto statements = parseStatements(tokens, blockIndentSpec);
+    if (statements.length > 0) {
+        end = statements[$ - 1].end;
+    }
+    // If this is an "else if" block we can parse more else blocks
+    if (condition !is null) {
+        conditionBlocks ~= ConditionalStatement.Block(condition, statements);
+        return parseConditionBlocks(tokens, indentSpec, blockIndentSpec, end, conditionBlocks);
+    }
+    return statements;
 }
 
 public Statement parseStatement(Tokenizer tokens, IndentSpec indentSpec = noIndent()) {

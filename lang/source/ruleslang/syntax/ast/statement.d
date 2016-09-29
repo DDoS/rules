@@ -174,24 +174,42 @@ public class Assignment : Statement {
 }
 
 public class ConditionalStatement : Statement {
-    private Expression _condition;
-    private Statement[] _trueStatements;
+    public struct Block {
+        private Expression _condition;
+        private Statement[] _statements;
+
+        @property public Expression condition() {
+            return _condition;
+        }
+
+        @property public Statement[] statements() {
+            return _statements;
+        }
+
+        private void map(StatementMapper mapper) {
+            _condition = _condition.map(mapper);
+            foreach (i, statement; _statements) {
+                _statements[i] = statement.map(mapper);
+            }
+        }
+
+        public string toString() {
+            return format("if %s: %s;", _condition.toString(), _statements.join!"; "());
+        }
+    }
+
+    private Block[] _conditionBlocks;
     private Statement[] _falseStatements;
 
-    public this(Expression condition, Statement[] trueStatements, Statement[] falseStatements, size_t start, size_t end) {
-        _condition = condition;
-        _trueStatements = trueStatements;
+    public this(Block[] conditionBlocks, Statement[] falseStatements, size_t start, size_t end) {
+        _conditionBlocks = conditionBlocks;
         _falseStatements = falseStatements;
         _start = start;
         _end = end;
     }
 
-    @property public Expression condition() {
-        return _condition;
-    }
-
-    @property public Statement[] trueStatements() {
-        return _trueStatements;
+    @property public Block[] conditionBlocks() {
+        return _conditionBlocks;
     }
 
     @property public Statement[] falseStatements() {
@@ -201,9 +219,8 @@ public class ConditionalStatement : Statement {
     mixin sourceIndexFields;
 
     public override Statement map(StatementMapper mapper) {
-        _condition = _condition.map(mapper);
-        foreach (i, statement; _trueStatements) {
-            _trueStatements[i] = statement.map(mapper);
+        foreach (block; _conditionBlocks) {
+            block.map(mapper);
         }
         foreach (i, statement; _falseStatements) {
             _falseStatements[i] = statement.map(mapper);
@@ -217,7 +234,7 @@ public class ConditionalStatement : Statement {
     }
 
     public override string toString() {
-        return format("ConditionalStatement(if %s: %s%s)", _condition.toString(), _trueStatements.join!"; "(),
-                falseStatements.length > 0 ? format(" else: %s", _falseStatements.join!"; ") : "");
+        auto falseBlockString = falseStatements.length > 0 ? format(" else: %s;", _falseStatements.join!"; "()) : "";
+        return format("ConditionalStatement(%s%s)", _conditionBlocks.join!" else "(), falseBlockString);
     }
 }
