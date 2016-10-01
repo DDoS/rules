@@ -1196,7 +1196,7 @@ public immutable class TypeDefinitionNode : Node {
     }
 
     public override void evaluate(Runtime runtime) {
-        // Nothing to do, this is purely used at compile time
+        Evaluator.INSTANCE.evaluateTypeDefinition(runtime, this);
     }
 
     public override string toString() {

@@ -318,6 +318,10 @@ public immutable class Evaluator {
         }
     }
 
+    public void evaluateTypeDefinition(Runtime runtime, immutable TypeDefinitionNode typeDefinition) {
+        // Nothing to do, this is purely used at compile time
+    }
+
     public void evaluateVariableDeclaration(Runtime runtime, immutable VariableDeclarationNode variableDeclaration) {
         // First evaluate the declaration value
         variableDeclaration.value.evaluate(runtime);
