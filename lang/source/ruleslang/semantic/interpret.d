@@ -736,4 +736,40 @@ public immutable class Interpreter {
         }
         return new immutable AssignmentNode(target, value, assignment.start, assignment.end);
     }
+
+    public immutable(Node) interpretConditionalStatement(Context context, ConditionalStatement conditionalStatement) {
+        // Go backwards to build the nested sequence of blocks. Start with the false statements
+        context.enterBlock();
+        Rebindable!(immutable Node) falseBlockNode = interpretStatements(context, conditionalStatement.falseStatements,
+                conditionalStatement.end);
+        context.exitScope();
+        // Now wrap it in the condition blocks, from the bottom up
+        foreach_reverse (block; conditionalStatement.conditionBlocks) {
+            // Interpret the block condition
+            auto conditionNode = block.condition.interpret(context).reduceLiterals();
+            if (!AtomicType.BOOL.opEquals(conditionNode.getType())) {
+                throw new SourceException(format("Condition type must be bool, not %s", conditionNode.getType()),
+                        block.condition);
+            }
+            // Interpret the true block statements
+            context.enterBlock();
+            auto trueBlockNode = interpretStatements(context, block.statements, block.end);
+            context.exitScope();
+            // Create the conditional statement node
+            falseBlockNode = new immutable ConditionalStatementNode(conditionNode, trueBlockNode, falseBlockNode,
+                    block.start, falseBlockNode.end);
+        }
+        return falseBlockNode;
+    }
+
+    private static immutable(BlockNode) interpretStatements(Context context, Statement[] statements, size_t end) {
+        if (statements.length <= 0) {
+            return new immutable BlockNode([], end, end);
+        }
+        immutable(Node)[] block = [];
+        foreach (statement; statements) {
+            block ~= statement.interpret(context);
+        }
+        return new immutable BlockNode(block, statements[0].start, statements[$ - 1].end);
+    }
 }

@@ -1256,6 +1256,59 @@ public immutable class AssignmentNode : Node {
     }
 }
 
+public immutable class BlockNode : Node {
+    public Node[] statements;
+
+    public this(immutable Node[] statements, size_t start, size_t end) {
+        this.statements = statements;
+        _start = start;
+        _end = end;
+    }
+
+    mixin sourceIndexFields!false;
+
+    public override immutable(Node)[] getChildren() {
+        return statements;
+    }
+
+    public override void evaluate(Runtime runtime) {
+        Evaluator.INSTANCE.evaluateBlock(runtime, this);
+    }
+
+    public override string toString() {
+        return format("Block(%s)", statements.join!"; "());
+    }
+}
+
+public immutable class ConditionalStatementNode : Node {
+    public TypedNode condition;
+    public Node whenTrue;
+    public Node whenFalse;
+
+    public this(immutable TypedNode condition, immutable Node whenTrue, immutable Node whenFalse, size_t start, size_t end) {
+        this.condition = condition.addCastNode(AtomicType.BOOL);
+        this.whenTrue = whenTrue;
+        this.whenFalse = whenFalse;
+        _start = start;
+        _end = end;
+    }
+
+    mixin sourceIndexFields!false;
+
+    public override immutable(Node)[] getChildren() {
+        return [condition, whenTrue, whenFalse];
+    }
+
+    public override void evaluate(Runtime runtime) {
+        Evaluator.INSTANCE.evaluateConditionalStatement(runtime, this);
+    }
+
+    public override string toString() {
+        return format("ConditionalStatement(if %s: %s else: %s)", condition.toString(),
+                whenTrue.toString(), whenFalse.toString());
+    }
+}
+
 public immutable(Type)[] getTypes(immutable(TypedNode)[] values) {
     immutable(Type)[] valueTypes = [];
     valueTypes.reserve(values.length);

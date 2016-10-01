@@ -239,8 +239,7 @@ public class ConditionalStatement : Statement {
     }
 
     public override immutable(Node) interpret(Context context) {
-        //return Interpreter.INSTANCE.interpretAssignment(context, this);
-        return NullNode.INSTANCE;
+        return Interpreter.INSTANCE.interpretConditionalStatement(context, this);
     }
 
     public override string toString() {
