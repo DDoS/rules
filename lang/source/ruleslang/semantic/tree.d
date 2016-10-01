@@ -1136,7 +1136,7 @@ public immutable class ConditionalNode : TypedNode {
 
     public this(immutable TypedNode condition, immutable TypedNode whenTrue, immutable TypedNode whenFalse,
             size_t start, size_t end) {
-        this.condition = condition;
+        this.condition = condition.addCastNode(AtomicType.BOOL);
         // Reduce the literals of the possible values
         auto reducedTrue = whenTrue;
         auto reducedFalse = whenFalse;
