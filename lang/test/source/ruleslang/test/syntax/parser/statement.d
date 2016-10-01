@@ -148,7 +148,26 @@ unittest {
         "ConditionalStatement(if a: FunctionCall(b()); else if c: FunctionCall(d()); else: FunctionCall(e()))",
         parse("if a:\n b()\nelse if c:\n d()\nelse:\n e()\n")
     );
-
+    assertEqual(
+        "ConditionalStatement(if Compare(a == SignedIntegerLiteral(0)): )",
+        parse("if a == 0:\n  ;")
+    );
+    assertEqual(
+        "ConditionalStatement(if Compare(a == SignedIntegerLiteral(0)): VariableDeclaration(let b = SignedIntegerLiteral(12)))",
+        parse("if a == 0:\n  let b = 12\nelse:\n  ;")
+    );
+    assertEqual(
+        "ConditionalStatement(if Compare(a == SignedIntegerLiteral(0)): ; else: Assignment(d = SignedIntegerLiteral(1)))",
+        parse("if a == 0:\n  ;\nelse:\n  d = 1")
+    );
+    assertEqual(
+        "ConditionalStatement(if a: FunctionCall(b()); else if c: )",
+        parse("if a:\n b()\nelse if c:\n ;")
+    );
+    assertEqual(
+        "ConditionalStatement(if a: ; else if c: )",
+        parse("if a:\n ;\nelse if c:\n ;\nelse:\n ;\n")
+    );
     assertParseFail("if a == 0:\nlet b = 12");
     assertParseFail("if a == 0:let b = 12");
     assertParseFail("if a == 0:\n\nlet b = 12");
