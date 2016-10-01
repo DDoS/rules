@@ -179,7 +179,7 @@ private ConditionalStatement parseConditionalStatement(Tokenizer tokens, IndentS
     // Try to follow it with an else block
     auto conditionBlocks = [ConditionalStatement.Block(condition, trueStatements, start, end)];
     auto falseStatements = parseConditionBlocks(tokens, indentSpec, blockIndentSpec, end, conditionBlocks);
-    return new ConditionalStatement(conditionBlocks, falseStatements, start, end);
+    return new ConditionalStatement(conditionBlocks, falseStatements, end);
 }
 
 private Statement[] parseConditionBlocks(Tokenizer tokens, IndentSpec indentSpec, IndentSpec blockIndentSpec, ref size_t end,

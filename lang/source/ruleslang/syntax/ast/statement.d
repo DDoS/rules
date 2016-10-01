@@ -210,11 +210,11 @@ public class ConditionalStatement : Statement {
     private Block[] _conditionBlocks;
     private Statement[] _falseStatements;
 
-    public this(Block[] conditionBlocks, Statement[] falseStatements, size_t start, size_t end) {
+    public this(Block[] conditionBlocks, Statement[] falseStatements, size_t end) {
         assert (conditionBlocks.length > 0);
         _conditionBlocks = conditionBlocks;
         _falseStatements = falseStatements;
-        _start = start;
+        _start = conditionBlocks[0].start;
         _end = end;
     }
 
