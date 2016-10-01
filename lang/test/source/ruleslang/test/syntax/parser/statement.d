@@ -132,20 +132,20 @@ unittest {
 
 unittest {
     assertEqual(
-        "ConditionalStatement(if Compare(a == SignedIntegerLiteral(0)): VariableDeclaration(let b = SignedIntegerLiteral(12));)",
+        "ConditionalStatement(if Compare(a == SignedIntegerLiteral(0)): VariableDeclaration(let b = SignedIntegerLiteral(12)))",
         parse("if a == 0:\n  let b = 12")
     );
     assertEqual(
         "ConditionalStatement(if Compare(a == SignedIntegerLiteral(0)): VariableDeclaration(let b = SignedIntegerLiteral(12));"
-             ~ " else: Assignment(d = SignedIntegerLiteral(1));)",
+             ~ " else: Assignment(d = SignedIntegerLiteral(1)))",
         parse("if a == 0:\n  let b = 12\nelse:\n  d = 1")
     );
     assertEqual(
-        "ConditionalStatement(if a: FunctionCall(b()); else if c: FunctionCall(d());)",
+        "ConditionalStatement(if a: FunctionCall(b()); else if c: FunctionCall(d()))",
         parse("if a:\n b()\nelse if c:\n d()")
     );
     assertEqual(
-        "ConditionalStatement(if a: FunctionCall(b()); else if c: FunctionCall(d()); else: FunctionCall(e());)",
+        "ConditionalStatement(if a: FunctionCall(b()); else if c: FunctionCall(d()); else: FunctionCall(e()))",
         parse("if a:\n b()\nelse if c:\n d()\nelse:\n e()\n")
     );
 

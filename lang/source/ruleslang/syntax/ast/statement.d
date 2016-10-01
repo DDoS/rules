@@ -194,7 +194,7 @@ public class ConditionalStatement : Statement {
         }
 
         public string toString() {
-            return format("if %s: %s;", _condition.toString(), _statements.join!"; "());
+            return format("if %s: %s", _condition.toString(), _statements.join!"; "());
         }
     }
 
@@ -234,7 +234,7 @@ public class ConditionalStatement : Statement {
     }
 
     public override string toString() {
-        auto falseBlockString = falseStatements.length > 0 ? format(" else: %s;", _falseStatements.join!"; "()) : "";
-        return format("ConditionalStatement(%s%s)", _conditionBlocks.join!" else "(), falseBlockString);
+        auto falseBlockString = falseStatements.length > 0 ? format("; else: %s", _falseStatements.join!"; "()) : "";
+        return format("ConditionalStatement(%s%s)", _conditionBlocks.join!"; else "(), falseBlockString);
     }
 }
