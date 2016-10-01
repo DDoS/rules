@@ -902,7 +902,11 @@ unittest {
         interpretStmt("if false:\n  let c = 0\nelse:\n  let c = 1", context)
     );
     interpretExpFails("c", context);
-    interpretStmtFails("if false:\n  let d = 0", context);
+    assertEqual(
+        "ConditionalStatement(if BooleanLiteral(false): Block(VariableDeclaration(sint64 d = SignedIntegerLiteral(0)))"
+            ~" else: Block())",
+        interpretStmt("if false:\n  let d = 0", context)
+    );
 }
 
 private string interpretExp(alias info = getAllInfo)(string source, Context context = new Context()) {

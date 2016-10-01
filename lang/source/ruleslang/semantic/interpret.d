@@ -707,15 +707,13 @@ public immutable class Interpreter {
         auto name = variableDeclaration.name.getSource();
         // A field is re-assignable if it is a "var" field
         auto reAssignable = variableDeclaration.kind == VariableDeclaration.Kind.VAR;
-        // Create the field
-        auto field = new immutable Field(name, type, reAssignable);
-        // Now attempt to declare the field
+        //  Attempt to declare the field
         try {
-            context.declareField(name, field);
+            auto field = context.declareField(name, type, reAssignable);
+            return new immutable VariableDeclarationNode(field, value, variableDeclaration.start, variableDeclaration.end);
         } catch (Exception exception) {
             throw new SourceException(exception.msg, variableDeclaration.name);
         }
-        return new immutable VariableDeclarationNode(field, value, variableDeclaration.start, variableDeclaration.end);
     }
 
     public immutable(Node) interpretAssignment(Context context, Assignment assignment) {
