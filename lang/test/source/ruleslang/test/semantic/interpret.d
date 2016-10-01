@@ -573,6 +573,7 @@ unittest {
 
 unittest {
     auto context = new Context();
+    context.enterFunction();
     assertEqual(
         "TypeDefinition(def test: bool)",
         interpretStmt("def test: bool", context)
@@ -590,6 +591,7 @@ unittest {
 
 unittest {
     auto context = new Context();
+    context.enterFunction();
     assertEqual(
         "TypeDefinition(def tup1: {uint16})",
         interpretStmt("def tup1: {uint16}", context)
@@ -721,6 +723,7 @@ unittest {
 
 unittest {
     auto context = new Context();
+    context.enterFunction();
     assertEqual(
         "VariableDeclaration(bool a = BooleanLiteral(true))",
         interpretStmt("let a = true", context)
@@ -744,6 +747,7 @@ unittest {
 
 unittest {
     auto context = new Context();
+    context.enterFunction();
     assertEqual(
         "VariableDeclaration(bool a = BooleanLiteral(true))",
         interpretStmt("var a = true", context)
@@ -784,6 +788,7 @@ unittest {
 
 unittest {
     auto context = new Context();
+    context.enterFunction();
     assertEqual(
         "VariableDeclaration(uint32[3] s32 = StringLiteral(\"hey\"))",
         interpretStmt("let s32 = \"hey\"", context)
@@ -800,6 +805,7 @@ unittest {
 
 unittest {
     auto context = new Context();
+    context.enterFunction();
     assertEqual(
         "VariableDeclaration(uint64 a = UnsignedIntegerLiteral(1))",
         interpretStmt("let a = 1u", context)
@@ -835,6 +841,68 @@ unittest {
         "ArrayLiteral({other: ArrayInitializer(null[FieldAccess(a)]{other: NullLiteral(null)})}) | null[][0]",
         interpretExp("Any[a][]{}", context)
     );
+}
+
+unittest {
+    auto context = new Context();
+    context.enterFunction();
+    assertEqual(
+        "VariableDeclaration(sint64 d = SignedIntegerLiteral(0))",
+        interpretStmt("var sint64 d", context)
+    );
+    assertEqual(
+        "ConditionalStatement(if BooleanLiteral(true): Block(Assignment(FieldAccess(d) = SignedIntegerLiteral(0)))"
+            ~ " else: Block())",
+        interpretStmt("if 0 == 0:\n  d = 0", context)
+    );
+    assertEqual(
+        "ConditionalStatement(if BooleanLiteral(false): Block(Assignment(FieldAccess(d) = SignedIntegerLiteral(0)))"
+            ~ " else: Block(Assignment(FieldAccess(d) = SignedIntegerLiteral(1))))",
+        interpretStmt("if false:\n  d = 0\nelse:\n  d = 1", context)
+    );
+    assertEqual(
+        "ConditionalStatement(if BooleanLiteral(false): Block(Assignment(FieldAccess(d) = SignedIntegerLiteral(0)))"
+            ~ " else: ConditionalStatement(if BooleanLiteral(true): Block(Assignment(FieldAccess(d) = SignedIntegerLiteral(1)))"
+            ~ " else: Block()))",
+        interpretStmt("if false:\n d = 0\nelse if true:\n d = 1", context)
+    );
+    assertEqual(
+        "ConditionalStatement(if BooleanLiteral(false): Block(Assignment(FieldAccess(d) = SignedIntegerLiteral(0)))"
+            ~ " else: ConditionalStatement(if BooleanLiteral(true): Block(Assignment(FieldAccess(d) = SignedIntegerLiteral(1)))"
+            ~ " else: Block(Assignment(FieldAccess(d) = SignedIntegerLiteral(2)))))",
+        interpretStmt("if false:\n d = 0\nelse if true:\n d = 1\nelse:\n d = 2\n", context)
+    );
+    assertEqual(
+        "ConditionalStatement(if BooleanLiteral(false): Block() else: Block())",
+        interpretStmt("if false:\n  ;", context)
+    );
+    assertEqual(
+        "ConditionalStatement(if BooleanLiteral(false): Block(Assignment(FieldAccess(d) = SignedIntegerLiteral(0)))"
+            ~ " else: Block())",
+        interpretStmt("if false:\n  d = 0\nelse:\n  ;", context)
+    );
+    assertEqual(
+        "ConditionalStatement(if BooleanLiteral(false): Block()"
+            ~ " else: Block(Assignment(FieldAccess(d) = SignedIntegerLiteral(0))))",
+        interpretStmt("if false:\n  ;\nelse:\n  d = 0", context)
+    );
+    assertEqual(
+        "ConditionalStatement(if BooleanLiteral(false): Block(Assignment(FieldAccess(d) = SignedIntegerLiteral(0)))"
+            ~ " else: ConditionalStatement(if BooleanLiteral(true): Block() else: Block()))",
+        interpretStmt("if false:\n d = 0\nelse if true:\n ;", context)
+    );
+    assertEqual(
+        "ConditionalStatement(if BooleanLiteral(false): Block() else: ConditionalStatement(if BooleanLiteral(true): Block()"
+            ~ " else: Block()))",
+        interpretStmt("if false:\n ;\nelse if true:\n ;\nelse:\n ;\n", context)
+    );
+    assertEqual(
+        "ConditionalStatement(if BooleanLiteral(false): Block(VariableDeclaration(sint64 c = SignedIntegerLiteral(0)))"
+            ~ " else: Block(VariableDeclaration(sint64 c = SignedIntegerLiteral(1))))",
+        interpretStmt("if false:\n  let c = 0\nelse:\n  let c = 1", context)
+    );
+    interpretExpFails("c", context);
+    interpretStmtFails("if false:\n  let d = 0", context);
 }
 
 private string interpretExp(alias info = getAllInfo)(string source, Context context = new Context()) {
