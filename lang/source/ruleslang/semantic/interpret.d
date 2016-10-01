@@ -728,7 +728,7 @@ public immutable class Interpreter {
             }
         }
         // Interpret the value node
-        auto value = assignment.value.interpret(context);
+        auto value = assignment.value.interpret(context).reduceLiterals();
         // Check if the types are compatible
         if (!value.getType().specializableTo(target.getType())) {
             throw new SourceException(format("Value type %s is not convertible to %s",
