@@ -178,6 +178,15 @@ public class ConditionalStatement : Statement {
         private Expression _condition;
         private Statement[] _statements;
 
+        public this(Expression condition, Statement[] statements, size_t start, size_t end) {
+            _condition = condition;
+            _statements = statements;
+            _start = start;
+            _end = end;
+        }
+
+        mixin sourceIndexFields;
+
         @property public Expression condition() {
             return _condition;
         }
@@ -202,6 +211,7 @@ public class ConditionalStatement : Statement {
     private Statement[] _falseStatements;
 
     public this(Block[] conditionBlocks, Statement[] falseStatements, size_t start, size_t end) {
+        assert (conditionBlocks.length > 0);
         _conditionBlocks = conditionBlocks;
         _falseStatements = falseStatements;
         _start = start;

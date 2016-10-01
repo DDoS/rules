@@ -158,7 +158,6 @@ private ConditionalStatement parseConditionalStatement(Tokenizer tokens, IndentS
         throw new SourceException("Expected \"def\"", tokens.head());
     }
     auto start = tokens.head().start;
-    auto end = tokens.head().end;
     tokens.advance();
     // Parse the condition expression
     auto condition = parseExpression(tokens);
@@ -166,6 +165,7 @@ private ConditionalStatement parseConditionalStatement(Tokenizer tokens, IndentS
     if (tokens.head() != ":") {
         throw new SourceException("Expected ':'", tokens.head());
     }
+    auto end = tokens.head().end;
     tokens.advance();
     // The indentation of the block will be that of the first statement
     if (tokens.head().getKind() != Kind.INDENTATION) {
@@ -177,7 +177,7 @@ private ConditionalStatement parseConditionalStatement(Tokenizer tokens, IndentS
         end = trueStatements[$ - 1].end;
     }
     // Try to follow it with an else block
-    auto conditionBlocks = [ConditionalStatement.Block(condition, trueStatements)];
+    auto conditionBlocks = [ConditionalStatement.Block(condition, trueStatements, start, end)];
     auto falseStatements = parseConditionBlocks(tokens, indentSpec, blockIndentSpec, end, conditionBlocks);
     return new ConditionalStatement(conditionBlocks, falseStatements, start, end);
 }
@@ -192,12 +192,11 @@ private Statement[] parseConditionBlocks(Tokenizer tokens, IndentSpec indentSpec
         return [];
     }
     tokens.discardPosition();
-    end = tokens.head().end;
+    auto start = tokens.head().start;
     tokens.advance();
     // This can also be an "else if" block
     Expression condition = null;
     if (tokens.head() == "if") {
-        end = tokens.head().end;
         tokens.advance();
         // Parse the condition expression
         condition = parseExpression(tokens);
@@ -206,15 +205,16 @@ private Statement[] parseConditionBlocks(Tokenizer tokens, IndentSpec indentSpec
     if (tokens.head() != ":") {
         throw new SourceException("Expected ':'", tokens.head());
     }
+    end = tokens.head().end;
     tokens.advance();
     // Reuse the indentation of the "if" block
     auto statements = parseStatements(tokens, blockIndentSpec);
     if (statements.length > 0) {
         end = statements[$ - 1].end;
     }
-    // If this is an "else if" block we can parse more else blocks
+    // If this is an "else if" block we can parse more "else" blocks
     if (condition !is null) {
-        conditionBlocks ~= ConditionalStatement.Block(condition, statements);
+        conditionBlocks ~= ConditionalStatement.Block(condition, statements, start, end);
         return parseConditionBlocks(tokens, indentSpec, blockIndentSpec, end, conditionBlocks);
     }
     return statements;
