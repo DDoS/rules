@@ -229,8 +229,8 @@ public class ConditionalStatement : Statement {
     mixin sourceIndexFields;
 
     public override Statement map(StatementMapper mapper) {
-        foreach (block; _conditionBlocks) {
-            block.map(mapper);
+        foreach (i; 0 .. _conditionBlocks.length) {
+            _conditionBlocks[i].map(mapper);
         }
         foreach (i, statement; _falseStatements) {
             _falseStatements[i] = statement.map(mapper);
