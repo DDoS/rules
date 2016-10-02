@@ -613,11 +613,11 @@ public immutable class Interpreter {
     public immutable(TypedNode) interpretLogicalAnd(Context context, LogicalAnd logicalAnd) {
         // Both the left and right nodes must be bools
         auto leftNode = logicalAnd.left.interpret(context).reduceLiterals();
-        if (!AtomicType.BOOL.opEquals(leftNode.getType())) {
+        if (!leftNode.getType().convertibleTo(AtomicType.BOOL)) {
             throw new SourceException(format("Left type must be bool, not %s", leftNode.getType()), logicalAnd.left);
         }
         auto rightNode = logicalAnd.right.interpret(context).reduceLiterals();
-        if (!AtomicType.BOOL.opEquals(rightNode.getType())) {
+        if (!rightNode.getType().convertibleTo(AtomicType.BOOL)) {
             throw new SourceException(format("Right type must be bool, not %s", rightNode.getType()), logicalAnd.right);
         }
         // Implement "logical and" as a conditional to support short-circuiting
@@ -632,11 +632,11 @@ public immutable class Interpreter {
     public immutable(TypedNode) interpretLogicalOr(Context context, LogicalOr logicalOr) {
         // Both the left and right nodes must be bools
         auto leftNode = logicalOr.left.interpret(context).reduceLiterals();
-        if (!AtomicType.BOOL.opEquals(leftNode.getType())) {
+        if (!leftNode.getType().convertibleTo(AtomicType.BOOL)) {
             throw new SourceException(format("Left type must be bool, not %s", leftNode.getType()), logicalOr.left);
         }
         auto rightNode = logicalOr.right.interpret(context).reduceLiterals();
-        if (!AtomicType.BOOL.opEquals(rightNode.getType())) {
+        if (!rightNode.getType().convertibleTo(AtomicType.BOOL)) {
             throw new SourceException(format("Right type must be bool, not %s", rightNode.getType()), logicalOr.right);
         }
         // Implement "logical or" as a conditional to support short-circuiting
@@ -655,7 +655,7 @@ public immutable class Interpreter {
     public immutable(TypedNode) interpretConditional(Context context, Conditional conditional) {
         // Get the condition node and make sure it is a bool type
         auto conditionNode = conditional.condition.interpret(context).reduceLiterals();
-        if (!AtomicType.BOOL.opEquals(conditionNode.getType())) {
+        if (!conditionNode.getType().convertibleTo(AtomicType.BOOL)) {
             throw new SourceException(format("Condition type must be bool, not %s", conditionNode.getType()),
                     conditional.condition);
         }
@@ -745,7 +745,7 @@ public immutable class Interpreter {
         foreach_reverse (block; conditionalStatement.conditionBlocks) {
             // Interpret the block condition
             auto conditionNode = block.condition.interpret(context).reduceLiterals();
-            if (!AtomicType.BOOL.opEquals(conditionNode.getType())) {
+            if (!conditionNode.getType().convertibleTo(AtomicType.BOOL)) {
                 throw new SourceException(format("Condition type must be bool, not %s", conditionNode.getType()),
                         block.condition);
             }
@@ -763,7 +763,7 @@ public immutable class Interpreter {
     public immutable(Node) interpretLoopStatement(Context context, LoopStatement loopStatement) {
         // Interpret the condition
         auto conditionNode = loopStatement.condition.interpret(context).reduceLiterals();
-        if (!AtomicType.BOOL.opEquals(conditionNode.getType())) {
+        if (!conditionNode.getType().convertibleTo(AtomicType.BOOL)) {
             throw new SourceException(format("Condition type must be bool, not %s", conditionNode.getType()),
                     loopStatement.condition);
         }
