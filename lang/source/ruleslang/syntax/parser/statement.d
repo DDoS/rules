@@ -155,7 +155,7 @@ private Statement parseAssigmnentOrFunctionCall(Tokenizer tokens) {
 
 private ConditionalStatement parseConditionalStatement(Tokenizer tokens, IndentSpec indentSpec = noIndent()) {
     if (tokens.head() != "if") {
-        throw new SourceException("Expected \"def\"", tokens.head());
+        throw new SourceException("Expected \"if\"", tokens.head());
     }
     auto start = tokens.head().start;
     tokens.advance();
@@ -171,7 +171,9 @@ private ConditionalStatement parseConditionalStatement(Tokenizer tokens, IndentS
     if (tokens.head().getKind() != Kind.INDENTATION) {
         throw new SourceException("Expected some indentation", tokens.head());
     }
+    // Combine the current indentation to the found one
     auto blockIndentSpec = indentSpec + tokens.head().castOrFail!Indentation();
+    // Parse the statements in the block
     auto trueStatements = parseStatements(tokens, blockIndentSpec);
     if (trueStatements.length > 0) {
         end = trueStatements[$ - 1].end;
@@ -207,7 +209,7 @@ private Statement[] parseConditionBlocks(Tokenizer tokens, IndentSpec indentSpec
     }
     end = tokens.head().end;
     tokens.advance();
-    // Reuse the indentation of the "if" block
+    // Reuse the indentation of the "if" block to parse the statements
     auto statements = parseStatements(tokens, blockIndentSpec);
     if (statements.length > 0) {
         end = statements[$ - 1].end;
@@ -220,6 +222,34 @@ private Statement[] parseConditionBlocks(Tokenizer tokens, IndentSpec indentSpec
     return statements;
 }
 
+public LoopStatement parseLoopStatement(Tokenizer tokens, IndentSpec indentSpec = noIndent()) {
+    if (tokens.head() != "while") {
+        throw new SourceException("Expected \"while\"", tokens.head());
+    }
+    auto start = tokens.head().start;
+    tokens.advance();
+    // Parse the condition expression
+    auto condition = parseExpression(tokens);
+    // Terminate the block header
+    if (tokens.head() != ":") {
+        throw new SourceException("Expected ':'", tokens.head());
+    }
+    auto end = tokens.head().end;
+    tokens.advance();
+    // The indentation of the block will be that of the first statement
+    if (tokens.head().getKind() != Kind.INDENTATION) {
+        throw new SourceException("Expected some indentation", tokens.head());
+    }
+    // Combine the current indentation to the found one
+    auto blockIndentSpec = indentSpec + tokens.head().castOrFail!Indentation();
+    // Parse the statements in the block
+    auto statements = parseStatements(tokens, blockIndentSpec);
+    if (statements.length > 0) {
+        end = statements[$ - 1].end;
+    }
+    return new LoopStatement(condition, statements, start, end);
+}
+
 public Statement parseStatement(Tokenizer tokens, IndentSpec indentSpec = noIndent()) {
     switch (tokens.head().getSource()) {
         case "def":
@@ -229,6 +259,8 @@ public Statement parseStatement(Tokenizer tokens, IndentSpec indentSpec = noInde
             return parseVariableDeclaration(tokens);
         case "if":
             return parseConditionalStatement(tokens, indentSpec);
+        case "while":
+            return parseLoopStatement(tokens, indentSpec);
         default:
             return parseAssigmnentOrFunctionCall(tokens);
     }

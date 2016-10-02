@@ -177,4 +177,8 @@ public abstract class StatementMapper : ExpressionMapper {
     public Statement mapConditionalStatement(ConditionalStatement statement) {
         return statement;
     }
+
+    public Statement mapLoopStatement(LoopStatement statement) {
+        return statement;
+    }
 }

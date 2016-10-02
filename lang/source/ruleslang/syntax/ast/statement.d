@@ -185,8 +185,6 @@ public class ConditionalStatement : Statement {
             _end = end;
         }
 
-        mixin sourceIndexFields;
-
         @property public Expression condition() {
             return _condition;
         }
@@ -194,6 +192,8 @@ public class ConditionalStatement : Statement {
         @property public Statement[] statements() {
             return _statements;
         }
+
+        mixin sourceIndexFields;
 
         private void map(StatementMapper mapper) {
             _condition = _condition.map(mapper);
@@ -245,5 +245,44 @@ public class ConditionalStatement : Statement {
     public override string toString() {
         auto falseBlockString = falseStatements.length > 0 ? format("; else: %s", _falseStatements.join!"; "()) : "";
         return format("ConditionalStatement(%s%s)", _conditionBlocks.join!"; else "(), falseBlockString);
+    }
+}
+
+public class LoopStatement : Statement {
+    private Expression _condition;
+    private Statement[] _statements;
+
+    public this(Expression condition, Statement[] statements, size_t start, size_t end) {
+        _condition = condition;
+        _statements = statements;
+        _start = start;
+        _end = end;
+    }
+
+    @property public Expression condition() {
+        return _condition;
+    }
+
+    @property public Statement[] statements() {
+        return _statements;
+    }
+
+    mixin sourceIndexFields;
+
+    public override Statement map(StatementMapper mapper) {
+        _condition = _condition.map(mapper);
+        foreach (i, statement; _statements) {
+            _statements[i] = statement.map(mapper);
+        }
+        return mapper.mapLoopStatement(this);
+    }
+
+    public override immutable(Node) interpret(Context context) {
+        //return Interpreter.INSTANCE.interpretLoopStatement(context, this);
+        return NullNode.INSTANCE;
+    }
+
+    public override string toString() {
+        return format("LoopStatement(while %s: %s)", _condition.toString(), _statements.join!"; "());
     }
 }

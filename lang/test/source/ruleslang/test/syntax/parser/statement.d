@@ -182,6 +182,21 @@ unittest {
     assertParseFail("if a == 0:\n  let b = 12\nelse:\n  \nc()");
 }
 
+unittest {
+    assertEqual(
+        "LoopStatement(while Compare(a == SignedIntegerLiteral(0)): VariableDeclaration(let b = SignedIntegerLiteral(12)))",
+        parse("while a == 0:\n  let b = 12")
+    );
+    assertEqual(
+        "LoopStatement(while Compare(a == SignedIntegerLiteral(0)): )",
+        parse("while a == 0:\n  ;")
+    );
+    assertParseFail("while a == 0:\nlet b = 12");
+    assertParseFail("while a == 0:let b = 12");
+    assertParseFail("while a == 0:\n\nlet b = 12");
+    assertParseFail("while a == 0:\n  \nlet b = 12");
+}
+
 private string parse(string source) {
     try {
         auto statements = new Tokenizer(new DCharReader(source)).parseStatements();
