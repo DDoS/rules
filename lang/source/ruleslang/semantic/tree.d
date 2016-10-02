@@ -1309,6 +1309,32 @@ public immutable class ConditionalStatementNode : Node {
     }
 }
 
+public immutable class LoopStatementNode : Node {
+    public TypedNode condition;
+    public Node whileTrue;
+
+    public this(immutable TypedNode condition, immutable Node whileTrue, size_t start, size_t end) {
+        this.condition = condition.addCastNode(AtomicType.BOOL);
+        this.whileTrue = whileTrue;
+        _start = start;
+        _end = end;
+    }
+
+    mixin sourceIndexFields!false;
+
+    public override immutable(Node)[] getChildren() {
+        return [condition, whileTrue];
+    }
+
+    public override void evaluate(Runtime runtime) {
+        //Evaluator.INSTANCE.evaluateLoopStatement(runtime, this);
+    }
+
+    public override string toString() {
+        return format("LoopStatement(while %s: %s)", condition.toString(), whileTrue.toString());
+    }
+}
+
 public immutable(Type)[] getTypes(immutable(TypedNode)[] values) {
     immutable(Type)[] valueTypes = [];
     valueTypes.reserve(values.length);

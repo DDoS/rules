@@ -760,6 +760,21 @@ public immutable class Interpreter {
         return falseBlockNode;
     }
 
+    public immutable(Node) interpretLoopStatement(Context context, LoopStatement loopStatement) {
+        // Interpret the condition
+        auto conditionNode = loopStatement.condition.interpret(context).reduceLiterals();
+        if (!AtomicType.BOOL.opEquals(conditionNode.getType())) {
+            throw new SourceException(format("Condition type must be bool, not %s", conditionNode.getType()),
+                    loopStatement.condition);
+        }
+        // Interpret the statements
+        context.enterBlock();
+        auto blockNode = interpretStatements(context, loopStatement.statements, loopStatement.end);
+        context.exitScope();
+        // Create the loop statement node
+        return new immutable LoopStatementNode(conditionNode, blockNode, loopStatement.start, loopStatement.end);
+    }
+
     private static immutable(BlockNode) interpretStatements(Context context, Statement[] statements, size_t end) {
         if (statements.length <= 0) {
             return new immutable BlockNode([], end, end);

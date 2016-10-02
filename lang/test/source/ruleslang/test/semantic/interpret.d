@@ -907,6 +907,34 @@ unittest {
             ~" else: Block())",
         interpretStmt("if false:\n  let d = 0", context)
     );
+    interpretStmtFails("if 'l':\n  d = 0", context);
+}
+
+unittest {
+    auto context = new Context();
+    context.enterFunction();
+    assertEqual(
+        "VariableDeclaration(sint64 d = SignedIntegerLiteral(0))",
+        interpretStmt("var sint64 d", context)
+    );
+    assertEqual(
+        "LoopStatement(while BooleanLiteral(true): Block(Assignment(FieldAccess(d) = SignedIntegerLiteral(0))))",
+        interpretStmt("while 0 == 0:\n  d = 0", context)
+    );
+    assertEqual(
+        "LoopStatement(while BooleanLiteral(false): Block())",
+        interpretStmt("while false:\n  ;", context)
+    );
+    assertEqual(
+        "LoopStatement(while BooleanLiteral(true): Block(VariableDeclaration(sint64 c = SignedIntegerLiteral(0))))",
+        interpretStmt("while true:\n  let c = 0", context)
+    );
+    interpretExpFails("c", context);
+    assertEqual(
+        "LoopStatement(while BooleanLiteral(false): Block(VariableDeclaration(sint64 d = SignedIntegerLiteral(0))))",
+        interpretStmt("while false:\n  let d = 0", context)
+    );
+    interpretStmtFails("while 'l':\n  d = 0", context);
 }
 
 private string interpretExp(alias info = getAllInfo)(string source, Context context = new Context()) {

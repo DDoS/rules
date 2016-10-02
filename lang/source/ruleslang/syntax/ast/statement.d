@@ -278,8 +278,7 @@ public class LoopStatement : Statement {
     }
 
     public override immutable(Node) interpret(Context context) {
-        //return Interpreter.INSTANCE.interpretLoopStatement(context, this);
-        return NullNode.INSTANCE;
+        return Interpreter.INSTANCE.interpretLoopStatement(context, this);
     }
 
     public override string toString() {
