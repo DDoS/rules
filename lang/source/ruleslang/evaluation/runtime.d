@@ -58,6 +58,10 @@ public abstract class Runtime {
         return fieldsByName[field.symbolicName];
     }
 
+    public void deleteField(immutable Field field) {
+        fieldsByName.remove(field.symbolicName);
+    }
+
     public void* allocateComposite(immutable ReferenceType type) {
         auto dataLayout = type.getDataLayout();
         assert (dataLayout.kind == DataLayout.Kind.TUPLE || dataLayout.kind == DataLayout.Kind.STRUCT);

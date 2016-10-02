@@ -338,6 +338,30 @@ public immutable class Evaluator {
         // Finally copy the value to the target
         runtime.stack.popTo(assignment.value.getType(), address);
     }
+
+    public void evaluateBlock(Runtime runtime, immutable BlockNode block) {
+        // The count of successfully evaluated statements in the block
+        size_t count = 0;
+        // We use a scope guard here to ensure the stack gets cleaned even if an exception occurs
+        scope (exit) {
+            // Then we have to delete and pop-off any created variables
+            foreach_reverse (i; 0 .. count) {
+                auto variableDeclaration = cast(immutable VariableDeclarationNode) block.statements[i];
+                if (variableDeclaration is null) {
+                    continue;
+                }
+                // Delete the variable mapping from the runtime
+                runtime.deleteField(variableDeclaration.field);
+                // Pop the field of the stack
+                runtime.stack.pop(variableDeclaration.value.getType());
+            }
+        }
+        // Sequentially evaluate every statemen node in the block
+        foreach (statement; block.statements) {
+            statement.evaluate(runtime);
+            count += 1;
+        }
+    }
 }
 
 public class NotImplementedException : Exception {
