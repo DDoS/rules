@@ -375,6 +375,20 @@ public immutable class Evaluator {
             conditionalStatement.whenFalse.evaluate(runtime);
         }
     }
+
+    public void evaluateLoopStatement(Runtime runtime, immutable LoopStatementNode loopStatement) {
+        while (true) {
+            // Evaluate the condition node
+            loopStatement.condition.evaluate(runtime);
+            // Check if the loop condition is true
+            if (!runtime.stack.pop!bool()) {
+                // If not then exit
+                break;
+            }
+            // Otherwise evaluate the statements
+            loopStatement.whileTrue.evaluate(runtime);
+        }
+    }
 }
 
 public class NotImplementedException : Exception {

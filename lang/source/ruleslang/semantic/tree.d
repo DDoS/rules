@@ -1327,7 +1327,7 @@ public immutable class LoopStatementNode : Node {
     }
 
     public override void evaluate(Runtime runtime) {
-        //Evaluator.INSTANCE.evaluateLoopStatement(runtime, this);
+        Evaluator.INSTANCE.evaluateLoopStatement(runtime, this);
     }
 
     public override string toString() {
