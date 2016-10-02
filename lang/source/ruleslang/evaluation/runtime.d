@@ -121,7 +121,7 @@ public class Stack {
     }
 
     @property public size_t usedSize() {
-        return byteIndex + 1;
+        return byteIndex;
     }
 
     public bool isEmpty() {

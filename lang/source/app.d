@@ -56,6 +56,7 @@ void main() {
                     statement.evaluate(context, runtime);
                 }
             }
+            stdout.writeln("stack size: ", runtime.stack.usedSize, "B");
         } catch (SourceException exception) {
             writeln(exception.getErrorInformation(source).toString());
         }
@@ -105,6 +106,7 @@ private void evaluate(Expression expression, Context context, Runtime runtime) {
         reducedNode.evaluate(runtime);
         auto valueAddress = runtime.stack.peekAddress(type);
         stdout.writeln("value: ", runtime.asString(type, valueAddress));
+        runtime.stack.pop(type);
     } catch (NotImplementedException ignored) {
         stdout.writeln("value not implemented: ", ignored.msg);
     }
