@@ -362,6 +362,19 @@ public immutable class Evaluator {
             count += 1;
         }
     }
+
+    public void evaluateConditionalStatement(Runtime runtime, immutable ConditionalStatementNode conditionalStatement) {
+        // First evaluate the condition node
+        conditionalStatement.condition.evaluate(runtime);
+        // Branch on the value, which is on the top of the stack
+        if (runtime.stack.pop!bool()) {
+            // Evaluate the true statements
+            conditionalStatement.whenTrue.evaluate(runtime);
+        } else {
+            // Evaluate the false statements
+            conditionalStatement.whenFalse.evaluate(runtime);
+        }
+    }
 }
 
 public class NotImplementedException : Exception {
