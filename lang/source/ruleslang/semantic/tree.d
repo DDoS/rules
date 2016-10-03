@@ -3,7 +3,9 @@ module ruleslang.semantic.tree;
 import std.conv : to;
 import std.algorithm.searching : all;
 import std.format : format;
+import std.typecons : Rebindable;
 
+import ruleslang.syntax.dchars;
 import ruleslang.syntax.source;
 import ruleslang.semantic.type;
 import ruleslang.semantic.symbol;
@@ -24,6 +26,10 @@ public immutable interface TypedNode : Node {
     public immutable(TypedNode)[] getChildren();
     public immutable(Type) getType();
     public bool isIntrinsicEvaluable();
+}
+
+public immutable interface AssignableNode : TypedNode {
+    public void* evaluateAddress(Runtime runtime);
 }
 
 public immutable interface LiteralNode : TypedNode {
@@ -148,8 +154,20 @@ public immutable class BooleanLiteralNode : LiteralNode {
 public immutable class StringLiteralNode : ReferenceNode, LiteralNode {
     private StringLiteralType type;
 
+    public this(string value, size_t start, size_t end) {
+        this(new immutable StringLiteralType(value), start, end);
+    }
+
+    public this(wstring value, size_t start, size_t end) {
+        this(new immutable StringLiteralType(value), start, end);
+    }
+
     public this(dstring value, size_t start, size_t end) {
-        type = new immutable StringLiteralType(value);
+        this(new immutable StringLiteralType(value), start, end);
+    }
+
+    public this(immutable StringLiteralType type, size_t start, size_t end) {
+        this.type = type;
         _start = start;
         _end = end;
     }
@@ -165,6 +183,23 @@ public immutable class StringLiteralNode : ReferenceNode, LiteralNode {
     }
 
     public override immutable(LiteralNode) specializeTo(immutable Type specialType) {
+        if (type.convertibleTo(specialType)) {
+            return this;
+        }
+        auto arrayType = cast(immutable ArrayType) specialType;
+        if (arrayType !is null) {
+            Rebindable!(immutable StringLiteralType) newType;
+            if (arrayType.componentType.opEquals(AtomicType.UINT32)) {
+                newType = type.convert!(StringLiteralType.Encoding.UTF32);
+            } else if (arrayType.componentType.opEquals(AtomicType.UINT16)) {
+                newType = type.convert!(StringLiteralType.Encoding.UTF16);
+            } else if (arrayType.componentType.opEquals(AtomicType.UINT8)) {
+                newType = type.convert!(StringLiteralType.Encoding.UTF8);
+            } else {
+                return null;
+            }
+            return new immutable StringLiteralNode(newType, _start, _end);
+        }
         return null;
     }
 
@@ -177,7 +212,7 @@ public immutable class StringLiteralNode : ReferenceNode, LiteralNode {
     }
 
     public override string toString() {
-        return format("StringLiteral(\"%s\")", type.value);
+        return format("StringLiteral(\"%s\")", type.valueAs!(StringLiteralType.Encoding.UTF32).escapeString());
     }
 }
 
@@ -766,8 +801,48 @@ public immutable class ArrayLiteralNode : LiteralNode, ReferenceNode {
     }
 }
 
-public immutable class FieldAccessNode : TypedNode {
-    private Field field;
+public immutable class ArrayInitializer : TypedNode {
+    public ArrayType type;
+    public TypedNode size;
+    public ArrayLiteralNode literal;
+
+    public this(immutable TypedNode size, immutable ArrayLiteralNode literal, size_t start, size_t end) {
+        if (literal.labels.length != 1 || !literal.labels[0].other) {
+            throw new SourceException("Runtime arrays must have an empty literal", literal);
+        }
+        this.type = literal.getType().withoutSize();
+        this.size = size.addCastNode(AtomicType.UINT64);
+        this.literal = literal;
+        _start = start;
+        _end = end;
+    }
+
+    mixin sourceIndexFields!false;
+
+    public override immutable(TypedNode)[] getChildren() {
+        return [size, literal];
+    }
+
+    public override immutable(ArrayType) getType() {
+        return type;
+    }
+
+    public override bool isIntrinsicEvaluable() {
+        return size.isIntrinsicEvaluable() && literal.isIntrinsicEvaluable();
+    }
+
+    public override void evaluate(Runtime runtime) {
+        Evaluator.INSTANCE.evaluateArrayInitializer(runtime, this);
+    }
+
+    public override string toString() {
+        return format("ArrayInitializer(%s[%s]{%s})", type.componentType.toString(), size.toString(),
+                stringZip!": "(literal.labels, literal.values).join!", "());
+    }
+}
+
+public immutable class FieldAccessNode : AssignableNode {
+    public Field field;
 
     public this(immutable Field field, size_t start, size_t end) {
         this.field = field;
@@ -793,12 +868,16 @@ public immutable class FieldAccessNode : TypedNode {
         Evaluator.INSTANCE.evaluateFieldAccess(runtime, this);
     }
 
+    public override void* evaluateAddress(Runtime runtime) {
+        return Evaluator.INSTANCE.evaluateFieldAccessAddress(runtime, this);
+    }
+
     public override string toString() {
         return format("FieldAccess(%s)", field.name);
     }
 }
 
-public immutable class MemberAccessNode : TypedNode {
+public immutable class MemberAccessNode : AssignableNode {
     public TypedNode value;
     public string name;
     private Type type;
@@ -806,7 +885,7 @@ public immutable class MemberAccessNode : TypedNode {
     public this(immutable TypedNode value, string name, size_t start, size_t end) {
         this.value = value;
         this.name = name;
-        type = this.value.getType().castOrFail!(immutable StructureType)().getMemberType(name);
+        type = this.value.getType().castOrFail!(immutable StructureType).getMemberType(name);
         assert (type !is null);
         _start = start;
         _end = end;
@@ -830,12 +909,16 @@ public immutable class MemberAccessNode : TypedNode {
         Evaluator.INSTANCE.evaluateMemberAccess(runtime, this);
     }
 
+    public override void* evaluateAddress(Runtime runtime) {
+        return Evaluator.INSTANCE.evaluateMemberAccessAddress(runtime, this);
+    }
+
     public override string toString() {
         return format("MemberAccess(%s.%s)", value.toString(), name);
     }
 }
 
-public immutable class IndexAccessNode : TypedNode {
+public immutable class IndexAccessNode : AssignableNode {
     public TypedNode value;
     public TypedNode index;
     private Type type;
@@ -893,6 +976,10 @@ public immutable class IndexAccessNode : TypedNode {
 
     public override void evaluate(Runtime runtime) {
         Evaluator.INSTANCE.evaluateIndexAccess(runtime, this);
+    }
+
+    public override void* evaluateAddress(Runtime runtime) {
+        return Evaluator.INSTANCE.evaluateIndexAccessAddress(runtime, this);
     }
 
     public override string toString() {
@@ -1049,7 +1136,7 @@ public immutable class ConditionalNode : TypedNode {
 
     public this(immutable TypedNode condition, immutable TypedNode whenTrue, immutable TypedNode whenFalse,
             size_t start, size_t end) {
-        this.condition = condition;
+        this.condition = condition.addCastNode(AtomicType.BOOL);
         // Reduce the literals of the possible values
         auto reducedTrue = whenTrue;
         auto reducedFalse = whenFalse;
@@ -1057,7 +1144,7 @@ public immutable class ConditionalNode : TypedNode {
         type = reducedTrue.getType().lowestUpperBound(reducedFalse.getType());
         if (type is null) {
             throw new SourceException(
-                format("No lowest upper bound for types %s and %s", reducedTrue.getType(), reducedFalse.getType()),
+                format("No common supertype for %s and %s", reducedTrue.getType(), reducedFalse.getType()),
                 start, end
             );
         }
@@ -1109,11 +1196,142 @@ public immutable class TypeDefinitionNode : Node {
     }
 
     public override void evaluate(Runtime runtime) {
-        // Nothing to do, this is purely used at compile time
+        Evaluator.INSTANCE.evaluateTypeDefinition(runtime, this);
     }
 
     public override string toString() {
         return format("TypeDefinition(def %s: %s)", name, type.toString());
+    }
+}
+
+public immutable class VariableDeclarationNode : Node {
+    public Field field;
+    public TypedNode value;
+
+    public this(immutable Field field, immutable TypedNode value, size_t start, size_t end) {
+        this.field = field;
+        this.value = value is null ? field.type.defaultValue(end, end) : value.addCastNode(field.type);
+        _start = start;
+        _end = end;
+    }
+
+    mixin sourceIndexFields!false;
+
+    public override immutable(TypedNode)[] getChildren() {
+        return [value];
+    }
+
+    public override void evaluate(Runtime runtime) {
+        Evaluator.INSTANCE.evaluateVariableDeclaration(runtime, this);
+    }
+
+    public override string toString() {
+        return format("VariableDeclaration(%s = %s)", field.toString(), value.toString());
+    }
+}
+
+public immutable class AssignmentNode : Node {
+    public AssignableNode target;
+    public TypedNode value;
+
+    public this(immutable AssignableNode target, immutable TypedNode value, size_t start, size_t end) {
+        this.target = target;
+        this.value = value.addCastNode(target.getType());
+        _start = start;
+        _end = end;
+    }
+
+    mixin sourceIndexFields!false;
+
+    public override immutable(TypedNode)[] getChildren() {
+        return [target, value];
+    }
+
+    public override void evaluate(Runtime runtime) {
+        Evaluator.INSTANCE.evaluateAssignment(runtime, this);
+    }
+
+    public override string toString() {
+        return format("Assignment(%s = %s)", target.toString(), value.toString());
+    }
+}
+
+public immutable class BlockNode : Node {
+    public Node[] statements;
+
+    public this(immutable Node[] statements, size_t start, size_t end) {
+        this.statements = statements;
+        _start = start;
+        _end = end;
+    }
+
+    mixin sourceIndexFields!false;
+
+    public override immutable(Node)[] getChildren() {
+        return statements;
+    }
+
+    public override void evaluate(Runtime runtime) {
+        Evaluator.INSTANCE.evaluateBlock(runtime, this);
+    }
+
+    public override string toString() {
+        return format("Block(%s)", statements.join!"; "());
+    }
+}
+
+public immutable class ConditionalStatementNode : Node {
+    public TypedNode condition;
+    public Node whenTrue;
+    public Node whenFalse;
+
+    public this(immutable TypedNode condition, immutable Node whenTrue, immutable Node whenFalse, size_t start, size_t end) {
+        this.condition = condition.addCastNode(AtomicType.BOOL);
+        this.whenTrue = whenTrue;
+        this.whenFalse = whenFalse;
+        _start = start;
+        _end = end;
+    }
+
+    mixin sourceIndexFields!false;
+
+    public override immutable(Node)[] getChildren() {
+        return [condition, whenTrue, whenFalse];
+    }
+
+    public override void evaluate(Runtime runtime) {
+        Evaluator.INSTANCE.evaluateConditionalStatement(runtime, this);
+    }
+
+    public override string toString() {
+        return format("ConditionalStatement(if %s: %s else: %s)", condition.toString(),
+                whenTrue.toString(), whenFalse.toString());
+    }
+}
+
+public immutable class LoopStatementNode : Node {
+    public TypedNode condition;
+    public Node whileTrue;
+
+    public this(immutable TypedNode condition, immutable Node whileTrue, size_t start, size_t end) {
+        this.condition = condition.addCastNode(AtomicType.BOOL);
+        this.whileTrue = whileTrue;
+        _start = start;
+        _end = end;
+    }
+
+    mixin sourceIndexFields!false;
+
+    public override immutable(Node)[] getChildren() {
+        return [condition, whileTrue];
+    }
+
+    public override void evaluate(Runtime runtime) {
+        Evaluator.INSTANCE.evaluateLoopStatement(runtime, this);
+    }
+
+    public override string toString() {
+        return format("LoopStatement(while %s: %s)", condition.toString(), whileTrue.toString());
     }
 }
 
@@ -1154,7 +1372,6 @@ private immutable(TypedNode) addCastNode(immutable TypedNode fromNode, immutable
         assert (fromLiteralNode !is null);
         return specializeNode(fromLiteralNode, toType);
     }
-    // TODO: other conversion kinds
     throw new SourceException(format("Unknown conversion chain from type %s to %s: %s",
             fromType.toString(), toType.toString(), conversions.toString()), fromNode);
 }
@@ -1239,9 +1456,14 @@ public immutable(TypedNode) defaultValue(immutable Type type, size_t start, size
         auto sizedArrayType = cast(immutable SizedArrayType) type;
         if (sizedArrayType !is null) {
             auto defaultComponent = sizedArrayType.componentType.defaultValue(start, end);
-            immutable(TypedNode)[] values = [defaultComponent, defaultComponent];
-            immutable(ArrayLabel)[] labels = [immutable ArrayLabel(sizedArrayType.size - 1, start, end),
-                    ArrayLabel.asOther(start, end)];
+            immutable(TypedNode)[] values;
+            immutable(ArrayLabel)[] labels;
+            if (sizedArrayType.size > 0) {
+                values ~= defaultComponent;
+                labels ~= immutable ArrayLabel(sizedArrayType.size - 1, start, end);
+            }
+            values ~= defaultComponent;
+            labels ~= ArrayLabel.asOther(start, end);
             return new immutable ArrayLiteralNode(values, labels, start, end);
         }
         return new immutable NullLiteralNode(start, end);

@@ -2,6 +2,7 @@ module ruleslang.semantic.interpret;
 
 import std.format : format;
 import std.typecons : Rebindable;
+import std.algorithm.searching : any;
 
 import ruleslang.syntax.source;
 import ruleslang.syntax.token;
@@ -21,6 +22,12 @@ public immutable class Interpreter {
     }
 
     public immutable(Type) interpretNamedType(Context context, NamedTypeAst namedType) {
+        immutable(TypedNode)[] runtimeSizes;
+        return interpretNamedType!false(context, namedType, runtimeSizes);
+    }
+
+    private static immutable(Type) interpretNamedType(bool allowRuntimeSize)(Context context, NamedTypeAst namedType,
+            out immutable(TypedNode)[] runtimeSizes) {
         auto name = namedType.name;
         if (name.length != 1) {
             throw new SourceException("Multi-part type names are not supported right now", namedType);
@@ -41,20 +48,35 @@ public immutable class Interpreter {
             if (dimension is null) {
                 // Null means unsized
                 wrapped = new immutable ArrayType(wrapped);
+                static if (allowRuntimeSize) {
+                    // Append null to indicate that the size doesn't matter
+                    runtimeSizes ~= null;
+                }
             } else {
                 // Check if the size has type uint64
-                auto sizeNodeType = dimension.interpret(context).reduceLiterals().getType();
+                auto sizeNode = dimension.interpret(context).reduceLiterals();
+                auto sizeNodeType = sizeNode.getType();
                 if (!sizeNodeType.specializableTo(AtomicType.UINT64)) {
                     throw new SourceException(format("Size type %s is not convertible to uint64", sizeNodeType.toString()),
                             dimension);
                 }
-                // Try to get the size (should be available as a literal)
-                auto literalSizeNodeType = cast(immutable IntegerLiteralType) sizeNodeType;
-                if (literalSizeNodeType is null) {
-                    throw new SourceException("Array size must be known at compile time", dimension);
+                // Try to get the size (it might be available as a literal)
+                if (auto literalSizeNodeType = cast(immutable IntegerLiteralType) sizeNodeType) {
+                    wrapped = new immutable SizedArrayType(wrapped, literalSizeNodeType.unsignedValue());
+                    static if (allowRuntimeSize) {
+                        // Append null to indicate that the size doesn't matter
+                        runtimeSizes ~= null;
+                    }
+                } else {
+                    static if (allowRuntimeSize) {
+                        // We can evaluate the size at runtime instead, so we'll use a size of zero temporarily
+                        wrapped = new immutable SizedArrayType(wrapped, 0);
+                        // Append the size node so we know where to get the size at runtime
+                        runtimeSizes ~= sizeNode;
+                    } else {
+                        throw new SourceException("Array size must be known at compile time", dimension);
+                    }
                 }
-                auto size = literalSizeNodeType.unsignedValue();
-                wrapped = new immutable SizedArrayType(wrapped, size);
             }
         }
         return wrapped;
@@ -252,8 +274,10 @@ public immutable class Interpreter {
     }
 
     public immutable(TypedNode) interpretInitializer(Context context, Initializer initializer) {
-        // Interpret the type and the composite literal
-        auto type = initializer.type.interpret(context);
+        // Interpret the type, allowing runtime sizes
+        immutable(TypedNode)[] runtimeSizes;
+        auto type = interpretNamedType!true(context, initializer.type, runtimeSizes);
+        // Interpret the composite literal
         auto literalNode = initializer.literal.interpret(context).castOrFail!(immutable LiteralNode);
         // Check if we can initialize the literal as the given type
         auto literalType = literalNode.getType();
@@ -267,7 +291,36 @@ public immutable class Interpreter {
             throw new SourceException(format("Specialization from %s to %s is not implemented",
                     literalType.toString(), type.toString()), initializer);
         }
+        // If we have an array literal then we must add array initializers for runtime-sized arrays
+        if (runtimeSizes.any!(a => a !is null)) {
+            if (auto arrayLiteral = cast(immutable ArrayLiteralNode) specialized) {
+                return addArrayInitializers(arrayLiteral, runtimeSizes);
+            }
+        }
         return specialized;
+    }
+
+    private static immutable(TypedNode) addArrayInitializers(immutable ArrayLiteralNode literal,
+            immutable(TypedNode)[] runtimeSizes, size_t depth = 0) {
+        // Check that we're not recursing past the array depth
+        if (depth >= runtimeSizes.length) {
+            return literal;
+        }
+        // Wrapped recursively all array literals in this literal
+        immutable(TypedNode)[] wrappedValues;
+        foreach (value; literal.values) {
+            if (auto nestedLiteral = cast(immutable ArrayLiteralNode) value) {
+                wrappedValues ~= addArrayInitializers(nestedLiteral, runtimeSizes, depth + 1);
+            } else {
+                wrappedValues ~= value;
+            }
+        }
+        auto wrapped = new immutable ArrayLiteralNode(wrappedValues, literal.labels, literal.start, literal.end);
+        // If the arrays has a runtime size then we wrap it in an array initializer
+        if (auto size = runtimeSizes[runtimeSizes.length - 1 - depth]) {
+            return new immutable ArrayInitializer(size, wrapped, wrapped.start, wrapped.end);
+        }
+        return wrapped;
     }
 
     public immutable(TypedNode) interpretContextMemberAccess(Context context, ContextMemberAccess expression) {
@@ -560,11 +613,11 @@ public immutable class Interpreter {
     public immutable(TypedNode) interpretLogicalAnd(Context context, LogicalAnd logicalAnd) {
         // Both the left and right nodes must be bools
         auto leftNode = logicalAnd.left.interpret(context).reduceLiterals();
-        if (!AtomicType.BOOL.opEquals(leftNode.getType())) {
+        if (!leftNode.getType().convertibleTo(AtomicType.BOOL)) {
             throw new SourceException(format("Left type must be bool, not %s", leftNode.getType()), logicalAnd.left);
         }
         auto rightNode = logicalAnd.right.interpret(context).reduceLiterals();
-        if (!AtomicType.BOOL.opEquals(rightNode.getType())) {
+        if (!rightNode.getType().convertibleTo(AtomicType.BOOL)) {
             throw new SourceException(format("Right type must be bool, not %s", rightNode.getType()), logicalAnd.right);
         }
         // Implement "logical and" as a conditional to support short-circuiting
@@ -579,11 +632,11 @@ public immutable class Interpreter {
     public immutable(TypedNode) interpretLogicalOr(Context context, LogicalOr logicalOr) {
         // Both the left and right nodes must be bools
         auto leftNode = logicalOr.left.interpret(context).reduceLiterals();
-        if (!AtomicType.BOOL.opEquals(leftNode.getType())) {
+        if (!leftNode.getType().convertibleTo(AtomicType.BOOL)) {
             throw new SourceException(format("Left type must be bool, not %s", leftNode.getType()), logicalOr.left);
         }
         auto rightNode = logicalOr.right.interpret(context).reduceLiterals();
-        if (!AtomicType.BOOL.opEquals(rightNode.getType())) {
+        if (!rightNode.getType().convertibleTo(AtomicType.BOOL)) {
             throw new SourceException(format("Right type must be bool, not %s", rightNode.getType()), logicalOr.right);
         }
         // Implement "logical or" as a conditional to support short-circuiting
@@ -602,7 +655,7 @@ public immutable class Interpreter {
     public immutable(TypedNode) interpretConditional(Context context, Conditional conditional) {
         // Get the condition node and make sure it is a bool type
         auto conditionNode = conditional.condition.interpret(context).reduceLiterals();
-        if (!AtomicType.BOOL.opEquals(conditionNode.getType())) {
+        if (!conditionNode.getType().convertibleTo(AtomicType.BOOL)) {
             throw new SourceException(format("Condition type must be bool, not %s", conditionNode.getType()),
                     conditional.condition);
         }
@@ -618,12 +671,118 @@ public immutable class Interpreter {
         try {
             context.defineType(name, type);
         } catch (Exception exception) {
-            throw new SourceException(exception.msg, typeDefinition);
+            throw new SourceException(exception.msg, typeDefinition.name);
         }
         return new immutable TypeDefinitionNode(name, type, typeDefinition.start, typeDefinition.end);
     }
 
-    public immutable(Node) interpretAssignment(Context context, Assignment typeDefinition) {
-        return NullNode.INSTANCE;
+    public immutable(Node) interpretVariableDeclaration(Context context, VariableDeclaration variableDeclaration) {
+        // Get the type and value, which will vary depending on whether or not type inference is used
+        Rebindable!(immutable Type) type;
+        Rebindable!(immutable TypedNode) value;
+        if (variableDeclaration.type is null) {
+            // Use type inference, the type is the same as the value, but without literals
+            value = variableDeclaration.value.interpret(context).reduceLiterals();
+            type = value.getType().withoutLiteral();
+        } else {
+            // Use the given type
+            type = variableDeclaration.type.interpret(context);
+            // Interpret the value if present
+            if (variableDeclaration.value !is null) {
+                value = variableDeclaration.value.interpret(context).reduceLiterals();
+                // Check if the types are compatible
+                if (!value.getType().specializableTo(type)) {
+                    throw new SourceException(format("Value type %s is not convertible to %s",
+                            value.getType().toString(), type.toString()), variableDeclaration.value);
+                }
+            } else {
+                // TODO: allow later initialization of "let" declarations
+                if (variableDeclaration.kind == VariableDeclaration.Kind.LET) {
+                    throw new SourceException("\"let\" variable declarations must have a value", variableDeclaration);
+                }
+                value = null;
+            }
+        }
+        // Get the field name
+        auto name = variableDeclaration.name.getSource();
+        // A field is re-assignable if it is a "var" field
+        auto reAssignable = variableDeclaration.kind == VariableDeclaration.Kind.VAR;
+        //  Attempt to declare the field
+        try {
+            auto field = context.declareField(name, type, reAssignable);
+            return new immutable VariableDeclarationNode(field, value, variableDeclaration.start, variableDeclaration.end);
+        } catch (Exception exception) {
+            throw new SourceException(exception.msg, variableDeclaration.name);
+        }
+    }
+
+    public immutable(Node) interpretAssignment(Context context, Assignment assignment) {
+        assert (assignment.operator == "=");
+        auto target = assignment.target.interpret(context).castOrFail!(immutable AssignableNode);
+        // Check if the target is assignable (for a field)
+        if (auto fieldAccess = cast(immutable FieldAccessNode) target) {
+            if (!fieldAccess.field.reAssignable) {
+                throw new SourceException(format("Cannot re-assign field %s", fieldAccess.field.name), fieldAccess);
+            }
+        }
+        // Interpret the value node
+        auto value = assignment.value.interpret(context).reduceLiterals();
+        // Check if the types are compatible
+        if (!value.getType().specializableTo(target.getType())) {
+            throw new SourceException(format("Value type %s is not convertible to %s",
+                    value.getType().toString(), target.getType().toString()), assignment.value);
+        }
+        return new immutable AssignmentNode(target, value, assignment.start, assignment.end);
+    }
+
+    public immutable(Node) interpretConditionalStatement(Context context, ConditionalStatement conditionalStatement) {
+        // Go backwards to build the nested sequence of blocks. Start with the false statements
+        context.enterBlock();
+        Rebindable!(immutable Node) falseBlockNode = interpretStatements(context, conditionalStatement.falseStatements,
+                conditionalStatement.end);
+        context.exitScope();
+        // Now wrap it in the condition blocks, from the bottom up
+        foreach_reverse (block; conditionalStatement.conditionBlocks) {
+            // Interpret the block condition
+            auto conditionNode = block.condition.interpret(context).reduceLiterals();
+            if (!conditionNode.getType().convertibleTo(AtomicType.BOOL)) {
+                throw new SourceException(format("Condition type must be bool, not %s", conditionNode.getType()),
+                        block.condition);
+            }
+            // Interpret the true block statements
+            context.enterBlock();
+            auto trueBlockNode = interpretStatements(context, block.statements, block.end);
+            context.exitScope();
+            // Create the conditional statement node
+            falseBlockNode = new immutable ConditionalStatementNode(conditionNode, trueBlockNode, falseBlockNode,
+                    block.start, falseBlockNode.end);
+        }
+        return falseBlockNode;
+    }
+
+    public immutable(Node) interpretLoopStatement(Context context, LoopStatement loopStatement) {
+        // Interpret the condition
+        auto conditionNode = loopStatement.condition.interpret(context).reduceLiterals();
+        if (!conditionNode.getType().convertibleTo(AtomicType.BOOL)) {
+            throw new SourceException(format("Condition type must be bool, not %s", conditionNode.getType()),
+                    loopStatement.condition);
+        }
+        // Interpret the statements
+        context.enterBlock();
+        auto blockNode = interpretStatements(context, loopStatement.statements, loopStatement.end);
+        context.exitScope();
+        // Create the loop statement node
+        return new immutable LoopStatementNode(conditionNode, blockNode, loopStatement.start, loopStatement.end);
+    }
+
+    private static immutable(BlockNode) interpretStatements(Context context, Statement[] statements, size_t end) {
+        if (statements.length <= 0) {
+            return new immutable BlockNode([], end, end);
+        }
+        immutable(Node)[] block = [];
+        foreach (statement; statements) {
+            block ~= statement.interpret(context);
+        }
+        return new immutable BlockNode(block, statements[0].start, statements[$ - 1].end);
     }
 }

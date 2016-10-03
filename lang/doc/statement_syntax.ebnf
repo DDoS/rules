@@ -34,15 +34,28 @@
     Vec3[] {1, 2, 3}.len() == 3
 *)
 
+(* Used to give names to types, example: "def Vec2d: {fp64 x, fp64 y}" *)
+typeDef = "def", identifier, ":", type ;
+
+(* Used to declare variables, example: "var x", "let Vec2d v = {-1, 1}" *)
+variableDecl = ("let" | "var"), (
+    ([namedType], identifier, "=", expression)
+    | (namedType, identifier, ["=", expression])
+) ;
+
 (* Assignment aren't expressions in this language *)
 referenceExpression = name | fieldAccess | indexAccess ;
 assignment = referenceExpression, assignmentOperator, expression ;
 
-(* Used to give names to types, example: def Vec2d: {fp64 x, fp64 y} *)
-typeDef = "def", identifier, ":", type ;
-
 indentation = indentationToken, {indentationToken} ;
 
-statement = assignment | functionCall ;
+conditionalStatement = "if", expression, ":", indentation, statements,
+    {"else", "if", expression, ":", indentation, statements},
+    ["else", ":", indentation, statements] ;
+
+loopStatement = "while", expression, ":", indentation, statements ;
+
+statement = functionCall | typeDef | variableDecl | assignment
+    | conditionalStatement | loopStatement ;
 
 statements = {indentation, (EOF | (statement, (indentation | ";" | EOF)))} ;

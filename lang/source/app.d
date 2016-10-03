@@ -1,6 +1,7 @@
 import std.stdio;
 import std.conv : to;
 
+import ruleslang.syntax.dchars;
 import ruleslang.syntax.source;
 import ruleslang.syntax.token;
 import ruleslang.syntax.tokenizer;
@@ -19,9 +20,6 @@ import ruleslang.evaluation.evaluate;
 void main() {
     /*
         TODO:
-            Parse variable declarations
-            Interpret variable declarations
-            Interpret assignments
             Parse control flow
             Interpret control flow
     */
@@ -30,11 +28,7 @@ void main() {
     auto runtime = new IntrinsicRuntime();
     bool expressionMode = false;
     while (true) {
-        if (expressionMode) {
-            stdout.write(">>");
-        }
-        stdout.write("> ");
-        auto source = stdin.readln();
+        auto source = readSource(expressionMode);
         if (source.length <= 0) {
             stdout.writeln();
             break;
@@ -50,23 +44,57 @@ void main() {
                     tokenizer.advance();
                 }
                 if (tokenizer.head().getKind() != Kind.EOF) {
-                    tokenizer.parseExpression().evaluate(context, runtime);
+                    auto expression = tokenizer.parseExpression();
+                    auto lastKind = tokenizer.head().getKind();
+                    if (lastKind != Kind.EOF && lastKind != Kind.INDENTATION) {
+                        throw new SourceException("Expected end of expression", tokenizer.head());
+                    }
+                    expression.evaluate(context, runtime);
                 }
             } else {
                 foreach (statement; tokenizer.parseStatements()) {
                     statement.evaluate(context, runtime);
                 }
             }
+            stdout.writeln("stack size: ", runtime.stack.usedSize, "B");
         } catch (SourceException exception) {
             writeln(exception.getErrorInformation(source).toString());
         }
     }
 }
 
+private string readSource(bool expressionMode) {
+    if (expressionMode) {
+        stdout.write(">>");
+    }
+    stdout.write("> ");
+    auto source = stdin.readln();
+    while (!expressionMode && source.endsWithIgnoreWhiteSpace(':')) {
+        string nextLine;
+        do {
+            stdout.write("> ");
+            nextLine = stdin.readln();
+            source ~= nextLine;
+        } while (nextLine.length > 0 && nextLine[0].isLineWhiteSpace());
+    }
+    return source;
+}
+
+private bool endsWithIgnoreWhiteSpace(string s, char c) {
+    foreach_reverse (cs; s) {
+        if (!cs.isWhiteSpace()) {
+            if (cs == c) {
+                return true;
+            }
+            break;
+        }
+    }
+    return false;
+}
+
 private void evaluate(Expression expression, Context context, Runtime runtime) {
-    expression = expression.expandOperators();
     stdout.writeln("syntax: ", expression.toString());
-    auto node = expression.interpret(context);
+    auto node = expression.expandOperators().interpret(context);
     if (cast(NullNode) node !is null) {
         return;
     }
@@ -78,15 +106,15 @@ private void evaluate(Expression expression, Context context, Runtime runtime) {
         reducedNode.evaluate(runtime);
         auto valueAddress = runtime.stack.peekAddress(type);
         stdout.writeln("value: ", runtime.asString(type, valueAddress));
+        runtime.stack.pop(type);
     } catch (NotImplementedException ignored) {
         stdout.writeln("value not implemented: ", ignored.msg);
     }
 }
 
 private void evaluate(Statement statement, Context context, Runtime runtime) {
-    statement = statement.expandOperators();
     stdout.writeln("syntax: ", statement.toString());
-    auto node = statement.interpret(context);
+    auto node = statement.expandOperators().interpret(context);
     if (cast(NullNode) node !is null) {
         return;
     }
@@ -117,8 +145,19 @@ private string asString(Runtime runtime, immutable Type type, void* address) {
     if (stringLiteral !is null) {
         auto length = *(cast(size_t*) dataSegment);
         dataSegment += size_t.sizeof;
-        dchar[] stringData = (cast(dchar*) dataSegment)[0 .. length];
-        return '"' ~ stringData.idup.to!string() ~ '"';
+        string value;
+        final switch (stringLiteral.encoding) with (StringLiteralType.Encoding) {
+            case UTF8:
+                value = (cast(char*) dataSegment)[0 .. length].idup;
+                break;
+            case UTF16:
+                value = (cast(wchar*) dataSegment)[0 .. length].idup.to!string();
+                break;
+            case UTF32:
+                value = (cast(dchar*) dataSegment)[0 .. length].idup.to!string();
+                break;
+        }
+        return '"' ~ value ~ '"';
     }
 
     auto arrayType = cast(immutable ArrayType) referenceType;

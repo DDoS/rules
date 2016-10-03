@@ -7,8 +7,9 @@ import std.algorithm.searching : canFind;
 import std.typecons : Rebindable;
 import std.exception : assumeUnique;
 import std.math: isNaN, isInfinity;
-import std.utf : codeLength;
+import std.utf : codeLength, toUTF8, toUTF16, toUTF32;
 
+import ruleslang.syntax.dchars;
 import ruleslang.util;
 
 public enum ConversionKind {
@@ -25,6 +26,7 @@ public enum TypeConversion {
     FLOAT_LITERAL_NARROW,
     STRING_LITERAL_TO_UTF8,
     STRING_LITERAL_TO_UTF16,
+    STRING_LITERAL_TO_UTF32,
     REFERENCE_WIDENING,
     REFERENCE_NARROWING
 }
@@ -41,6 +43,7 @@ public ConversionKind getKind(TypeConversion conversion) {
         case FLOAT_LITERAL_NARROW:
         case STRING_LITERAL_TO_UTF8:
         case STRING_LITERAL_TO_UTF16:
+        case STRING_LITERAL_TO_UTF32:
         case REFERENCE_NARROWING:
             return ConversionKind.NARROWING;
     }
@@ -92,25 +95,39 @@ public class TypeConversionChain {
         return chain.length == 1 && chain[0] == TypeConversion.IDENTITY;
     }
 
-    public alias isNumericWidening = checkConversions!"INTEGER_WIDEN INTEGER_TO_FLOAT FLOAT_WIDEN";
-    public alias isNumericNarrowing = checkConversions!"INTEGER_LITERAL_NARROW FLOAT_LITERAL_NARROW";
-    public alias isReferenceWidening = checkConversions!"REFERENCE_WIDENING";
-    public alias isReferenceNarrowing = checkConversions!"REFERENCE_NARROWING";
+    public alias isNumericWidening = checkConversions!("INTEGER_WIDEN INTEGER_TO_FLOAT FLOAT_WIDEN", false);
+    public alias isNumericNarrowing = checkConversions!("INTEGER_LITERAL_NARROW FLOAT_LITERAL_NARROW", true);
+    public alias isReferenceWidening = checkConversions!("REFERENCE_WIDENING", false);
+    public alias isReferenceNarrowing = checkConversions!(
+            "REFERENCE_NARROWING STRING_LITERAL_TO_UTF32 STRING_LITERAL_TO_UTF16 STRING_LITERAL_TO_UTF8", true
+    );
 
-    private bool checkConversions(string cases)() {
+    private bool checkConversions(string cases, bool any)() {
         if (chain.length <= 0 || isIdentity()) {
             return false;
         }
         foreach (conversion; chain) {
             switch (conversion) with (TypeConversion) {
-                case IDENTITY:
-                mixin ("case " ~ cases.split().join!":\ncase "() ~ ":\n");
-                    continue;
-                default:
-                    return false;
+                static if (any) {
+                    mixin ("case " ~ cases.split().join!":\ncase "() ~ ":\n");
+                        return true;
+                    case IDENTITY:
+                    default:
+                        continue;
+                } else {
+                    case IDENTITY:
+                    mixin ("case " ~ cases.split().join!":\ncase "() ~ ":\n");
+                        continue;
+                    default:
+                        return false;
+                }
             }
         }
-        return true;
+        static if (any) {
+            return false;
+        } else {
+            return true;
+        }
     }
 
     public override string toString() {
@@ -177,20 +194,11 @@ public immutable class AtomicType : Type {
     public static immutable immutable(AtomicType)[] ALL_TYPES = BOOL ~ NUMERIC_TYPES;
     public static immutable immutable(AtomicType)[] NUMERIC_TYPES = INTEGER_TYPES ~ FLOATING_POINT_TYPES;
     public static immutable immutable(AtomicType)[] INTEGER_TYPES = SIGNED_INTEGER_TYPES ~ UNSIGNED_INTEGER_TYPES;
-    public static immutable immutable(AtomicType)[] SIGNED_INTEGER_TYPES = [
-        SINT8, SINT16, SINT32, SINT64
-    ];
-    public static immutable immutable(AtomicType)[] UNSIGNED_INTEGER_TYPES = [
-        UINT8, UINT16, UINT32, UINT64
-    ];
-    public static immutable immutable(AtomicType)[] FLOATING_POINT_TYPES = [
-        FP32, FP64
-    ];
+    public static immutable immutable(AtomicType)[] SIGNED_INTEGER_TYPES = [SINT8, SINT16, SINT32, SINT64];
+    public static immutable immutable(AtomicType)[] UNSIGNED_INTEGER_TYPES = [UINT8, UINT16, UINT32, UINT64];
+    public static immutable immutable(AtomicType)[] FLOATING_POINT_TYPES = [FP32, FP64];
     private static immutable immutable(AtomicType)[][immutable(DataInfo)] SUPERTYPES;
     private static immutable immutable(AtomicType)[][immutable(DataInfo)] CONVERSIONS;
-    private static immutable immutable(AtomicType)[immutable(DataInfo)] UNSIGNED_TO_SIGNED;
-    private static immutable immutable(AtomicType)[immutable(DataInfo)] SIGNED_TO_UNSIGNED;
-    private static immutable immutable(AtomicType)[immutable(DataInfo)] INTEGER_TO_FLOAT;
     private static immutable immutable(AtomicType)[immutable(DataInfo)] INFO_TO_SINGLETON;
     public static immutable immutable(AtomicType)[string] BY_NAME;
     public string name;
@@ -220,22 +228,6 @@ public immutable class AtomicType : Type {
         auto conversions = supertypes.transitiveClosure().mapKeys!getInfo();
         conversions.rehash;
         CONVERSIONS = conversions.assumeUnique();
-
-        immutable(AtomicType)[immutable(DataInfo)] unsignedToSigned = [
-           UINT8.info: SINT8, UINT16.info: SINT16, UINT32.info: SINT32, UINT64.info: SINT64,
-        ];
-        UNSIGNED_TO_SIGNED = unsignedToSigned.assumeUnique();
-
-        immutable(AtomicType)[immutable(DataInfo)] signedToUnsigned = [
-           SINT8.info: UINT8, SINT16.info: UINT16, SINT32.info: UINT32, SINT64.info: UINT64,
-        ];
-        SIGNED_TO_UNSIGNED = signedToUnsigned.assumeUnique();
-
-        immutable(AtomicType)[immutable(DataInfo)] integerToFloat = [
-           UINT8.info: FP32, SINT8.info: FP32, UINT16.info: FP32, SINT16.info: FP32,
-           UINT32.info: FP32, SINT32.info: FP32, UINT64.info: FP64, SINT64.info: FP64,
-        ];
-        INTEGER_TO_FLOAT = integerToFloat.assumeUnique();
 
         immutable(AtomicType)[immutable(DataInfo)] infoToSingleton = [
             BOOL.info: BOOL,
@@ -409,13 +401,6 @@ public immutable class AtomicType : Type {
         return SUPERTYPES[info];
     }
 
-    public immutable(AtomicType) asSigned() {
-        if (isSigned()) {
-            return this;
-        }
-        return UNSIGNED_TO_SIGNED[info];
-    }
-
     public override string toString() {
         return name;
     }
@@ -490,7 +475,6 @@ public immutable class BooleanLiteralType : AtomicType, AtomicLiteralType {
 public immutable interface IntegerLiteralType : AtomicLiteralType {
     public ulong unsignedValue();
     public long signedValue();
-    public immutable(FloatLiteralType) toFloatLiteral();
 }
 
 public alias SignedIntegerLiteralType = IntegerLiteralTypeTemplate!long;
@@ -588,10 +572,6 @@ private template IntegerLiteralTypeTemplate(T) {
 
         public override long signedValue() {
             return cast(long) value;
-        }
-
-        public override immutable(FloatLiteralType) toFloatLiteral() {
-            return new immutable FloatLiteralType(AtomicType.INTEGER_TO_FLOAT[info], value);
         }
 
         public override immutable(AtomicType) withoutLiteral() {
@@ -1359,15 +1339,95 @@ public immutable class SizedArrayLiteralType : SizedArrayType, LiteralType {
 }
 
 public immutable class StringLiteralType : SizedArrayLiteralType {
-    public dstring value;
+    public enum Encoding {
+        UTF8, UTF16, UTF32
+    }
+
+    public union Value {
+        string utf8Value;
+        wstring utf16Value;
+        dstring utf32Value;
+    }
+
+    public StringLiteralType.Encoding encoding;
+    private StringLiteralType.Value value;
     private ulong utf8Length;
     private ulong utf16Length;
+    private ulong utf32Length;
+
+    public this(string value) {
+        super([AtomicType.UINT8], value.length);
+        encoding = StringLiteralType.Encoding.UTF8;
+        this.value.utf8Value = value;
+        utf8Length = value.length;
+        utf16Length = value.codeLength!wchar;
+        utf32Length = value.codeLength!dchar;
+    }
+
+    public this(wstring value) {
+        super([AtomicType.UINT16], value.length);
+        encoding = StringLiteralType.Encoding.UTF16;
+        this.value.utf16Value = value;
+        utf8Length = value.codeLength!char;
+        utf16Length = value.length;
+        utf32Length = value.codeLength!dchar;
+    }
 
     public this(dstring value) {
         super([AtomicType.UINT32], value.length);
-        this.value = value;
+        encoding = StringLiteralType.Encoding.UTF32;
+        this.value.utf32Value = value;
         utf8Length = value.codeLength!char;
         utf16Length = value.codeLength!wchar;
+        utf32Length = value.length;
+    }
+
+    @property public string utf8Value() {
+        assert (encoding == StringLiteralType.Encoding.UTF8);
+        return value.utf8Value;
+    }
+
+    @property public wstring utf16Value() {
+        assert (encoding == StringLiteralType.Encoding.UTF16);
+        return value.utf16Value;
+    }
+
+    @property public dstring utf32Value() {
+        assert (encoding == StringLiteralType.Encoding.UTF32);
+        return value.utf32Value;
+    }
+
+    @property public auto valueAs(StringLiteralType.Encoding newEncoding)() {
+        static if (newEncoding == StringLiteralType.Encoding.UTF8) {
+            final switch (encoding) with (StringLiteralType.Encoding) {
+                case UTF8:
+                    return utf8Value;
+                case UTF16:
+                    return utf16Value.toUTF8();
+                case UTF32:
+                    return utf32Value.toUTF8();
+            }
+        } else static if (newEncoding == StringLiteralType.Encoding.UTF16) {
+            final switch (encoding) with (StringLiteralType.Encoding) {
+                case UTF8:
+                    return utf8Value.toUTF16();
+                case UTF16:
+                    return utf16Value;
+                case UTF32:
+                    return utf32Value.toUTF16();
+            }
+        } else static if (newEncoding == StringLiteralType.Encoding.UTF32) {
+            final switch (encoding) with (StringLiteralType.Encoding) {
+                case UTF8:
+                    return utf8Value.toUTF32();
+                case UTF16:
+                    return utf16Value.toUTF32();
+                case UTF32:
+                    return utf32Value;
+            }
+        } else {
+            static assert (0);
+        }
     }
 
     public override bool convertibleTo(immutable Type type, TypeConversionChain conversions = new TypeConversionChain()) {
@@ -1376,14 +1436,31 @@ public immutable class StringLiteralType : SizedArrayLiteralType {
             conversions.thenIdentity();
             return true;
         }
-        // Allow conversion to shorter string literals
+        // Allow conversion to shorter string literals of the same encoding
         auto literalType = type.exactCastImmutable!StringLiteralType();
-        if (literalType !is null) {
-            if (typeid(literalType) != typeid(StringLiteralType)) {
-                return false;
+        if (literalType !is null && encoding == literalType.encoding) {
+            bool convertible;
+            final switch (encoding) with (StringLiteralType.Encoding) {
+                case UTF8: {
+                    auto literalLength = literalType.utf8Length;
+                    convertible = literalLength < utf8Length
+                            && literalType.utf8Value[0 .. literalLength] == utf8Value[0 .. literalLength];
+                    break;
+                }
+                case UTF16: {
+                    auto literalLength = literalType.utf16Length;
+                    convertible = literalLength < utf16Length
+                            && literalType.utf16Value[0 .. literalLength] == utf16Value[0 .. literalLength];
+                    break;
+                }
+                case UTF32: {
+                    auto literalLength = literalType.utf32Length;
+                    convertible = literalLength < utf32Length
+                            && literalType.utf32Value[0 .. literalLength] == utf32Value[0 .. literalLength];
+                    break;
+                }
             }
-            auto literalLength = literalType.value.length;
-            if (literalLength < value.length && value[0 .. literalLength] == literalType.value[0 .. literalLength]) {
+            if (convertible) {
                 conversions.thenReferenceWidening();
                 return true;
             }
@@ -1401,16 +1478,27 @@ public immutable class StringLiteralType : SizedArrayLiteralType {
         if (cast(LiteralType) type !is null) {
             return false;
         }
-        // Can convert the string to UTF-16 or UTF-8
-        auto clone = conversions.clone().thenStringLiteralToUtf16();
-        if (new immutable SizedArrayType(AtomicType.UINT16, utf16Length).convertibleTo(type, clone)) {
-            conversions.copy(clone);
-            return true;
+        // Can try other encodings, but discard the literal to prevent implicit reconversion
+        if (encoding != StringLiteralType.Encoding.UTF32) {
+            auto clone = conversions.clone().thenStringLiteralToUtf32();
+            if (new immutable SizedArrayType(AtomicType.UINT32, utf32Length).convertibleTo(type, clone)) {
+                conversions.copy(clone);
+                return true;
+            }
         }
-        clone = conversions.clone().thenStringLiteralToUtf8();
-        if (new immutable SizedArrayType(AtomicType.UINT8, utf8Length).convertibleTo(type, clone)) {
-            conversions.copy(clone);
-            return true;
+        if (encoding != StringLiteralType.Encoding.UTF16) {
+            auto clone = conversions.clone().thenStringLiteralToUtf16();
+            if (new immutable SizedArrayType(AtomicType.UINT16, utf16Length).convertibleTo(type, clone)) {
+                conversions.copy(clone);
+                return true;
+            }
+        }
+        if (encoding != StringLiteralType.Encoding.UTF8) {
+            auto clone = conversions.clone().thenStringLiteralToUtf8();
+            if (new immutable SizedArrayType(AtomicType.UINT8, utf8Length).convertibleTo(type, clone)) {
+                conversions.copy(clone);
+                return true;
+            }
         }
         return false;
     }
@@ -1434,8 +1522,13 @@ public immutable class StringLiteralType : SizedArrayLiteralType {
         return withoutLiteral().lowestUpperBound(other);
     }
 
+    public immutable(StringLiteralType) convert(StringLiteralType.Encoding newEncoding)() {
+        return new immutable StringLiteralType(valueAs!newEncoding());
+    }
+
     public override string toString() {
-        return format("string_lit(\"%s\")", value);
+        auto width = componentType.castOrFail!(immutable AtomicType).bitCount;
+        return format("str%d_lit(\"%s\")", width, valueAs!(StringLiteralType.Encoding.UTF32).escapeString());
     }
 
     public override bool opEquals(immutable Type type) {
@@ -1443,7 +1536,17 @@ public immutable class StringLiteralType : SizedArrayLiteralType {
             return false;
         }
         auto literalType = type.exactCastImmutable!StringLiteralType();
-        return literalType is null || value == literalType.value;
+        if (literalType is null) {
+            return true;
+        }
+        final switch (encoding) with (StringLiteralType.Encoding) {
+            case UTF8:
+                return utf8Value == literalType.utf8Value;
+            case UTF16:
+                return utf16Value == literalType.utf16Value;
+            case UTF32:
+                return utf32Value == literalType.utf32Value;
+        }
     }
 }
 

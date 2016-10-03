@@ -166,7 +166,19 @@ public abstract class StatementMapper : ExpressionMapper {
         return statement;
     }
 
+    public Statement mapVariableDeclaration(VariableDeclaration statement) {
+        return statement;
+    }
+
     public Statement mapAssignment(Assignment statement) {
+        return statement;
+    }
+
+    public Statement mapConditionalStatement(ConditionalStatement statement) {
+        return statement;
+    }
+
+    public Statement mapLoopStatement(LoopStatement statement) {
         return statement;
     }
 }

@@ -14,11 +14,15 @@ public immutable interface Symbol {
 
 public immutable class Field : Symbol {
     private string _name;
+    private string _symbolicName;
     public Type type;
+    public bool reAssignable;
 
-    public this(string name, immutable Type type) {
+    public this(string name, string symbolicName, immutable Type type, bool reAssignable) {
         _name = name;
+        _symbolicName = symbolicName;
         this.type = type;
+        this.reAssignable = reAssignable;
     }
 
     @property public override string name() {
@@ -26,7 +30,7 @@ public immutable class Field : Symbol {
     }
 
     @property public override string symbolicName() {
-        return _name;
+        return _symbolicName;
     }
 
     public string toString() {

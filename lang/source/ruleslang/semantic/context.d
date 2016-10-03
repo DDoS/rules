@@ -44,12 +44,12 @@ public class Context {
         sourceNames = sourceNames.parent;
     }
 
-    public void defineType(string name, immutable(Type) type) {
+    public void defineType(string name, immutable Type type) {
         // Definitions are done in the source name space
-        // and aren't allowed to shadow higher priority ones
+        // and can shadow only lower priority ones
         auto existing = intrisicNames.getType(name);
         if (existing !is null) {
-            throw new Exception(format("Cannot redeclare type %s", name));
+            throw new Exception(format("Cannot re-declare type %s", name));
         }
         sourceNames.defineType(name, type);
     }
@@ -72,10 +72,19 @@ public class Context {
         return types.length <= 0 ? null : types[0];
     }
 
+    public immutable(Field) declareField(string name, immutable Type type, bool reAssignable) {
+        // Field declarations are done in the source name space
+        // and can shadow only lower priority ones
+        auto existing = intrisicNames.getField(name);
+        if (existing !is null) {
+            throw new Exception(format("Cannot re-declare field %s", name));
+        }
+        return sourceNames.declareField(name, type, reAssignable);
+    }
+
     public immutable(Field) resolveField(string name) {
         // Search the name spaces in order of priority
         // Allowing higher priority ones to shadow the others
-        // TODO: allow shawdowing?
         if (auto field = intrisicNames.getField(name)) {
             return field;
         }
@@ -247,22 +256,26 @@ public class ImportedNameSpace : NameSpace {
 public class SourceNameSpace : NameSpace {
     private SourceNameSpace _parent;
     public immutable ScopeKind scopeKind;
+    private immutable size_t depth;
     private Rebindable!(immutable Type)[string] typesByName;
     private Rebindable!(immutable Field)[string] fieldsByName;
     private immutable(Function)[][string] functionsByName;
 
     public this(ScopeKind scopeKind, SourceNameSpace parent) {
+        assert ((scopeKind == ScopeKind.TOP_LEVEL) == (parent is null));
         this.scopeKind = scopeKind;
         _parent = parent;
+        depth = parent is null ? 0 : parent.depth + 1;
     }
 
     @property public SourceNameSpace parent() {
         return _parent;
     }
 
-    public void defineType(string name, immutable(Type) type) {
+    public void defineType(string name, immutable Type type) {
         auto existing = getType(name);
         if (existing !is null) {
+            // Don't allow any kind of shadowing
             throw new Exception(format("Cannot redeclare type %s", name));
         }
         typesByName[name] = type;
@@ -279,8 +292,28 @@ public class SourceNameSpace : NameSpace {
         return *type;
     }
 
+    public immutable(Field) declareField(string name, immutable Type  type, bool reAssignable) {
+        // Allow shadowing of parent scopes, but not of the current one
+        auto existing = name in fieldsByName;
+        if (existing !is null) {
+            throw new Exception(format("Cannot redeclare field %s", name));
+        }
+        // The symbolic name is the name followed by '$' and the scope depth
+        auto symbolicName = format("%s$%d", name, depth);
+        auto field = new immutable Field(name, symbolicName, type, reAssignable);
+        fieldsByName[name] = field;
+        return field;
+    }
+
     public override immutable(Field) getField(string name) {
-        return null;
+        auto field = name in fieldsByName;
+        if (field is null) {
+            if (_parent is null) {
+                return null;
+            }
+            return _parent.getField(name);
+        }
+        return *field;
     }
 
     public override immutable(ApplicableFunction)[] getFunctions(string name, immutable(Type)[] argumentTypes) {

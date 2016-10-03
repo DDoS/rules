@@ -24,11 +24,22 @@ public immutable class Evaluator {
 
     public void evaluateStringLiteral(Runtime runtime, immutable StringLiteralNode stringLiteral) {
         // Allocate the string
-        auto value = stringLiteral.getType().value;
-        auto address = runtime.allocateArray(stringLiteral.getType(), value.length);
+        auto type = stringLiteral.getType();
+        auto length = type.size;
+        auto address = runtime.allocateArray(type, length);
         // Then place the string data
-        auto dataSegment = cast(dchar*) (address + TypeIndex.sizeof + size_t.sizeof);
-        dataSegment[0 .. value.length] = value;
+        auto dataSegment = address + TypeIndex.sizeof + size_t.sizeof;
+        final switch (type.encoding) with (StringLiteralType.Encoding) {
+            case UTF8:
+                (cast(char*) dataSegment)[0 .. length] = type.utf8Value;
+                break;
+            case UTF16:
+                (cast(wchar*) dataSegment)[0 .. length] = type.utf16Value;
+                break;
+            case UTF32:
+                (cast(dchar*) dataSegment)[0 .. length] = type.utf32Value;
+                break;
+        }
         // Finally push the address to the stack
         runtime.stack.push(address);
     }
@@ -81,12 +92,26 @@ public immutable class Evaluator {
 
     public void evaluateArrayLiteral(Runtime runtime, immutable ArrayLiteralNode arrayLiteral) {
         auto type = arrayLiteral.getType();
+        evaluateArrayLiteral(runtime, arrayLiteral, type, type.size);
+    }
+
+    public void evaluateArrayInitializer(Runtime runtime, immutable ArrayInitializer arrayInitializer) {
+        // Evaluate the size node
+        arrayInitializer.size.evaluate(runtime);
+        // Get the length from the top of the stack
+        auto length = runtime.stack.pop!ulong();
+        evaluateArrayLiteral(runtime, arrayInitializer.literal, arrayInitializer.getType(), length);
+    }
+
+    private static void evaluateArrayLiteral(Runtime runtime, immutable ArrayLiteralNode arrayLiteral,
+            immutable ArrayType type, size_t length) {
         // Allocate the string
-        auto length = type.size;
         auto address = runtime.allocateArray(type, length);
         // Then place the array data
         auto dataLayout = type.getDataLayout();
         auto dataSegment = address + TypeIndex.sizeof + size_t.sizeof;
+        // Some caching when possible for efficiency
+        bool otherCachable = cast(immutable AtomicType) type.componentType !is null;
         bool foundOther = false;
         Variant otherCache;
         for (size_t i = 0; i < length; i += 1, dataSegment += dataLayout.componentSize) {
@@ -97,13 +122,13 @@ public immutable class Evaluator {
                 continue;
             }
             // If the value has the "other" label then we must only evaluate it a single time
-            if (isOther && foundOther) {
+            if (otherCachable && isOther && foundOther) {
                 otherCache.writeVariant(dataSegment);
                 continue;
             }
             // Evaluate the data to place the value on the stack
             value.evaluate(runtime);
-            if (isOther && !foundOther) {
+            if (otherCachable && isOther && !foundOther) {
                 // If it is the first labeled with "other" cache it for reuse
                 otherCache = runtime.stack.peek(type.componentType);
                 foundOther = true;
@@ -116,10 +141,25 @@ public immutable class Evaluator {
     }
 
     public void evaluateFieldAccess(Runtime runtime, immutable FieldAccessNode fieldAccess) {
-        throw new NotImplementedException();
+        // Get the address of the field
+        auto address = evaluateFieldAccessAddress(runtime, fieldAccess);
+        // Copy the value at that address to the top of the stack
+        runtime.stack.pushFrom(fieldAccess.getType(), address);
+    }
+
+    public void* evaluateFieldAccessAddress(Runtime runtime, immutable FieldAccessNode fieldAccess) {
+        // Lookup the field address in the runtime
+        return runtime.getField(fieldAccess.field);
     }
 
     public void evaluateMemberAccess(Runtime runtime, immutable MemberAccessNode memberAccess) {
+        // Get the member address
+        auto address = evaluateMemberAccessAddress(runtime, memberAccess);
+        // Push the member's data onto the stack
+        runtime.stack.pushFrom(memberAccess.getType(), address);
+    }
+
+    public void* evaluateMemberAccessAddress(Runtime runtime, immutable MemberAccessNode memberAccess) {
         // Evaluate the member access value to place it on the stack
         memberAccess.value.evaluate(runtime);
         // Now get its address from the stack and do a null check
@@ -131,13 +171,18 @@ public immutable class Evaluator {
         auto type = runtime.getType(*(cast(TypeIndex*) address));
         // From the type data layout, get the member offset
         auto memberOffset = type.getDataLayout().memberOffsetByName[memberAccess.name];
-        // Get the member address
-        auto memberAddress = address + TypeIndex.sizeof + memberOffset;
-        // Finally push the member's data onto the stack
-        runtime.stack.pushFrom(memberAccess.getType(), memberAddress);
+        // Calculate the member address
+        return address + TypeIndex.sizeof + memberOffset;
     }
 
     public void evaluateIndexAccess(Runtime runtime, immutable IndexAccessNode indexAccess) {
+        // Get the member address
+        auto address = evaluateIndexAccessAddress(runtime, indexAccess);
+        // Push the member's data onto the stack
+        runtime.stack.pushFrom(indexAccess.getType(), address);
+    }
+
+    public void* evaluateIndexAccessAddress(Runtime runtime, immutable IndexAccessNode indexAccess) {
         // Evaluate the index access value to place it on the stack
         indexAccess.value.evaluate(runtime);
         // Now get its address from the stack and do a null check
@@ -193,10 +238,8 @@ public immutable class Evaluator {
                 break;
             }
         }
-        // Get the member address
-        auto memberAddress = dataSegment + memberOffset;
-        // Finally push the member's data onto the stack
-        runtime.stack.pushFrom(indexAccess.getType(), memberAddress);
+        // Calculate the member address
+        return dataSegment + memberOffset;
     }
 
     public void evaluateFunctionCall(Runtime runtime, immutable FunctionCallNode functionCall) {
@@ -272,6 +315,78 @@ public immutable class Evaluator {
         } else {
             // Evaluate the false value and leave it on the top of the stack
             conditional.whenFalse.evaluate(runtime);
+        }
+    }
+
+    public void evaluateTypeDefinition(Runtime runtime, immutable TypeDefinitionNode typeDefinition) {
+        // Nothing to do, this is purely used at compile time
+    }
+
+    public void evaluateVariableDeclaration(Runtime runtime, immutable VariableDeclarationNode variableDeclaration) {
+        // First evaluate the declaration value
+        variableDeclaration.value.evaluate(runtime);
+        // Then we declare a field using the top of the stack (the value stays on the stack)
+        auto address = runtime.stack.peekAddress(variableDeclaration.value.getType());
+        runtime.registerField(variableDeclaration.field, address);
+    }
+
+    public void evaluateAssignment(Runtime runtime, immutable AssignmentNode assignment) {
+        // First evaluate the target address
+        auto address = assignment.target.evaluateAddress(runtime);
+        // Then evaluate the value
+        assignment.value.evaluate(runtime);
+        // Finally copy the value to the target
+        runtime.stack.popTo(assignment.value.getType(), address);
+    }
+
+    public void evaluateBlock(Runtime runtime, immutable BlockNode block) {
+        // The count of successfully evaluated statements in the block
+        size_t count = 0;
+        // We use a scope guard here to ensure the stack gets cleaned even if an exception occurs
+        scope (exit) {
+            // Then we have to delete and pop-off any created variables
+            foreach_reverse (i; 0 .. count) {
+                auto variableDeclaration = cast(immutable VariableDeclarationNode) block.statements[i];
+                if (variableDeclaration is null) {
+                    continue;
+                }
+                // Delete the variable mapping from the runtime
+                runtime.deleteField(variableDeclaration.field);
+                // Pop the field of the stack
+                runtime.stack.pop(variableDeclaration.value.getType());
+            }
+        }
+        // Sequentially evaluate every statemen node in the block
+        foreach (statement; block.statements) {
+            statement.evaluate(runtime);
+            count += 1;
+        }
+    }
+
+    public void evaluateConditionalStatement(Runtime runtime, immutable ConditionalStatementNode conditionalStatement) {
+        // First evaluate the condition node
+        conditionalStatement.condition.evaluate(runtime);
+        // Branch on the value, which is on the top of the stack
+        if (runtime.stack.pop!bool()) {
+            // Evaluate the true statements
+            conditionalStatement.whenTrue.evaluate(runtime);
+        } else {
+            // Evaluate the false statements
+            conditionalStatement.whenFalse.evaluate(runtime);
+        }
+    }
+
+    public void evaluateLoopStatement(Runtime runtime, immutable LoopStatementNode loopStatement) {
+        while (true) {
+            // Evaluate the condition node
+            loopStatement.condition.evaluate(runtime);
+            // Check if the loop condition is true
+            if (!runtime.stack.pop!bool()) {
+                // If not then exit
+                break;
+            }
+            // Otherwise evaluate the statements
+            loopStatement.whileTrue.evaluate(runtime);
         }
     }
 }

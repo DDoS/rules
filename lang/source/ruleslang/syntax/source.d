@@ -127,18 +127,34 @@ public class SourceException : Exception {
     private size_t _start;
     private size_t _end;
 
+    public this(string message, size_t index) {
+        this(message, null, index);
+    }
+
     public this(string message, dchar offender, size_t index) {
+        this(message, offender.escapeChar().to!string(), index);
+    }
+
+    public this(string message, string offender, size_t index) {
         super(message);
-        this.offender = offender.escapeChar().to!string();
+        this.offender = offender;
         _start = index;
         _end = index;
     }
 
-    public this(SourceIndexed)(string message, SourceIndexed problem) if (isSourceIndexed!SourceIndexed){
+    public this(SourceIndexed)(string message, SourceIndexed problem) if (isSourceIndexed!SourceIndexed) {
         this(message, problem.start, problem.end);
     }
 
+    public this(SourceIndexed)(string message, string offender, SourceIndexed problem) if (isSourceIndexed!SourceIndexed) {
+        this(message, offender, problem.start, problem.end);
+    }
+
     public this(string message, size_t start, size_t end) {
+        this(message, null, start, end);
+    }
+
+    public this(string message, string offender, size_t start, size_t end) {
         super(message);
         assert(start <= end);
         _start = start;
