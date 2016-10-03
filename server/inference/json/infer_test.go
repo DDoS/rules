@@ -3,7 +3,7 @@ package inference
 import (
 	"testing"
 	"github.com/stretchr/testify/assert"
-	"github.com/michael-golfi/rules/server/http/inference"
+	"github.com/michael-golfi/rules/server/inference"
 	"github.com/go-errors/errors"
 	"io/ioutil"
 )
@@ -57,7 +57,6 @@ func assertDeepValues(t *testing.T, expected, actual []inference.Field) {
 			assert.EqualValues(t, v, *dataVal)
 		}
 	}
-
 }
 
 func whereKeyEquals(fields []inference.Field, name string) (*inference.Field, error) {

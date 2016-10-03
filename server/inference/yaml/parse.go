@@ -1,7 +1,7 @@
 package yaml
 
 import (
-	"github.com/michael-golfi/rules/server/http/inference"
+	"github.com/michael-golfi/rules/server/inference"
 	"gopkg.in/yaml.v2"
 	"github.com/michael-golfi/log4go"
 )

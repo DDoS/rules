@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"encoding/json"
 	"github.com/michael-golfi/log4go"
-	"github.com/michael-golfi/rules/server/http/inference"
+	"github.com/michael-golfi/rules/server/inference"
 )
 
 func (j *JsonHandler) Parse(msg []byte) []inference.Field {
