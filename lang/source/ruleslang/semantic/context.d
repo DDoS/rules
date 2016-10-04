@@ -364,10 +364,10 @@ public class IntrinsicNameSpace : NameSpace {
     private static immutable IntrinsicFunctions[string] unaryOperators;
     private static immutable IntrinsicFunctions[string] binaryOperators;
     private static enum string LENGTH_NAME = "len";
-    private static enum string LENGTH_SYMBOLIC_NAME = LENGTH_NAME ~ "({})" ~ getWordType().toString();
+    private static enum string LENGTH_SYMBOLIC_NAME = LENGTH_NAME ~ "({})";
     private static immutable FunctionImpl LENGTH_IMPLEMENTATION;
     private static enum string CONCATENATE_NAME = OperatorFunction.CONCATENATE_FUNCTION;
-    private static enum string CONCATENATE_SYMBOLIC_NAME = CONCATENATE_NAME ~ "({}, {}){}";
+    private static enum string CONCATENATE_SYMBOLIC_NAME = CONCATENATE_NAME ~ "({}, {})";
     private static immutable FunctionImpl CONCATENATE_IMPLEMENTATION;
     public static immutable FunctionImpl[string] FUNCTION_IMPLEMENTATIONS;
 

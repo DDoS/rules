@@ -49,7 +49,7 @@ public immutable class Function : Symbol {
     public Type returnType;
 
     public this(string name, immutable(Type)[] parameterTypes, immutable Type returnType) {
-        this(name, genSymbolicName(name, parameterTypes, returnType), parameterTypes, returnType);
+        this(name, genSymbolicName(name, parameterTypes), parameterTypes, returnType);
     }
 
     public this(string name, string symbolicName, immutable(Type)[] parameterTypes, immutable Type returnType) {
@@ -103,7 +103,7 @@ public immutable class Function : Symbol {
     }
 }
 
-private string genSymbolicName(string name, immutable(Type)[] parameterTypes, immutable(Type) returnType) {
+private string genSymbolicName(string name, immutable(Type)[] parameterTypes) {
     char[] buffer = [];
     buffer.reserve(256);
     // First part if the function name
@@ -117,8 +117,6 @@ private string genSymbolicName(string name, immutable(Type)[] parameterTypes, im
         }
     }
     buffer ~= ')';
-    // Finally we append the return type
-    buffer ~= returnType.toString();
     return buffer.idup;
 }
 
