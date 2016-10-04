@@ -174,39 +174,6 @@ public class Assignment : Statement {
 }
 
 public class ConditionalStatement : Statement {
-    public struct Block {
-        private Expression _condition;
-        private Statement[] _statements;
-
-        public this(Expression condition, Statement[] statements, size_t start, size_t end) {
-            _condition = condition;
-            _statements = statements;
-            _start = start;
-            _end = end;
-        }
-
-        @property public Expression condition() {
-            return _condition;
-        }
-
-        @property public Statement[] statements() {
-            return _statements;
-        }
-
-        mixin sourceIndexFields;
-
-        private void map(StatementMapper mapper) {
-            _condition = _condition.map(mapper);
-            foreach (i, statement; _statements) {
-                _statements[i] = statement.map(mapper);
-            }
-        }
-
-        public string toString() {
-            return format("if %s: %s", _condition.toString(), _statements.join!"; "());
-        }
-    }
-
     private Block[] _conditionBlocks;
     private Statement[] _falseStatements;
 
@@ -246,6 +213,39 @@ public class ConditionalStatement : Statement {
         auto falseBlockString = falseStatements.length > 0 ? format("; else: %s", _falseStatements.join!"; "()) : "";
         return format("ConditionalStatement(%s%s)", _conditionBlocks.join!"; else "(), falseBlockString);
     }
+
+    public struct Block {
+        private Expression _condition;
+        private Statement[] _statements;
+
+        public this(Expression condition, Statement[] statements, size_t start, size_t end) {
+            _condition = condition;
+            _statements = statements;
+            _start = start;
+            _end = end;
+        }
+
+        @property public Expression condition() {
+            return _condition;
+        }
+
+        @property public Statement[] statements() {
+            return _statements;
+        }
+
+        mixin sourceIndexFields;
+
+        private void map(StatementMapper mapper) {
+            _condition = _condition.map(mapper);
+            foreach (i, statement; _statements) {
+                _statements[i] = statement.map(mapper);
+            }
+        }
+
+        public string toString() {
+            return format("if %s: %s", _condition.toString(), _statements.join!"; "());
+        }
+    }
 }
 
 public class LoopStatement : Statement {
@@ -283,5 +283,90 @@ public class LoopStatement : Statement {
 
     public override string toString() {
         return format("LoopStatement(while %s: %s)", _condition.toString(), _statements.join!"; "());
+    }
+}
+
+public class FunctionDefinition : Statement {
+    private Identifier _name;
+    private Parameter[] _parameters;
+    private NamedTypeAst _returnType;
+    private Statement[] _statements;
+
+    public this(Identifier name, Parameter[] parameters, NamedTypeAst returnType, Statement[] statements,
+            size_t start, size_t end) {
+        _name = name;
+        _parameters = parameters;
+        _returnType = returnType;
+        _statements = statements;
+        _start = start;
+        _end = end;
+    }
+
+    @property public Identifier name() {
+        return _name;
+    }
+
+    @property public Parameter[] parameters() {
+        return _parameters;
+    }
+
+    @property public NamedTypeAst returnType() {
+        return _returnType;
+    }
+
+    @property public Statement[] statements() {
+        return _statements;
+    }
+
+    mixin sourceIndexFields;
+
+    public override Statement map(StatementMapper mapper) {
+        foreach (i; 0 .. _parameters.length) {
+            _parameters[i].map(mapper);
+        }
+        if (_returnType !is null) {
+            _returnType = _returnType.map(mapper).castOrFail!NamedTypeAst();
+        }
+        foreach (i, statement; _statements) {
+            _statements[i] = statement.map(mapper);
+        }
+        return mapper.mapFunctionDefinition(this);
+    }
+
+    public override immutable(Node) interpret(Context context) {
+        //return Interpreter.INSTANCE.interpretFunctionDefinition(context, this);
+        return NullNode.INSTANCE;
+    }
+
+    public override string toString() {
+        auto returnString = _returnType is null ? "" : " " ~ _returnType.toString();
+        return format("FunctionDefinition(func %s(%s)%s: %s)", _name.getSource(), _parameters.join!", "(),
+                returnString, _statements.join!"; "());
+    }
+
+    public struct Parameter {
+        private NamedTypeAst _type;
+        private Identifier _name;
+
+        public this(NamedTypeAst type, Identifier name) {
+            _type = type;
+            _name = name;
+        }
+
+        @property public NamedTypeAst type() {
+            return _type;
+        }
+
+        @property public Identifier name() {
+            return _name;
+        }
+
+        private void map(StatementMapper mapper) {
+            _type = _type.map(mapper).castOrFail!NamedTypeAst();
+        }
+
+        public string toString() {
+            return format("%s %s", _type.toString(), _name.getSource());
+        }
     }
 }

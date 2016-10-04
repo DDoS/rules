@@ -250,6 +250,77 @@ public LoopStatement parseLoopStatement(Tokenizer tokens, IndentSpec indentSpec 
     return new LoopStatement(condition, statements, start, end);
 }
 
+public FunctionDefinition parseFunctionDefinition(Tokenizer tokens, IndentSpec indentSpec = noIndent()) {
+    if (tokens.head() != "func") {
+        throw new SourceException("Expected \"func\"", tokens.head());
+    }
+    auto start = tokens.head().start;
+    tokens.advance();
+    // Get the function name
+    if (tokens.head().getKind() != Kind.IDENTIFIER) {
+        throw new SourceException("Expected an identifier", tokens.head());
+    }
+    auto name = tokens.head().castOrFail!Identifier();
+    tokens.advance();
+    // Parse the parameter types
+    auto parameters = parseFunctionDefinitionParameters(tokens);
+    // Parse the return type
+    NamedTypeAst returnType = null;
+    if (tokens.head() != ":") {
+        returnType = parseNamedType(tokens);
+    }
+    // Terminate the function signature
+    if (tokens.head() != ":") {
+        throw new SourceException("Expected ':'", tokens.head());
+    }
+    auto end = tokens.head().end;
+    tokens.advance();
+    // The indentation of the block will be that of the first statement
+    if (tokens.head().getKind() != Kind.INDENTATION) {
+        throw new SourceException("Expected some indentation", tokens.head());
+    }
+    // Combine the current indentation to the found one
+    auto blockIndentSpec = indentSpec + tokens.head().castOrFail!Indentation();
+    // Parse the statements in the block
+    auto statements = parseStatements(tokens, blockIndentSpec);
+    if (statements.length > 0) {
+        end = statements[$ - 1].end;
+    }
+    return new FunctionDefinition(name, parameters, returnType, statements, start, end);
+}
+
+public FunctionDefinition.Parameter[] parseFunctionDefinitionParameters(Tokenizer tokens) {
+    if (tokens.head() != "(") {
+        throw new SourceException("Expected '('", tokens.head());
+    }
+    tokens.advance();
+    if (tokens.head() == ")") {
+        tokens.advance();
+        return [];
+    }
+    // Parse comma separated pairs of named types and names
+    FunctionDefinition.Parameter[] parameters = [parseFunctionDefinitionParameter(tokens)];
+    while (tokens.head() == ",") {
+        tokens.advance();
+        parameters ~= parseFunctionDefinitionParameter(tokens);
+    }
+    if (tokens.head() != ")") {
+        throw new SourceException("Expected ')'", tokens.head());
+    }
+    tokens.advance();
+    return parameters;
+}
+
+public FunctionDefinition.Parameter parseFunctionDefinitionParameter(Tokenizer tokens) {
+    auto type = parseNamedType(tokens);
+    if (tokens.head().getKind() != Kind.IDENTIFIER) {
+        throw new SourceException("Expected an identifier", tokens.head());
+    }
+    auto name = tokens.head().castOrFail!Identifier();
+    tokens.advance();
+    return FunctionDefinition.Parameter(type, name);
+}
+
 public Statement parseStatement(Tokenizer tokens, IndentSpec indentSpec = noIndent()) {
     switch (tokens.head().getSource()) {
         case "def":
@@ -261,6 +332,8 @@ public Statement parseStatement(Tokenizer tokens, IndentSpec indentSpec = noInde
             return parseConditionalStatement(tokens, indentSpec);
         case "while":
             return parseLoopStatement(tokens, indentSpec);
+        case "func":
+            return parseFunctionDefinition(tokens, indentSpec);
         default:
             return parseAssigmnentOrFunctionCall(tokens);
     }

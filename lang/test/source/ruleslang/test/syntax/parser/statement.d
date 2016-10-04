@@ -197,6 +197,29 @@ unittest {
     assertParseFail("while a == 0:\n  \nlet b = 12");
 }
 
+unittest {
+    assertEqual(
+        "FunctionDefinition(func test(): VariableDeclaration(let b = SignedIntegerLiteral(12)))",
+        parse("func test():\n  let b = 12")
+    );
+    assertEqual(
+        "FunctionDefinition(func test() bool: VariableDeclaration(let b = SignedIntegerLiteral(12)))",
+        parse("func test() bool:\n  let b = 12")
+    );
+    assertEqual(
+        "FunctionDefinition(func test(uint32 a) bool: VariableDeclaration(let b = SignedIntegerLiteral(12)))",
+        parse("func test(uint32 a) bool:\n  let b = 12")
+    );
+    assertEqual(
+        "FunctionDefinition(func test(uint32[] a, fp64 b) bool: VariableDeclaration(let b = SignedIntegerLiteral(12)))",
+        parse("func test(uint32[] a, fp64 b) bool:\n  let b = 12")
+    );
+    assertParseFail("func test():\nlet b = 12");
+    assertParseFail("func test():let b = 12");
+    assertParseFail("func test():\n\nlet b = 12");
+    assertParseFail("func test():\n  \nlet b = 12");
+}
+
 private string parse(string source) {
     try {
         auto statements = new Tokenizer(new DCharReader(source)).parseStatements();
