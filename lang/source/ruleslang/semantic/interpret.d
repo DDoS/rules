@@ -775,6 +775,33 @@ public immutable class Interpreter {
         return new immutable LoopStatementNode(conditionNode, blockNode, loopStatement.start, loopStatement.end);
     }
 
+    public immutable(Node) interpretFunctionDefinition(Context context, FunctionDefinition functionDefinition) {
+        // Interpret the function parameters
+        immutable(string)[] parameterNames = [];
+        immutable(Type)[] parameterTypes = [];
+        foreach (parameter; functionDefinition.parameters) {
+            parameterNames ~= parameter.name.getSource();
+            parameterTypes ~= parameter.type.interpret(context);
+        }
+        // The return type is void if missing
+        auto returnType = functionDefinition.returnType is null ? VoidType.INSTANCE
+                : functionDefinition.returnType.interpret(context);
+        // Create the function symbol
+        auto func = new immutable Function(functionDefinition.name.getSource(), parameterTypes, returnType);
+        // Interpret the statements
+        context.enterFunction();
+        auto blockNode = interpretStatements(context, functionDefinition.statements, functionDefinition.end);
+        context.exitScope();
+        // Create the function definition node
+        return new immutable FunctionDefinitionNode(func, parameterNames, blockNode,
+                functionDefinition.start, functionDefinition.end);
+
+        /*
+            TODO: prevent access to fields out of scope
+                  return statements!
+        */
+    }
+
     private static immutable(BlockNode) interpretStatements(Context context, Statement[] statements, size_t end) {
         if (statements.length <= 0) {
             return new immutable BlockNode([], end, end);

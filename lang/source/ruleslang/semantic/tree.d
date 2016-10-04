@@ -1335,6 +1335,37 @@ public immutable class LoopStatementNode : Node {
     }
 }
 
+public immutable class FunctionDefinitionNode : Node {
+    public Function func;
+    public string[] parameterNames;
+    public Node implementation;
+
+    public this(immutable Function func, immutable(string)[] parameterNames, immutable Node implementation,
+            size_t start, size_t end) {
+        assert (func.parameterTypes.length == parameterNames.length);
+        this.func = func;
+        this.parameterNames = parameterNames;
+        this.implementation = implementation;
+        _start = start;
+        _end = end;
+    }
+
+    mixin sourceIndexFields!false;
+
+    public override immutable(Node)[] getChildren() {
+        return [implementation];
+    }
+
+    public override void evaluate(Runtime runtime) {
+    }
+
+    public override string toString() {
+        auto signature = format("%s(%s) %s", func.name, stringZip!" "(func.parameterTypes, parameterNames).join!", "(),
+                func.returnType.toString());
+        return format("FunctionDefinition(%s: %s)", signature, implementation.toString());
+    }
+}
+
 public immutable(Type)[] getTypes(immutable(TypedNode)[] values) {
     immutable(Type)[] valueTypes = [];
     valueTypes.reserve(values.length);

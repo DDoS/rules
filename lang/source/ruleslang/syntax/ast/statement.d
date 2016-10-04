@@ -334,8 +334,7 @@ public class FunctionDefinition : Statement {
     }
 
     public override immutable(Node) interpret(Context context) {
-        //return Interpreter.INSTANCE.interpretFunctionDefinition(context, this);
-        return NullNode.INSTANCE;
+        return Interpreter.INSTANCE.interpretFunctionDefinition(context, this);
     }
 
     public override string toString() {
