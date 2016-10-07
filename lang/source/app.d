@@ -20,8 +20,7 @@ import ruleslang.evaluation.evaluate;
 void main() {
     /*
         TODO:
-            Parse control flow
-            Interpret control flow
+            Add break and continue statements to loops
     */
     auto context = new Context();
     context.enterFunction();

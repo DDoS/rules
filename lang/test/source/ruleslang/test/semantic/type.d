@@ -163,6 +163,13 @@ unittest {
 }
 
 unittest {
+    assertConvertible(VoidType.INSTANCE, VoidType.INSTANCE, TypeConversion.IDENTITY);
+    assertNotConvertible(VoidType.INSTANCE, AtomicType.UINT8);
+    assertNotConvertible(AtomicType.UINT8, VoidType.INSTANCE);
+    assertNotConvertible(VoidType.INSTANCE, new immutable ArrayType(AtomicType.UINT8));
+}
+
+unittest {
     assertConvertible(new immutable ArrayType(AtomicType.UINT8), new immutable ArrayType(AtomicType.UINT8),
         TypeConversion.IDENTITY);
     assertNotConvertible(new immutable ArrayType(AtomicType.UINT8), new immutable ArrayType(AtomicType.SINT16));
@@ -581,6 +588,8 @@ unittest {
 }
 
 unittest {
+    assertLUB(VoidType.INSTANCE, VoidType.INSTANCE, VoidType.INSTANCE);
+    assertNoLUB(VoidType.INSTANCE, AtomicType.SINT16);
     assertLUB(AtomicType.BOOL, AtomicType.BOOL, AtomicType.BOOL);
     assertLUB(AtomicType.UINT8, AtomicType.SINT8, AtomicType.SINT16);
     assertLUB(AtomicType.UINT64, AtomicType.SINT64, AtomicType.FP64);
