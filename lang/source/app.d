@@ -20,10 +20,11 @@ import ruleslang.evaluation.evaluate;
 void main() {
     /*
         TODO:
+            Function return statements
             Add break and continue statements to loops
     */
     auto context = new Context();
-    context.enterFunction();
+    context.enterFunctionImpl();
     auto runtime = new IntrinsicRuntime();
     bool expressionMode = false;
     while (true) {

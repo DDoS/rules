@@ -166,6 +166,10 @@ public abstract class StatementMapper : ExpressionMapper {
         return statement;
     }
 
+    public Statement mapFunctionCallStatement(FunctionCallStatement statement) {
+        return statement;
+    }
+
     public Statement mapVariableDeclaration(VariableDeclaration statement) {
         return statement;
     }

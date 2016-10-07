@@ -318,28 +318,35 @@ public immutable class Evaluator {
         }
     }
 
-    public void evaluateTypeDefinition(Runtime runtime, immutable TypeDefinitionNode typeDefinition) {
+    public immutable(Flow) evaluateTypeDefinition(Runtime runtime, immutable TypeDefinitionNode typeDefinition) {
         // Nothing to do, this is purely used at compile time
+        return Flow();
     }
 
-    public void evaluateVariableDeclaration(Runtime runtime, immutable VariableDeclarationNode variableDeclaration) {
+    public immutable(Flow) evaluateFunctionCallStatement(Runtime runtime, immutable FunctionCallStatementNode functionCall) {
+        return Flow();
+    }
+
+    public immutable(Flow) evaluateVariableDeclaration(Runtime runtime, immutable VariableDeclarationNode variableDeclaration) {
         // First evaluate the declaration value
         variableDeclaration.value.evaluate(runtime);
         // Then we declare a field using the top of the stack (the value stays on the stack)
         auto address = runtime.stack.peekAddress(variableDeclaration.value.getType());
         runtime.registerField(variableDeclaration.field, address);
+        return Flow();
     }
 
-    public void evaluateAssignment(Runtime runtime, immutable AssignmentNode assignment) {
+    public immutable(Flow) evaluateAssignment(Runtime runtime, immutable AssignmentNode assignment) {
         // First evaluate the target address
         auto address = assignment.target.evaluateAddress(runtime);
         // Then evaluate the value
         assignment.value.evaluate(runtime);
         // Finally copy the value to the target
         runtime.stack.popTo(assignment.value.getType(), address);
+        return Flow();
     }
 
-    public void evaluateBlock(Runtime runtime, immutable BlockNode block) {
+    public immutable(Flow) evaluateBlock(Runtime runtime, immutable BlockNode block) {
         // The count of successfully evaluated statements in the block
         size_t count = 0;
         // We use a scope guard here to ensure the stack gets cleaned even if an exception occurs
@@ -361,33 +368,15 @@ public immutable class Evaluator {
             statement.evaluate(runtime);
             count += 1;
         }
+        return Flow();
     }
 
-    public void evaluateConditionalStatement(Runtime runtime, immutable ConditionalStatementNode conditionalStatement) {
-        // First evaluate the condition node
-        conditionalStatement.condition.evaluate(runtime);
-        // Branch on the value, which is on the top of the stack
-        if (runtime.stack.pop!bool()) {
-            // Evaluate the true statements
-            conditionalStatement.whenTrue.evaluate(runtime);
-        } else {
-            // Evaluate the false statements
-            conditionalStatement.whenFalse.evaluate(runtime);
-        }
+    public immutable(Flow) evaluateBlockJump(Runtime runtime, immutable BlockJumpNode block) {
+        return Flow();
     }
 
-    public void evaluateLoopStatement(Runtime runtime, immutable LoopStatementNode loopStatement) {
-        while (true) {
-            // Evaluate the condition node
-            loopStatement.condition.evaluate(runtime);
-            // Check if the loop condition is true
-            if (!runtime.stack.pop!bool()) {
-                // If not then exit
-                break;
-            }
-            // Otherwise evaluate the statements
-            loopStatement.whileTrue.evaluate(runtime);
-        }
+    public immutable(Flow) evaluatePredicateBlockJump(Runtime runtime, immutable PredicateBlockJumpNode block) {
+        return Flow();
     }
 }
 

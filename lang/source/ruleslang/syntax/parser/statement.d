@@ -91,6 +91,24 @@ private TypeDefinition parseTypeDefinition(Tokenizer tokens) {
     return new TypeDefinition(name, type, start);
 }
 
+private Statement parseAssigmnentOrFunctionCall(Tokenizer tokens) {
+    auto access = parseAccess(tokens);
+    auto call = cast(FunctionCall) access;
+    if (call !is null) {
+        return new FunctionCallStatement(call);
+    }
+    auto reference = cast(AssignableExpression) access;
+    if (reference is null) {
+        throw new SourceException("Not an assignable expression", access);
+    }
+    if (tokens.head().getKind() != Kind.ASSIGNMENT_OPERATOR) {
+        throw new SourceException("Expected an assignment operator", tokens.head());
+    }
+    auto operator = tokens.head().castOrFail!AssignmentOperator();
+    tokens.advance();
+    return new Assignment(reference, parseExpression(tokens), operator);
+}
+
 private VariableDeclaration parseVariableDeclaration(Tokenizer tokens) {
     // Try to parse "let" or "var" first
     VariableDeclaration.Kind kind;
@@ -133,24 +151,6 @@ private VariableDeclaration parseVariableDeclaration(Tokenizer tokens) {
     // Otherwise parse and expression for the value
     auto value = parseExpression(tokens);
     return new VariableDeclaration(kind, type, name, value, start);
-}
-
-private Statement parseAssigmnentOrFunctionCall(Tokenizer tokens) {
-    auto access = parseAccess(tokens);
-    auto call = cast(FunctionCall) access;
-    if (call !is null) {
-        return call;
-    }
-    auto reference = cast(AssignableExpression) access;
-    if (reference is null) {
-        throw new SourceException("Not an assignable expression", access);
-    }
-    if (tokens.head().getKind() != Kind.ASSIGNMENT_OPERATOR) {
-        throw new SourceException("Expected an assignment operator", tokens.head());
-    }
-    auto operator = tokens.head().castOrFail!AssignmentOperator();
-    tokens.advance();
-    return new Assignment(reference, parseExpression(tokens), operator);
 }
 
 private ConditionalStatement parseConditionalStatement(Tokenizer tokens, IndentSpec indentSpec = noIndent()) {

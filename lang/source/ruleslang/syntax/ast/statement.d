@@ -20,7 +20,7 @@ public interface Statement {
     @property public void start(size_t start);
     @property public void end(size_t end);
     public Statement map(StatementMapper mapper);
-    public immutable(Node) interpret(Context context);
+    public immutable(FlowNode) interpret(Context context);
     public string toString();
 }
 
@@ -50,12 +50,41 @@ public class TypeDefinition : Statement {
         return mapper.mapTypeDefinition(this);
     }
 
-    public override immutable(Node) interpret(Context context) {
+    public override immutable(FlowNode) interpret(Context context) {
         return Interpreter.INSTANCE.interpretTypeDefinition(context, this);
     }
 
     public override string toString() {
         return format("TypeDefinition(def %s: %s)", _name.getSource(), _type.toString());
+    }
+}
+
+public class FunctionCallStatement : Statement {
+    private FunctionCall _call;
+
+    public this(FunctionCall call) {
+        _call = call;
+        _start = call.start;
+        _end = call.end;
+    }
+
+    @property public FunctionCall call() {
+        return _call;
+    }
+
+    mixin sourceIndexFields;
+
+    public override Statement map(StatementMapper mapper) {
+        _call = _call.map(mapper).castOrFail!FunctionCall();
+        return mapper.mapFunctionCallStatement(this);
+    }
+
+    public override immutable(FlowNode) interpret(Context context) {
+        return Interpreter.INSTANCE.interpretFunctionCallStatement(context, this);
+    }
+
+    public override string toString() {
+        return _call.toString();
     }
 }
 
@@ -115,7 +144,7 @@ public class VariableDeclaration : Statement {
         return mapper.mapVariableDeclaration(this);
     }
 
-    public override immutable(Node) interpret(Context context) {
+    public override immutable(FlowNode) interpret(Context context) {
         return Interpreter.INSTANCE.interpretVariableDeclaration(context, this);
     }
 
@@ -164,7 +193,7 @@ public class Assignment : Statement {
         return mapper.mapAssignment(this);
     }
 
-    public override immutable(Node) interpret(Context context) {
+    public override immutable(FlowNode) interpret(Context context) {
         return Interpreter.INSTANCE.interpretAssignment(context, this);
     }
 
@@ -205,7 +234,7 @@ public class ConditionalStatement : Statement {
         return mapper.mapConditionalStatement(this);
     }
 
-    public override immutable(Node) interpret(Context context) {
+    public override immutable(FlowNode) interpret(Context context) {
         return Interpreter.INSTANCE.interpretConditionalStatement(context, this);
     }
 
@@ -277,7 +306,7 @@ public class LoopStatement : Statement {
         return mapper.mapLoopStatement(this);
     }
 
-    public override immutable(Node) interpret(Context context) {
+    public override immutable(FlowNode) interpret(Context context) {
         return Interpreter.INSTANCE.interpretLoopStatement(context, this);
     }
 
@@ -333,7 +362,7 @@ public class FunctionDefinition : Statement {
         return mapper.mapFunctionDefinition(this);
     }
 
-    public override immutable(Node) interpret(Context context) {
+    public override immutable(FlowNode) interpret(Context context) {
         return Interpreter.INSTANCE.interpretFunctionDefinition(context, this);
     }
 
