@@ -25,8 +25,30 @@ public immutable interface FlowNode : Node {
     public Flow evaluate(Runtime runtime);
 }
 
-public immutable struct Flow {
+public struct Flow {
+    public enum Action {
+        PROCEED, BREAK, RERUN
+    }
 
+    public static immutable Flow PROCEED = Flow(0, false);
+    private size_t targetOffset;
+    private bool restart;
+    public Action action;
+
+    public this(size_t targetOffset, bool restart) inout {
+        this.targetOffset = targetOffset;
+        this.restart = restart;
+        if (targetOffset > 0) {
+            action = Action.BREAK;
+        } else {
+            action = restart ? Action.RERUN : Action.PROCEED;
+        }
+    }
+
+    public immutable(Flow) next() inout {
+        assert (targetOffset > 0);
+        return immutable Flow(targetOffset - 1, restart);
+    }
 }
 
 public immutable interface TypedNode : Node {
@@ -1285,11 +1307,9 @@ public immutable class AssignmentNode : FlowNode {
 }
 
 public immutable class BlockNode : FlowNode {
-    public size_t number;
     public FlowNode[] statements;
 
-    public this(size_t number, immutable FlowNode[] statements, size_t start, size_t end) {
-        this.number = number;
+    public this(immutable FlowNode[] statements, size_t start, size_t end) {
         this.statements = statements;
         _start = start;
         _end = end;
@@ -1306,20 +1326,20 @@ public immutable class BlockNode : FlowNode {
     }
 
     public override string toString() {
-        return format("Block(%d: %s)", number, statements.join!"; "());
+        return format("Block(%s)", statements.join!"; "());
     }
 }
 
-public enum BlockJumpTarget {
-    START, END
+public enum BlockJumpTarget : bool {
+    START = true, END = false
 }
 
 public immutable class BlockJumpNode : FlowNode {
+    public size_t blockOffset;
     public BlockJumpTarget target;
-    public size_t blockNumber;
 
-    public this(size_t blockNumber, BlockJumpTarget target, size_t start, size_t end) {
-        this.blockNumber = blockNumber;
+    public this(size_t blockOffset, BlockJumpTarget target, size_t start, size_t end) {
+        this.blockOffset = blockOffset;
         this.target = target;
         _start = start;
         _end = end;
@@ -1336,19 +1356,19 @@ public immutable class BlockJumpNode : FlowNode {
     }
 
     public override string toString() {
-        return format("BlockJump(%s of block %s)", target, blockNumber);
+        return format("BlockJump(%s of %s blocks)", target, blockOffset);
     }
 }
 
 public immutable class PredicateBlockJumpNode : FlowNode {
     public TypedNode predicate;
     public bool negated;
+    public size_t blockOffset;
     public BlockJumpTarget target;
-    public size_t blockNumber;
 
-    public this(immutable TypedNode predicate, bool negated, size_t blockNumber, BlockJumpTarget target,
+    public this(immutable TypedNode predicate, bool negated, size_t blockOffset, BlockJumpTarget target,
             size_t start, size_t end) {
-        this.blockNumber = blockNumber;
+        this.blockOffset = blockOffset;
         this.target = target;
         this.predicate = predicate;
         this.negated = negated;
@@ -1368,7 +1388,7 @@ public immutable class PredicateBlockJumpNode : FlowNode {
 
     public override string toString() {
         auto negation = negated ? "not " : "";
-        return format("PredicateBlockJump(if %s%s: %s of block %s)", negation, predicate.toString(), target, blockNumber);
+        return format("PredicateBlockJump(if %s%s: %s of %s blocks)", negation, predicate.toString(), target, blockOffset);
     }
 }
 

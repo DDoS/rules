@@ -120,7 +120,10 @@ private void evaluate(Statement statement, Context context, Runtime runtime) {
     }
     stdout.writeln("semantic: ", node.toString());
     try {
-        node.evaluate(runtime);
+        Flow flow;
+        do {
+            flow = node.evaluate(runtime);
+        } while (flow.action == Flow.Action.RERUN);
     } catch (NotImplementedException ignored) {
         stdout.writeln("value not implemented: ", ignored.msg);
     }

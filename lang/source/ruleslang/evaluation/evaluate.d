@@ -320,11 +320,11 @@ public immutable class Evaluator {
 
     public immutable(Flow) evaluateTypeDefinition(Runtime runtime, immutable TypeDefinitionNode typeDefinition) {
         // Nothing to do, this is purely used at compile time
-        return Flow();
+        return Flow.PROCEED;
     }
 
     public immutable(Flow) evaluateFunctionCallStatement(Runtime runtime, immutable FunctionCallStatementNode functionCall) {
-        return Flow();
+        return Flow.PROCEED;
     }
 
     public immutable(Flow) evaluateVariableDeclaration(Runtime runtime, immutable VariableDeclarationNode variableDeclaration) {
@@ -333,7 +333,7 @@ public immutable class Evaluator {
         // Then we declare a field using the top of the stack (the value stays on the stack)
         auto address = runtime.stack.peekAddress(variableDeclaration.value.getType());
         runtime.registerField(variableDeclaration.field, address);
-        return Flow();
+        return Flow.PROCEED;
     }
 
     public immutable(Flow) evaluateAssignment(Runtime runtime, immutable AssignmentNode assignment) {
@@ -343,7 +343,7 @@ public immutable class Evaluator {
         assignment.value.evaluate(runtime);
         // Finally copy the value to the target
         runtime.stack.popTo(assignment.value.getType(), address);
-        return Flow();
+        return Flow.PROCEED;
     }
 
     public immutable(Flow) evaluateBlock(Runtime runtime, immutable BlockNode block) {
@@ -363,20 +363,43 @@ public immutable class Evaluator {
                 runtime.stack.pop(variableDeclaration.value.getType());
             }
         }
-        // Sequentially evaluate every statemen node in the block
+        // Sequentially evaluate every statement node in the block
         foreach (statement; block.statements) {
-            statement.evaluate(runtime);
+            // Evaluate the statement as long as the flow action is "rerun"
+            Flow flow;
+            do {
+                flow = statement.evaluate(runtime);
+            } while (flow.action == Flow.Action.RERUN);
+            // Next break from the block or proceed to the next statement
+            final switch (flow.action) with (Flow.Action) {
+                case BREAK:
+                    return flow.next();
+                case PROCEED:
+                    break;
+                case RERUN:
+                    assert (0);
+            }
+            // Keep track of the number of executed statements for clean up
             count += 1;
         }
-        return Flow();
+        return Flow.PROCEED;
     }
 
-    public immutable(Flow) evaluateBlockJump(Runtime runtime, immutable BlockJumpNode block) {
-        return Flow();
+    public immutable(Flow) evaluateBlockJump(Runtime runtime, immutable BlockJumpNode blockJump) {
+        return immutable Flow(blockJump.blockOffset, blockJump.target);
     }
 
-    public immutable(Flow) evaluatePredicateBlockJump(Runtime runtime, immutable PredicateBlockJumpNode block) {
-        return Flow();
+    public immutable(Flow) evaluatePredicateBlockJump(Runtime runtime, immutable PredicateBlockJumpNode predicateBlockJump) {
+        // First evaluate the predicate node
+        predicateBlockJump.predicate.evaluate(runtime);
+        // Get the value, which is on the top of the stack
+        auto predicate = runtime.stack.pop!bool();
+        // Negate it if needed
+        if (predicateBlockJump.negated) {
+            predicate = !predicate;
+        }
+        // Branch on the value to return the proper flow
+        return predicate ? immutable Flow(predicateBlockJump.blockOffset, predicateBlockJump.target) : Flow.PROCEED;
     }
 }
 

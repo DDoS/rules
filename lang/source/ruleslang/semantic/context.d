@@ -47,10 +47,6 @@ public class Context {
         sourceNames = sourceNames.parent;
     }
 
-    public size_t getBlockDepth() {
-        return sourceNames.depth;
-    }
-
     public void defineType(string name, immutable Type type) {
         // Definitions are done in the source name space
         // and can shadow only lower priority ones

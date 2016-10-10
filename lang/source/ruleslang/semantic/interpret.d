@@ -745,7 +745,6 @@ public immutable class Interpreter {
     public immutable(FlowNode) interpretConditionalStatement(Context context, ConditionalStatement conditionalStatement) {
         // Enter the outer block which is used to end the conditional, and contains the "else" statements (if any)
         context.enterConditionBlock();
-        auto outerBlock = context.getBlockDepth();
         // Create a block node for each condition block
         auto hasFalseStatement = conditionalStatement.falseStatements.length > 0;
         immutable(FlowNode)[] conditionalStatements = [];
@@ -762,27 +761,26 @@ public immutable class Interpreter {
             auto statements = block.statements;
             auto statementNodes = interpretStatements(context, statements);
             // Prepend the statements with a block jump to the end if the condition doesn't pass
-            auto currentBlock = context.getBlockDepth();
-            auto conditionJump = new immutable PredicateBlockJumpNode(conditionNode, true, currentBlock, BlockJumpTarget.END,
+            auto conditionJump = new immutable PredicateBlockJumpNode(conditionNode, true, 1, BlockJumpTarget.END,
                     condition.start, condition.end);
             statementNodes = conditionJump ~ statementNodes;
             // Append the statements with a block jump to the end of the outer block, unless this is the last one
             auto statementsEnd = statements.length <= 0 ? block.end : statements[$ - 1].end;
             if (hasFalseStatement || i < conditionalStatement.conditionBlocks.length - 1) {
-                statementNodes ~= new immutable BlockJumpNode(outerBlock, BlockJumpTarget.END, statementsEnd, statementsEnd);
+                statementNodes ~= new immutable BlockJumpNode(2, BlockJumpTarget.END, statementsEnd, statementsEnd);
             }
             // Exit the conditional block
             context.exitBlock();
             // Create the condition block
             auto statementsStart = statements.length <= 0 ? block.end : statements[0].start;
-            conditionalStatements ~= new immutable BlockNode(currentBlock, statementNodes, statementsStart, statementsEnd);
+            conditionalStatements ~= new immutable BlockNode(statementNodes, statementsStart, statementsEnd);
         }
         // Append the false statements
         conditionalStatements ~= interpretStatements(context, conditionalStatement.falseStatements);
         // Exit the outer condition block
         context.exitBlock();
         // Create the condition block
-        return new immutable BlockNode(outerBlock, conditionalStatements, conditionalStatement.start, conditionalStatement.end);
+        return new immutable BlockNode(conditionalStatements, conditionalStatement.start, conditionalStatement.end);
     }
 
     public immutable(FlowNode) interpretLoopStatement(Context context, LoopStatement loopStatement) {
@@ -799,26 +797,24 @@ public immutable class Interpreter {
         auto statements = loopStatement.statements;
         auto statementNodes = interpretStatements(context, statements);
         // Prepend the statements with a block jump to the end if the loop condition doesn't pass
-        auto currentBlock = context.getBlockDepth();
-        auto conditionJump = new immutable PredicateBlockJumpNode(conditionNode, true, currentBlock, BlockJumpTarget.END,
+        auto conditionJump = new immutable PredicateBlockJumpNode(conditionNode, true, 1, BlockJumpTarget.END,
                 condition.start, condition.end);
         statementNodes = conditionJump ~ statementNodes;
         // Append the statements with a block jump to the start
         auto statementsEnd = statements.length <= 0 ? loopStatement.end : statements[$ - 1].end;
-        auto loopJump = new immutable BlockJumpNode(currentBlock, BlockJumpTarget.START, statementsEnd, statementsEnd);
+        auto loopJump = new immutable BlockJumpNode(1, BlockJumpTarget.START, statementsEnd, statementsEnd);
         statementNodes ~= loopJump;
         // Exit the loop block
         context.exitBlock();
         // Create the loop block
         auto statementsStart = statements.length <= 0 ? loopStatement.end : statements[0].start;
-        return new immutable BlockNode(currentBlock, statementNodes, statementsStart, statementsEnd);
+        return new immutable BlockNode(statementNodes, statementsStart, statementsEnd);
     }
 
     public immutable(FlowNode) interpretFunctionDefinition(Context context, FunctionDefinition functionDefinition) {
         context.enterFunctionImpl();
-        auto currentBlock = context.getBlockDepth();
         context.exitBlock();
-        return new immutable BlockNode(currentBlock, [], functionDefinition.start, functionDefinition.end);
+        return new immutable BlockNode([], functionDefinition.start, functionDefinition.end);
         /*
         // Interpret the function parameters
         immutable(string)[] parameterNames = [];
