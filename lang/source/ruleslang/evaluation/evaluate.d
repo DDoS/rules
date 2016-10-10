@@ -324,6 +324,10 @@ public immutable class Evaluator {
     }
 
     public immutable(Flow) evaluateFunctionCallStatement(Runtime runtime, immutable FunctionCallStatementNode functionCall) {
+        // Evaluate the function call expression within
+        functionCall.functionCall.evaluate(runtime);
+        // Since this is a statement we must remove the return value from the stack
+        runtime.stack.pop(functionCall.functionCall.getType());
         return Flow.PROCEED;
     }
 
