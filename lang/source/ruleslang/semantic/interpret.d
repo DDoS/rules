@@ -813,9 +813,6 @@ public immutable class Interpreter {
 
     public immutable(FlowNode) interpretFunctionDefinition(Context context, FunctionDefinition functionDefinition) {
         context.enterFunctionImpl();
-        context.exitBlock();
-        return new immutable BlockNode([], functionDefinition.start, functionDefinition.end);
-        /*
         // Interpret the function parameters
         immutable(string)[] parameterNames = [];
         immutable(Type)[] parameterTypes = [];
@@ -826,16 +823,25 @@ public immutable class Interpreter {
         // The return type is void if missing
         auto returnType = functionDefinition.returnType is null ? VoidType.INSTANCE
                 : functionDefinition.returnType.interpret(context);
-        // Create the function symbol
-        auto func = new immutable Function(functionDefinition.name.getSource(), parameterTypes, returnType);
+        // Create the function symbol and define it in the context
+        auto func = context.defineFunction(functionDefinition.name.getSource(), parameterTypes, returnType);
         // Interpret the statements
         context.enterFunctionImpl();
-        auto blockNode = interpretBlock(context, functionDefinition.statements, functionDefinition.end);
+        auto statements = functionDefinition.statements;
+        auto statementNodes = interpretStatements(context, statements);
         context.exitBlock();
+        // Create the implementation block
+        auto statementsStart = statements.length <= 0 ? functionDefinition.end : statements[0].start;
+        auto statementsEnd = statements.length <= 0 ? functionDefinition.end : statements[$ - 1].end;
+        auto blockNode = new immutable BlockNode(statementNodes, statementsStart, statementsEnd);
         // Create the function definition node
         return new immutable FunctionDefinitionNode(func, parameterNames, blockNode,
                 functionDefinition.start, functionDefinition.end);
-        */
+    }
+
+    public immutable(FlowNode) interpretReturnStatement(Context context, ReturnStatement returnStatement) {
+        auto blockOffset = 1;
+        return new immutable BlockJumpNode(blockOffset, BlockJumpTarget.END, returnStatement.start, returnStatement.end);
     }
 
     private static immutable(FlowNode)[] interpretStatements(Context context, Statement[] statements) {

@@ -63,7 +63,10 @@ paramList = {namedType, identifier} ;
 functionDef = "func", identifier, "(", paramList, ")", [namedType], ":",
     indentation, statements ;
 
+returnStatement = "return", expression ;
+
 statement = functionCall | typeDef | variableDecl | assignment
-    | conditionalStatement | loopStatement | functionDef ;
+    | conditionalStatement | loopStatement | functionDef
+    | returnStatement ;
 
 statements = {indentation, (EOF | (statement, (indentation | ";" | EOF)))} ;

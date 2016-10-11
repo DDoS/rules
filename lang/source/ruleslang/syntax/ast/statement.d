@@ -398,3 +398,34 @@ public class FunctionDefinition : Statement {
         }
     }
 }
+
+public class ReturnStatement : Statement {
+    private Expression _value;
+
+    public this(Expression value, size_t start, size_t end) {
+        _value = value;
+        _start = start;
+        _end = end;
+    }
+
+    @property public Expression value() {
+        return _value;
+    }
+
+    mixin sourceIndexFields;
+
+    public override Statement map(StatementMapper mapper) {
+        if (_value !is null) {
+            _value = _value.map(mapper);
+        }
+        return mapper.mapReturnStatement(this);
+    }
+
+    public override immutable(FlowNode) interpret(Context context) {
+        return Interpreter.INSTANCE.interpretReturnStatement(context, this);
+    }
+
+    public override string toString() {
+        return format("ReturnStatement(return%s)", _value is null ? "" : " " ~ value.toString());
+    }
+}

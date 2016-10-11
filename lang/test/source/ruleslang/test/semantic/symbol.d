@@ -29,5 +29,5 @@ private void assertNotApplicable(immutable Type[] parameterTypes, immutable Type
 
 private bool areApplicable(immutable Type[] parameterTypes, immutable Type[] argumentTypes) {
     ConversionKind[] conversions;
-    return new immutable Function("f", parameterTypes, AtomicType.UINT8).areApplicable(argumentTypes, conversions);
+    return new immutable Function("", "f", parameterTypes, AtomicType.UINT8).areApplicable(argumentTypes, conversions);
 }

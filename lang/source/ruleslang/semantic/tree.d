@@ -1392,12 +1392,12 @@ public immutable class PredicateBlockJumpNode : FlowNode {
     }
 }
 
-/*public immutable class FunctionDefinitionNode : FlowNode {
+public immutable class FunctionDefinitionNode : FlowNode {
     public Function func;
     public string[] parameterNames;
-    public FlowNode implementation;
+    public BlockNode implementation;
 
-    public this(immutable Function func, immutable(string)[] parameterNames, immutable FlowNode implementation,
+    public this(immutable Function func, immutable(string)[] parameterNames, immutable BlockNode implementation,
             size_t start, size_t end) {
         assert (func.parameterTypes.length == parameterNames.length);
         this.func = func;
@@ -1414,6 +1414,7 @@ public immutable class PredicateBlockJumpNode : FlowNode {
     }
 
     public override Flow evaluate(Runtime runtime) {
+        return Flow.PROCEED;
     }
 
     public override string toString() {
@@ -1421,7 +1422,7 @@ public immutable class PredicateBlockJumpNode : FlowNode {
                 func.returnType.toString());
         return format("FunctionDefinition(%s: %s)", signature, implementation.toString());
     }
-}*/
+}
 
 public immutable(Type)[] getTypes(immutable(TypedNode)[] values) {
     immutable(Type)[] valueTypes = [];
@@ -1450,7 +1451,7 @@ private immutable(TypedNode) addCastNode(immutable TypedNode fromNode, immutable
             return specializeNode(fromLiteralNode, toType);
         }
         // Add a call to the appropriate cast function
-        auto castFunc = IntrinsicNameSpace.getExactFunction(toType.toString(), [fromType]);
+        auto castFunc = IntrinsicNameSpace.getExactFunctionStatic(toType.toString(), [fromType]);
         assert (castFunc !is null);
         return new immutable FunctionCallNode(castFunc, [fromNode], fromNode.start, fromNode.end);
     }

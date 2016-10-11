@@ -321,6 +321,29 @@ public FunctionDefinition.Parameter parseFunctionDefinitionParameter(Tokenizer t
     return FunctionDefinition.Parameter(type, name);
 }
 
+public ReturnStatement parseReturnStatement(Tokenizer tokens) {
+    if (tokens.head() != "return") {
+        throw new SourceException("Expected \"return\"", tokens.head());
+    }
+    auto start = tokens.head().start;
+    auto end = tokens.head().end;
+    tokens.advance();
+    // Check for a return value
+    Expression value = void;
+    switch (tokens.head().getKind()) with (Kind) {
+        case INDENTATION:
+        case TERMINATOR:
+        case EOF:
+            value = null;
+            break;
+        default:
+            value = parseExpression(tokens);
+            end = value.end;
+            break;
+    }
+    return new ReturnStatement(value, start, end);
+}
+
 public Statement parseStatement(Tokenizer tokens, IndentSpec indentSpec = noIndent()) {
     switch (tokens.head().getSource()) {
         case "def":
@@ -334,6 +357,8 @@ public Statement parseStatement(Tokenizer tokens, IndentSpec indentSpec = noInde
             return parseLoopStatement(tokens, indentSpec);
         case "func":
             return parseFunctionDefinition(tokens, indentSpec);
+        case "return":
+            return parseReturnStatement(tokens);
         default:
             return parseAssigmnentOrFunctionCall(tokens);
     }

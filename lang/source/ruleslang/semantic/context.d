@@ -4,6 +4,7 @@ import std.exception : assumeUnique;
 import std.meta : AliasSeq;
 import std.typecons : Rebindable;
 import std.format : format;
+import std.conv : to;
 
 import ruleslang.syntax.source;
 import ruleslang.semantic.type;
@@ -98,6 +99,16 @@ public class Context {
             return field;
         }
         return null;
+    }
+
+    public immutable(Function) defineFunction(string name, immutable(Type)[] parameterTypes, immutable Type returnType) {
+        // Function definitions are done in the source name space
+        // and can shadow only lower priority ones
+        auto existing = intrisicNames.getExactFunction(name, parameterTypes);
+        if (existing !is null) {
+            throw new Exception(format("Cannot re-declare function %s", existing.toString()));
+        }
+        return sourceNames.defineFunction(name, parameterTypes, returnType);
     }
 
     public immutable(Function) resolveFunction(string name, immutable(Type)[] argumentTypes) {
@@ -226,6 +237,7 @@ public interface NameSpace {
     public immutable(Type) getType(string name);
     public immutable(Field) getField(string name);
     public immutable(ApplicableFunction)[] getFunctions(string name, immutable(Type)[] argumentTypes);
+    public immutable(Function) getExactFunction(string name, immutable(Type)[] parameterTypes);
 }
 
 public class ForeignNameSpace : NameSpace {
@@ -240,6 +252,10 @@ public class ForeignNameSpace : NameSpace {
     public override immutable(ApplicableFunction)[] getFunctions(string name, immutable(Type)[] argumentTypes) {
         return [];
     }
+
+    public override immutable(Function) getExactFunction(string name, immutable(Type)[] parameterTypes) {
+        return null;
+    }
 }
 
 public class ImportedNameSpace : NameSpace {
@@ -253,6 +269,10 @@ public class ImportedNameSpace : NameSpace {
 
     public override immutable(ApplicableFunction)[] getFunctions(string name, immutable(Type)[] argumentTypes) {
         return [];
+    }
+
+    public override immutable(Function) getExactFunction(string name, immutable(Type)[] parameterTypes) {
+        return null;
     }
 }
 
@@ -279,7 +299,7 @@ public class SourceNameSpace : NameSpace {
         auto existing = getType(name);
         if (existing !is null) {
             // Don't allow any kind of shadowing
-            throw new Exception(format("Cannot redeclare type %s", name));
+            throw new Exception(format("Cannot re-declare type %s", name));
         }
         typesByName[name] = type;
     }
@@ -299,11 +319,10 @@ public class SourceNameSpace : NameSpace {
         // Allow shadowing of parent scopes, but not of the current one
         auto existing = name in fieldsByName;
         if (existing !is null) {
-            throw new Exception(format("Cannot redeclare field %s", name));
+            throw new Exception(format("Cannot re-declare field %s", name));
         }
-        // The symbolic name is the name followed by '$' and the scope depth
-        auto symbolicName = format("%s$%d", name, depth);
-        auto field = new immutable Field(name, symbolicName, type, reAssignable);
+        // The prefix is the scope depth
+        auto field = new immutable Field(depth.to!string(), name, type, reAssignable);
         fieldsByName[name] = field;
         return field;
     }
@@ -319,8 +338,32 @@ public class SourceNameSpace : NameSpace {
         return *field;
     }
 
+    public immutable(Function) defineFunction(string name, immutable(Type)[] parameterTypes, immutable Type returnType) {
+        // Don't allow any shadowing
+        auto existing = getExactFunction(name, parameterTypes);
+        if (existing !is null) {
+            throw new Exception(format("Cannot re-declare function %s", existing.toString()));
+        }
+        // The prefix is '$' followed by the scope depth
+        auto func = new immutable Function(depth.to!string(), name, parameterTypes, returnType);
+        functionsByName[name] ~= func;
+        return func;
+    }
+
     public override immutable(ApplicableFunction)[] getFunctions(string name, immutable(Type)[] argumentTypes) {
         return [];
+    }
+
+    public override immutable(Function) getExactFunction(string name, immutable(Type)[] parameterTypes) {
+        auto functions = name in functionsByName;
+        if (functions !is null) {
+            foreach (func; *functions) {
+                if (func.sameSignature(name, parameterTypes)) {
+                    return func;
+                }
+            }
+        }
+        return _parent is null ? null : _parent.getExactFunction(name, parameterTypes);
     }
 }
 
@@ -366,6 +409,7 @@ public class IntrinsicNameSpace : NameSpace {
     private alias IntrinsicFunctions = immutable IntrinsicFunction[];
     private static immutable IntrinsicFunctions[string] unaryOperators;
     private static immutable IntrinsicFunctions[string] binaryOperators;
+    private static enum string PREFIX = "_";
     private static enum string LENGTH_NAME = "len";
     private static enum string LENGTH_SYMBOLIC_NAME = LENGTH_NAME ~ "({})";
     private static immutable FunctionImpl LENGTH_IMPLEMENTATION;
@@ -522,11 +566,15 @@ public class IntrinsicNameSpace : NameSpace {
         return functions;
     }
 
-    public static immutable(Function) getExactFunction(string name, immutable(Type)[] parameterTypes) {
+    public override immutable(Function) getExactFunction(string name, immutable(Type)[] parameterTypes) {
+        return getExactFunctionStatic(name, parameterTypes);
+    }
+
+    public static immutable(Function) getExactFunctionStatic(string name, immutable(Type)[] parameterTypes) {
         IntrinsicFunctions searchFunctions = getPossibleFunctions(name, parameterTypes);
         foreach (intrinsic; searchFunctions) {
             auto func = intrinsic.func;
-            if (func.isExactly(name, parameterTypes)) {
+            if (func.sameSignature(name, parameterTypes)) {
                 return func;
             }
         }
@@ -561,7 +609,7 @@ public class IntrinsicNameSpace : NameSpace {
             }
             // Generate a function that takes that argument type and returns the length as the word type
             auto paramType = arrayType.withoutLiteral();
-            auto func = new immutable Function(LENGTH_NAME, LENGTH_SYMBOLIC_NAME, [paramType], getWordType());
+            auto func = new immutable Function(PREFIX, LENGTH_NAME, LENGTH_SYMBOLIC_NAME, [paramType], getWordType());
             return [immutable IntrinsicFunction(func, LENGTH_IMPLEMENTATION)];
         }
         if (name == CONCATENATE_NAME && argumentTypes.length == 2) {
@@ -570,8 +618,8 @@ public class IntrinsicNameSpace : NameSpace {
             auto arrayTypeA = cast(immutable ArrayType) argumentTypes[0];
             auto paramTypeA = arrayTypeA is null ? null : arrayTypeA.withoutLiteral().withoutSize();
             if (paramTypeA !is null) {
-                auto funcA = new immutable Function(CONCATENATE_NAME, CONCATENATE_SYMBOLIC_NAME, [paramTypeA, paramTypeA],
-                        paramTypeA);
+                auto funcA = new immutable Function(PREFIX, CONCATENATE_NAME, CONCATENATE_SYMBOLIC_NAME,
+                        [paramTypeA, paramTypeA], paramTypeA);
                 funcs ~= immutable IntrinsicFunction(funcA, CONCATENATE_IMPLEMENTATION);
             }
             //  If the second argument is a different array type, try also using it as the parameter type
@@ -579,8 +627,8 @@ public class IntrinsicNameSpace : NameSpace {
             auto paramTypeB = arrayTypeB is null ? null : arrayTypeB.withoutLiteral().withoutSize();
             if (paramTypeB !is null) {
                 if (!paramTypeB.opEquals(paramTypeA)) {
-                    auto funcB = new immutable Function(CONCATENATE_NAME, CONCATENATE_SYMBOLIC_NAME, [paramTypeB, paramTypeB],
-                            paramTypeB);
+                    auto funcB = new immutable Function(PREFIX, CONCATENATE_NAME, CONCATENATE_SYMBOLIC_NAME,
+                            [paramTypeB, paramTypeB], paramTypeB);
                     funcs ~= immutable IntrinsicFunction(funcB, CONCATENATE_IMPLEMENTATION);
                 }
             }
@@ -629,7 +677,7 @@ private immutable(IntrinsicFunction)[] genUnaryFunctions(OperatorFunction op,
     alias Return = ReturnFromInner!Inner;
     auto innerType = atomicTypeFor!Inner();
     auto returnType = atomicTypeFor!Return();
-    auto func = new immutable Function(op, [innerType], returnType);
+    auto func = new immutable Function(IntrinsicNameSpace.PREFIX, op, [innerType], returnType);
     auto impl = genUnaryOperatorImpl!(op, Inner, Return);
     auto funcs = [immutable IntrinsicFunction(func, impl)];
     static if (Inners.length > 0) {
@@ -642,7 +690,7 @@ private immutable(IntrinsicFunction)[] genCastFunctions(Types...)() {
     immutable(IntrinsicFunction)[] genCasts(To, From, Froms...)() {
         auto fromType = atomicTypeFor!From();
         auto toType = atomicTypeFor!To();
-        auto func = new immutable Function(toType.toString(), [fromType], toType);
+        auto func = new immutable Function(IntrinsicNameSpace.PREFIX, toType.toString(), [fromType], toType);
         auto impl = genCastImpl!(From, To);
         auto funcs = [immutable IntrinsicFunction(func, impl)];
         static if (Froms.length > 0) {
@@ -669,7 +717,7 @@ private immutable(IntrinsicFunction)[] genBinaryFunctions(OperatorFunction op,
     auto leftType = atomicTypeFor!Left();
     auto rightType = atomicTypeFor!Right();
     auto returnType = atomicTypeFor!Return();
-    auto func = new immutable Function(op, [leftType, rightType], returnType);
+    auto func = new immutable Function(IntrinsicNameSpace.PREFIX, op, [leftType, rightType], returnType);
     auto impl = genBinaryOperatorImpl!(op, Left, Right, Return);
     auto funcs = [immutable IntrinsicFunction(func, impl)];
     static if (Lefts.length > 0) {
@@ -681,7 +729,8 @@ private immutable(IntrinsicFunction)[] genBinaryFunctions(OperatorFunction op,
 private immutable(IntrinsicFunction)[] genRangeFunctions(Param, Params...)() {
     auto paramType = atomicTypeFor!Param();
     auto returnType = genRangeReturnType(paramType);
-    auto func = new immutable Function(OperatorFunction.RANGE_FUNCTION, [paramType, paramType], returnType);
+    auto func = new immutable Function(IntrinsicNameSpace.PREFIX, OperatorFunction.RANGE_FUNCTION,
+            [paramType, paramType], returnType);
     auto impl = genRangeOperatorImpl!Param();
     auto funcs = [immutable IntrinsicFunction(func, impl)];
     static if (Params.length > 0) {

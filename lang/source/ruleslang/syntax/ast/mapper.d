@@ -189,4 +189,8 @@ public abstract class StatementMapper : ExpressionMapper {
     public Statement mapFunctionDefinition(FunctionDefinition statement) {
         return statement;
     }
+
+    public Statement mapReturnStatement(ReturnStatement statement) {
+        return statement;
+    }
 }
