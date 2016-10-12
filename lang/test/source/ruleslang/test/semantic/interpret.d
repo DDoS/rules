@@ -572,8 +572,7 @@ unittest {
 }
 
 unittest {
-    auto context = new Context();
-    context.enterFunctionImpl();
+    auto context = new Context(BlockKind.SHELL);
     assertEqual(
         "TypeDefinition(def test: bool)",
         interpretStmt("def test: bool", context)
@@ -590,8 +589,7 @@ unittest {
 }
 
 unittest {
-    auto context = new Context();
-    context.enterFunctionImpl();
+    auto context = new Context(BlockKind.SHELL);
     assertEqual(
         "TypeDefinition(def tup1: {uint16})",
         interpretStmt("def tup1: {uint16}", context)
@@ -722,8 +720,7 @@ unittest {
 }
 
 unittest {
-    auto context = new Context();
-    context.enterFunctionImpl();
+    auto context = new Context(BlockKind.SHELL);
     assertEqual(
         "VariableDeclaration(bool a = BooleanLiteral(true))",
         interpretStmt("let a = true", context)
@@ -746,8 +743,7 @@ unittest {
 }
 
 unittest {
-    auto context = new Context();
-    context.enterFunctionImpl();
+    auto context = new Context(BlockKind.SHELL);
     assertEqual(
         "VariableDeclaration(bool a = BooleanLiteral(true))",
         interpretStmt("var a = true", context)
@@ -787,8 +783,7 @@ unittest {
 }
 
 unittest {
-    auto context = new Context();
-    context.enterFunctionImpl();
+    auto context = new Context(BlockKind.SHELL);
     assertEqual(
         "VariableDeclaration(uint32[3] s32 = StringLiteral(\"hey\"))",
         interpretStmt("let s32 = \"hey\"", context)
@@ -804,8 +799,7 @@ unittest {
 }
 
 unittest {
-    auto context = new Context();
-    context.enterFunctionImpl();
+    auto context = new Context(BlockKind.SHELL);
     assertEqual(
         "VariableDeclaration(uint64 a = UnsignedIntegerLiteral(1))",
         interpretStmt("let a = 1u", context)
@@ -844,8 +838,7 @@ unittest {
 }
 
 unittest {
-    auto context = new Context();
-    context.enterFunctionImpl();
+    auto context = new Context(BlockKind.SHELL);
     assertEqual(
         "VariableDeclaration(sint64 d = SignedIntegerLiteral(0))",
         interpretStmt("var sint64 d", context)
@@ -917,8 +910,7 @@ unittest {
 }
 
 unittest {
-    auto context = new Context();
-    context.enterFunctionImpl();
+    auto context = new Context(BlockKind.SHELL);
     assertEqual(
         "VariableDeclaration(sint64 d = SignedIntegerLiteral(0))",
         interpretStmt("var sint64 d", context)

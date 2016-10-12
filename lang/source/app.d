@@ -23,8 +23,7 @@ void main() {
             Function return statements
             Add break and continue statements to loops
     */
-    auto context = new Context();
-    context.enterFunctionImpl();
+    auto context = new Context(BlockKind.SHELL);
     auto runtime = new IntrinsicRuntime();
     bool expressionMode = false;
     while (true) {

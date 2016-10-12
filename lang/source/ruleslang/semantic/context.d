@@ -12,8 +12,8 @@ import ruleslang.semantic.symbol;
 import ruleslang.evaluation.runtime;
 import ruleslang.util;
 
-private enum BlockKind {
-    TOP_LEVEL, FUNCTION_IMPL, CONDITION_BLOCK, LOOP_BLOCK
+public enum BlockKind {
+    TOP_LEVEL, FUNCTION_IMPL, CONDITION, LOOP, SHELL
 }
 
 public class Context {
@@ -22,29 +22,29 @@ public class Context {
     private SourceNameSpace sourceNames;
     private IntrinsicNameSpace intrisicNames;
 
-    public this() {
+    public this(BlockKind topKind = BlockKind.TOP_LEVEL) {
         foreignNames = new ForeignNameSpace();
         importedNames = new ImportedNameSpace();
-        sourceNames = new SourceNameSpace(BlockKind.TOP_LEVEL, null);
+        sourceNames = new SourceNameSpace(topKind);
         intrisicNames = new IntrinsicNameSpace();
     }
 
-    public void enterFunctionImpl() {
-        auto functionNames = new SourceNameSpace(BlockKind.FUNCTION_IMPL, sourceNames);
+    public void enterFunctionImpl(immutable Function func) {
+        auto functionNames = new SourceNameSpace(sourceNames, func);
         sourceNames = functionNames;
     }
 
-    public alias enterConditionBlock = enterBlock!(BlockKind.CONDITION_BLOCK);
-    public alias enterLoopBlock = enterBlock!(BlockKind.LOOP_BLOCK);
+    public alias enterConditionBlock = enterBlock!(BlockKind.CONDITION);
+    public alias enterLoopBlock = enterBlock!(BlockKind.LOOP);
 
-    private void enterBlock(BlockKind kind)() if (kind != BlockKind.TOP_LEVEL) {
-        assert (sourceNames.scopeKind != BlockKind.TOP_LEVEL);
-        auto blockNames = new SourceNameSpace(kind, sourceNames);
+    private void enterBlock(BlockKind kind)() if (kind == BlockKind.CONDITION || kind == BlockKind.LOOP) {
+        assert (sourceNames.blockKind != BlockKind.TOP_LEVEL);
+        auto blockNames = new SourceNameSpace(sourceNames, kind);
         sourceNames = blockNames;
     }
 
     public void exitBlock() {
-        assert (sourceNames.scopeKind != BlockKind.TOP_LEVEL);
+        assert (sourceNames.blockKind != BlockKind.TOP_LEVEL);
         sourceNames = sourceNames.parent;
     }
 
@@ -278,17 +278,37 @@ public class ImportedNameSpace : NameSpace {
 
 public class SourceNameSpace : NameSpace {
     private SourceNameSpace _parent;
-    public immutable BlockKind scopeKind;
-    private immutable size_t depth;
+    public immutable BlockKind blockKind;
+    public immutable size_t depth;
+    private immutable Function enclosingFunction;
     private Rebindable!(immutable Type)[string] typesByName;
     private Rebindable!(immutable Field)[string] fieldsByName;
     private immutable(Function)[][string] functionsByName;
 
-    public this(BlockKind scopeKind, SourceNameSpace parent) {
-        assert ((scopeKind == BlockKind.TOP_LEVEL) == (parent is null));
-        this.scopeKind = scopeKind;
+    public this(BlockKind blockKind) {
+        assert (blockKind == BlockKind.TOP_LEVEL || blockKind == BlockKind.SHELL);
+        _parent = null;
+        this.blockKind = blockKind;
+        depth = 0;
+        enclosingFunction = null;
+    }
+
+    public this(SourceNameSpace parent, immutable Function func) {
+        assert (parent !is null);
+        assert (func !is null);
         _parent = parent;
-        depth = parent is null ? 0 : parent.depth + 1;
+        this.blockKind = BlockKind.FUNCTION_IMPL;
+        depth = parent.depth + 1;
+        enclosingFunction = func;
+    }
+
+    public this(SourceNameSpace parent, BlockKind blockKind) {
+        assert (parent !is null);
+        assert (blockKind == BlockKind.CONDITION || blockKind == BlockKind.LOOP);
+        _parent = parent;
+        this.blockKind = blockKind;
+        depth = parent.depth + 1;
+        enclosingFunction = null;
     }
 
     @property public SourceNameSpace parent() {
