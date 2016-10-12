@@ -429,7 +429,7 @@ public class IntrinsicNameSpace : NameSpace {
     private alias IntrinsicFunctions = immutable IntrinsicFunction[];
     private static immutable IntrinsicFunctions[string] unaryOperators;
     private static immutable IntrinsicFunctions[string] binaryOperators;
-    private static enum string PREFIX = "_";
+    public static enum string PREFIX = "_";
     private static enum string LENGTH_NAME = "len";
     private static enum string LENGTH_SYMBOLIC_NAME = LENGTH_NAME ~ "({})";
     private static immutable FunctionImpl LENGTH_IMPLEMENTATION;

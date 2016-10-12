@@ -1041,7 +1041,7 @@ public immutable class FunctionCallNode : TypedNode {
     }
 
     public override bool isIntrinsicEvaluable() {
-        return arguments.all!(a => a.isIntrinsicEvaluable());
+        return func.prefix == IntrinsicNameSpace.PREFIX && arguments.all!(a => a.isIntrinsicEvaluable());
     }
 
     public override void evaluate(Runtime runtime) {
