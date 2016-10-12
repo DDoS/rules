@@ -938,6 +938,46 @@ unittest {
     interpretStmtFails("while 'l':\n  d = 0", context);
 }
 
+unittest {
+    auto context = new Context(BlockKind.SHELL);
+    assertEqual(
+        "FunctionDefinition(test1() void: Block(BlockJump(END of 1 blocks)))",
+        interpretStmt("func test1():\n  return", context)
+    );
+    interpretStmtFails("func test1():\n  return", context);
+    assertEqual(
+        "FunctionDefinition(test2() uint16: Block(BlockJump(END of 1 blocks)))",
+        interpretStmt("func test2() uint16:\n  return 1", context)
+    );
+    interpretStmtFails("func test2() bool:\n  return true", context);
+    interpretStmtFails("func test3() uint16:\n  return -1", context);
+    assertEqual(
+        "FunctionDefinition(test4() uint16: Block(VariableDeclaration(uint8 a = UnsignedIntegerLiteral(1));"
+            ~ " BlockJump(END of 1 blocks)))",
+        interpretStmt("func test4() uint16:\n  let uint8 a = 1\n  return a", context)
+    );
+    interpretStmtFails("func test4_5() uint16:\n  let a = 1\n  return a", context);
+    assertEqual(
+        "FunctionDefinition(test5(bool yes) bool: Block(BlockJump(END of 1 blocks)))",
+        interpretStmt("func test5(bool yes) bool:\n  return !yes", context)
+    );
+    assertEqual(
+        "VariableDeclaration(fp32 lol = FloatLiteral(2))",
+        interpretStmt("let fp32 lol = 2", context)
+    );
+    assertEqual(
+        "FunctionDefinition(test5(bool yes, fp32 lol) bool: Block(BlockJump(END of 1 blocks)))",
+        interpretStmt("func test5(bool yes, fp32 lol) bool:\n  return !yes && lol > 0", context)
+    );
+    interpretStmtFails("func test6() uint16:\n  return", context);
+    interpretStmtFails("func test7():\n  return 1", context);
+
+    /*assertEqual(
+        "",
+        interpretStmt("func test", context)
+    );*/
+}
+
 private string interpretExp(alias info = getAllInfo)(string source, Context context = new Context()) {
     auto tokenizer = new Tokenizer(new DCharReader(source));
     if (tokenizer.head().getKind() == Kind.INDENTATION) {
