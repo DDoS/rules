@@ -122,6 +122,10 @@ public class Context {
         }
         return null;
     }
+
+    public immutable(Function) getEnclosingFunction(out size_t blockOffset) {
+        return sourceNames.getEnclosingFunction(blockOffset);
+    }
 }
 
 public immutable(Function) resolveOverloads(immutable(ApplicableFunction)[] applicables) {
@@ -371,7 +375,20 @@ public class SourceNameSpace : NameSpace {
     }
 
     public override immutable(ApplicableFunction)[] getFunctions(string name, immutable(Type)[] argumentTypes) {
-        return [];
+        immutable(ApplicableFunction)[] functions = [];
+        auto candidates = name in functionsByName;
+        if (candidates !is null) {
+            foreach (func; *candidates) {
+                ConversionKind[] argumentConversions;
+                if (func.areApplicable(argumentTypes, argumentConversions)) {
+                    functions ~= immutable ApplicableFunction(func, argumentConversions.assumeUnique());
+                }
+            }
+        }
+        if (_parent !is null) {
+            functions ~= parent.getFunctions(name, argumentTypes);
+        }
+        return functions;
     }
 
     public override immutable(Function) getExactFunction(string name, immutable(Type)[] parameterTypes) {
@@ -384,6 +401,19 @@ public class SourceNameSpace : NameSpace {
             }
         }
         return _parent is null ? null : _parent.getExactFunction(name, parameterTypes);
+    }
+
+    public immutable(Function) getEnclosingFunction(out size_t blockOffset) {
+        if (enclosingFunction is null) {
+            if (_parent is null) {
+                return null;
+            }
+            auto func = _parent.getEnclosingFunction(blockOffset);
+            blockOffset += 1;
+            return func;
+        }
+        blockOffset = 1;
+        return enclosingFunction;
     }
 }
 

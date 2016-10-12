@@ -840,7 +840,28 @@ public immutable class Interpreter {
     }
 
     public immutable(FlowNode) interpretReturnStatement(Context context, ReturnStatement returnStatement) {
-        auto blockOffset = 1;
+        // Get the enclosing function
+        size_t blockOffset;
+        auto func = context.getEnclosingFunction(blockOffset);
+        if (func is null) {
+            throw new SourceException("Cannot use a return statement outside of a function", returnStatement);
+        }
+        // Check that the return expression is specializable to the function return type
+        if (func.returnType.specializableTo(VoidType.INSTANCE)) {
+            if (returnStatement.value !is null) {
+                throw new SourceException("Cannot have a return value for a void returning function", returnStatement.value);
+            }
+        } else {
+            if (returnStatement.value is null) {
+                throw new SourceException("Expected a return value", returnStatement);
+            }
+            auto valueNode = returnStatement.value.interpret(context).reduceLiterals();
+            if (!valueNode.getType().specializableTo(func.returnType)) {
+                throw new SourceException(format("Cannot convert the return value of type %s to %s",
+                        valueNode.getType(), func.returnType), returnStatement.value);
+            }
+        }
+        // TODO: some way of placing the return value on the stack
         return new immutable BlockJumpNode(blockOffset, BlockJumpTarget.END, returnStatement.start, returnStatement.end);
     }
 
