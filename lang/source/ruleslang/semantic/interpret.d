@@ -812,7 +812,6 @@ public immutable class Interpreter {
     }
 
     public immutable(FlowNode) interpretFunctionDefinition(Context context, FunctionDefinition functionDefinition) {
-        context.enterFunctionImpl();
         // Interpret the function parameters
         immutable(string)[] parameterNames = [];
         immutable(Type)[] parameterTypes = [];
@@ -824,9 +823,24 @@ public immutable class Interpreter {
         auto returnType = functionDefinition.returnType is null ? VoidType.INSTANCE
                 : functionDefinition.returnType.interpret(context);
         // Create the function symbol and define it in the context
-        auto func = context.defineFunction(functionDefinition.name.getSource(), parameterTypes, returnType);
+        string exceptionMessage;
+        auto func = collectExceptionMessage(
+            context.defineFunction(functionDefinition.name.getSource(), parameterTypes, returnType),
+            exceptionMessage
+        );
+        if (exceptionMessage !is null) {
+            throw new SourceException(exceptionMessage, functionDefinition);
+        }
+        // Enter the function body
+        context.enterFunctionImpl(func);
+        // Define each parameter as a field
+        foreach (i, name; parameterNames) {
+            collectExceptionMessage(context.declareField(name, parameterTypes[i], false), exceptionMessage);
+            if (exceptionMessage !is null) {
+                throw new SourceException(exceptionMessage, functionDefinition.parameters[i]);
+            }
+        }
         // Interpret the statements
-        context.enterFunctionImpl();
         auto statements = functionDefinition.statements;
         auto statementNodes = interpretStatements(context, statements);
         context.exitBlock();
