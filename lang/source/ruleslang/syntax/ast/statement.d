@@ -379,6 +379,8 @@ public class FunctionDefinition : Statement {
         public this(NamedTypeAst type, Identifier name) {
             _type = type;
             _name = name;
+            _start = type.start;
+            _end = name.end;
         }
 
         @property public NamedTypeAst type() {
@@ -388,6 +390,8 @@ public class FunctionDefinition : Statement {
         @property public Identifier name() {
             return _name;
         }
+
+        mixin sourceIndexFields;
 
         private void map(StatementMapper mapper) {
             _type = _type.map(mapper).castOrFail!NamedTypeAst();
