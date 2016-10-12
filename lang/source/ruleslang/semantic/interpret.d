@@ -871,7 +871,7 @@ public immutable class Interpreter {
             }
             auto valueNode = returnStatement.value.interpret(context).reduceLiterals();
             if (!valueNode.getType().specializableTo(func.returnType)) {
-                throw new SourceException(format("Cannot convert the return value of type %s to %s",
+                throw new SourceException(format("Cannot convert %s to the return type %s",
                         valueNode.getType(), func.returnType), returnStatement.value);
             }
         }
