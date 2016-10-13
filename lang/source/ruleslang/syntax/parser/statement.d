@@ -35,36 +35,32 @@ private struct IndentSpec {
         return true;
     }
 
-    private IndentSpec opBinary(string op)(Indentation indentation) {
-        static if (op == "+") {
-            void mixedError(char w, char c) {
-                throw new SourceException(format("Mixed indentation: should be '%s', but got '%s'",
-                        this.w.escapeChar(), c.escapeChar()), indentation);
-            }
-            auto source = indentation.getSource();
-            if (source.length <= 0) {
-                throw new SourceException("Expected some indentation", indentation);
-            }
-            char w = source[0];
-            if (count > 0 && this.w != w) {
-                mixedError(this.w, w);
-            }
-            foreach (c; source) {
-                if (w != c) {
-                    mixedError(w, c);
-                }
-            }
-            return IndentSpec(w, count + source.length);
-        } else {
-            static assert(0);
+    private IndentSpec increaseTo(Indentation indentation) {
+        void mixedError(char w, char c) {
+            throw new SourceException(format("Mixed indentation: should be '%s', but got '%s'",
+                    this.w.escapeChar(), c.escapeChar()), indentation);
         }
+        auto source = indentation.getSource();
+        if (source.length <= 0) {
+            throw new SourceException("Expected some indentation", indentation);
+        }
+        char w = source[0];
+        if (count > 0 && this.w != w) {
+            mixedError(this.w, w);
+        }
+        foreach (c; source) {
+            if (w != c) {
+                mixedError(w, c);
+            }
+        }
+        return IndentSpec(w, source.length);
     }
 
     private string toString() {
         if (count == 0) {
             return "no indentation";
         }
-        return format("%d of '%s' of indentation", count, w.escapeChar());
+        return format("%d of '%s' as indentation", count, w.escapeChar());
     }
 }
 
@@ -172,7 +168,7 @@ private ConditionalStatement parseConditionalStatement(Tokenizer tokens, IndentS
         throw new SourceException("Expected some indentation", tokens.head());
     }
     // Combine the current indentation to the found one
-    auto blockIndentSpec = indentSpec + tokens.head().castOrFail!Indentation();
+    auto blockIndentSpec = indentSpec.increaseTo(tokens.head().castOrFail!Indentation());
     // Parse the statements in the block
     auto trueStatements = parseStatements(tokens, blockIndentSpec);
     if (trueStatements.length > 0) {
@@ -241,7 +237,7 @@ public LoopStatement parseLoopStatement(Tokenizer tokens, IndentSpec indentSpec 
         throw new SourceException("Expected some indentation", tokens.head());
     }
     // Combine the current indentation to the found one
-    auto blockIndentSpec = indentSpec + tokens.head().castOrFail!Indentation();
+    auto blockIndentSpec = indentSpec.increaseTo(tokens.head().castOrFail!Indentation());
     // Parse the statements in the block
     auto statements = parseStatements(tokens, blockIndentSpec);
     if (statements.length > 0) {
@@ -280,7 +276,7 @@ public FunctionDefinition parseFunctionDefinition(Tokenizer tokens, IndentSpec i
         throw new SourceException("Expected some indentation", tokens.head());
     }
     // Combine the current indentation to the found one
-    auto blockIndentSpec = indentSpec + tokens.head().castOrFail!Indentation();
+    auto blockIndentSpec = indentSpec.increaseTo(tokens.head().castOrFail!Indentation());
     // Parse the statements in the block
     auto statements = parseStatements(tokens, blockIndentSpec);
     if (statements.length > 0) {
