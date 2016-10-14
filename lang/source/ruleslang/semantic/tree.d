@@ -1306,11 +1306,23 @@ public immutable class AssignmentNode : FlowNode {
     }
 }
 
+public enum BlockLimit : bool {
+    START = true, END = false
+}
+
 public immutable class BlockNode : FlowNode {
     public FlowNode[] statements;
+    public size_t exitOffset;
+    public BlockLimit exitTarget;
 
     public this(immutable FlowNode[] statements, size_t start, size_t end) {
+        this(statements, 0, BlockLimit.END, start, end);
+    }
+
+    public this(immutable FlowNode[] statements, size_t exitOffset, BlockLimit exitTarget, size_t start, size_t end) {
         this.statements = statements;
+        this.exitOffset = exitOffset;
+        this.exitTarget = exitTarget;
         _start = start;
         _end = end;
     }
@@ -1326,7 +1338,19 @@ public immutable class BlockNode : FlowNode {
     }
 
     public override string toString() {
-        return format("Block(%s)", statements.join!"; "());
+        return format("Block(%s)", statementsToString());
+    }
+
+    protected string statementsToString() {
+        auto statementsString = statements.join!"; "();
+        auto exitString = exitOffset != 0 ? format("exit to %s of %s blocks", exitTarget, exitOffset) : "";
+        if (statementsString.length > 0) {
+            if (exitString.length > 0) {
+                return format("%s; %s", statementsString, exitString);
+            }
+            return statementsString;
+        }
+        return exitString;
     }
 }
 
@@ -1335,6 +1359,12 @@ public immutable class ConditionalBlockNode : BlockNode {
 
     public this(immutable TypedNode condition, immutable FlowNode[] statements, size_t start, size_t end) {
         super(statements, start, end);
+        this.condition = condition;
+    }
+
+    public this(immutable TypedNode condition, immutable FlowNode[] statements, size_t exitOffset, BlockLimit exitTarget,
+            size_t start, size_t end) {
+        super(statements, exitOffset, exitTarget, start, end);
         this.condition = condition;
     }
 
@@ -1347,12 +1377,10 @@ public immutable class ConditionalBlockNode : BlockNode {
     //}
 
     public override string toString() {
-        return format("ConditionalBlock(if %s: %s)", condition.toString(), statements.join!"; "());
+        return format("ConditionalBlock(if %s: %s)", condition.toString(), statementsToString());
     }
 }
 
-public enum BlockJumpTarget : bool {
-    START = true, END = false
 }
 
 public immutable class BlockJumpNode : FlowNode {

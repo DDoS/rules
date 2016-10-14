@@ -762,22 +762,20 @@ public immutable class Interpreter {
             // Interpret the block statements
             auto statements = block.statements;
             auto statementNodes = interpretStatements(context, statements);
-            // Append the statements with a block jump to the end of the outer block, unless this is the last one
-            auto statementsEnd = statements.length <= 0 ? block.end : statements[$ - 1].end;
-            if (hasFalseStatement || i < conditionalStatement.conditionBlocks.length - 1) {
-                size_t blockOffset = simpleIf ? 1 : 2;
-                statementNodes ~= new immutable BlockJumpNode(blockOffset, BlockJumpTarget.END, statementsEnd, statementsEnd);
-            }
             // Exit the condition block
             context.exitBlock();
             // Create the conditional block
             auto statementsStart = statements.length <= 0 ? block.end : statements[0].start;
-            conditionalBlocks ~= new immutable ConditionalBlockNode(conditionNode, statementNodes,
+            auto statementsEnd = statements.length <= 0 ? block.end : statements[$ - 1].end;
+            // Jump to the end of the outer block, unless this is the last one
+            size_t blockOffset = !hasFalseStatement && i >= conditionalStatement.conditionBlocks.length - 1 ? 0 : 2;
+            auto blockNode = new immutable ConditionalBlockNode(conditionNode, statementNodes, blockOffset, BlockLimit.END,
                     statementsStart, statementsEnd);
-        }
-        // If this is a simple "if", just return the one block that was created
-        if (simpleIf) {
-            return cast(immutable BlockNode) conditionalBlocks[0];
+            // If this is a simple "if", just return the one block that we need
+            if (simpleIf) {
+                return blockNode;
+            }
+            conditionalBlocks ~= blockNode;
         }
         // Append the false statements
         conditionalBlocks ~= interpretStatements(context, conditionalStatement.falseStatements);
@@ -800,15 +798,13 @@ public immutable class Interpreter {
         // Interpret the statements
         auto statements = loopStatement.statements;
         auto statementNodes = interpretStatements(context, statements);
-        // Append the statements with a block jump to the start
-        auto statementsEnd = statements.length <= 0 ? loopStatement.end : statements[$ - 1].end;
-        auto loopJump = new immutable BlockJumpNode(1, BlockJumpTarget.START, statementsEnd, statementsEnd);
-        statementNodes ~= loopJump;
         // Exit the loop block
         context.exitBlock();
         // Create the loop block
         auto statementsStart = statements.length <= 0 ? loopStatement.end : statements[0].start;
-        return new immutable ConditionalBlockNode(conditionNode, statementNodes, statementsStart, statementsEnd);
+        auto statementsEnd = statements.length <= 0 ? loopStatement.end : statements[$ - 1].end;
+        return new immutable ConditionalBlockNode(conditionNode, statementNodes, 1, BlockLimit.START,
+                statementsStart, statementsEnd);
     }
 
     public immutable(FlowNode) interpretFunctionDefinition(Context context, FunctionDefinition functionDefinition) {
