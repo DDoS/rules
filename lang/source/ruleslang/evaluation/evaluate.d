@@ -393,17 +393,6 @@ public immutable class Evaluator {
         return immutable Flow(blockJump.blockOffset, blockJump.target);
     }
 
-    public immutable(Flow) evaluatePredicateBlockJump(Runtime runtime, immutable PredicateBlockJumpNode predicateBlockJump) {
-        // First evaluate the predicate node
-        predicateBlockJump.predicate.evaluate(runtime);
-        // Get the value, which is on the top of the stack
-        auto predicate = runtime.stack.pop!bool();
-        // Negate it if needed
-        if (predicateBlockJump.negated) {
-            predicate = !predicate;
-        }
-        // Branch on the value to return the proper flow
-        return predicate ? immutable Flow(predicateBlockJump.blockOffset, predicateBlockJump.target) : Flow.PROCEED;
     }
 }
 

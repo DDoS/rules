@@ -762,21 +762,18 @@ public immutable class Interpreter {
             // Interpret the block statements
             auto statements = block.statements;
             auto statementNodes = interpretStatements(context, statements);
-            // Prepend the statements with a block jump to the end if the condition doesn't pass
-            auto conditionJump = new immutable PredicateBlockJumpNode(conditionNode, true, 1, BlockJumpTarget.END,
-                    condition.start, condition.end);
-            statementNodes = conditionJump ~ statementNodes;
             // Append the statements with a block jump to the end of the outer block, unless this is the last one
             auto statementsEnd = statements.length <= 0 ? block.end : statements[$ - 1].end;
             if (hasFalseStatement || i < conditionalStatement.conditionBlocks.length - 1) {
                 size_t blockOffset = simpleIf ? 1 : 2;
                 statementNodes ~= new immutable BlockJumpNode(blockOffset, BlockJumpTarget.END, statementsEnd, statementsEnd);
             }
-            // Exit the conditional block
+            // Exit the condition block
             context.exitBlock();
-            // Create the condition block
+            // Create the conditional block
             auto statementsStart = statements.length <= 0 ? block.end : statements[0].start;
-            conditionalBlocks ~= new immutable BlockNode(statementNodes, statementsStart, statementsEnd);
+            conditionalBlocks ~= new immutable ConditionalBlockNode(conditionNode, statementNodes,
+                    statementsStart, statementsEnd);
         }
         // If this is a simple "if", just return the one block that was created
         if (simpleIf) {
@@ -803,10 +800,6 @@ public immutable class Interpreter {
         // Interpret the statements
         auto statements = loopStatement.statements;
         auto statementNodes = interpretStatements(context, statements);
-        // Prepend the statements with a block jump to the end if the loop condition doesn't pass
-        auto conditionJump = new immutable PredicateBlockJumpNode(conditionNode, true, 1, BlockJumpTarget.END,
-                condition.start, condition.end);
-        statementNodes = conditionJump ~ statementNodes;
         // Append the statements with a block jump to the start
         auto statementsEnd = statements.length <= 0 ? loopStatement.end : statements[$ - 1].end;
         auto loopJump = new immutable BlockJumpNode(1, BlockJumpTarget.START, statementsEnd, statementsEnd);
@@ -815,7 +808,7 @@ public immutable class Interpreter {
         context.exitBlock();
         // Create the loop block
         auto statementsStart = statements.length <= 0 ? loopStatement.end : statements[0].start;
-        return new immutable BlockNode(statementNodes, statementsStart, statementsEnd);
+        return new immutable ConditionalBlockNode(conditionNode, statementNodes, statementsStart, statementsEnd);
     }
 
     public immutable(FlowNode) interpretFunctionDefinition(Context context, FunctionDefinition functionDefinition) {

@@ -844,66 +844,58 @@ unittest {
         interpretStmt("var sint64 d", context)
     );
     assertEqual(
-        "Block(PredicateBlockJump(if not BooleanLiteral(true): END of 1 blocks); "
-            ~ "Assignment(FieldAccess(d) = SignedIntegerLiteral(0)))",
+        "ConditionalBlock(if BooleanLiteral(true): Assignment(FieldAccess(d) = SignedIntegerLiteral(0)))",
         interpretStmt("if 0 == 0:\n  d = 0", context)
     );
     assertEqual(
-        "Block(Block(PredicateBlockJump(if not BooleanLiteral(false): END of 1 blocks); "
-            ~ "Assignment(FieldAccess(d) = SignedIntegerLiteral(0)); BlockJump(END of 2 blocks)); "
-            ~ "Assignment(FieldAccess(d) = SignedIntegerLiteral(1)))",
+        "Block(ConditionalBlock(if BooleanLiteral(false): Assignment(FieldAccess(d) = SignedIntegerLiteral(0)); "
+            ~ "BlockJump(END of 2 blocks)); Assignment(FieldAccess(d) = SignedIntegerLiteral(1)))",
         interpretStmt("if false:\n  d = 0\nelse:\n  d = 1", context)
     );
     assertEqual(
-        "Block(Block(PredicateBlockJump(if not BooleanLiteral(false): END of 1 blocks); "
-            ~ "Assignment(FieldAccess(d) = SignedIntegerLiteral(0)); BlockJump(END of 2 blocks)); "
-            ~ "Block(PredicateBlockJump(if not BooleanLiteral(true): END of 1 blocks); "
+        "Block(ConditionalBlock(if BooleanLiteral(false): Assignment(FieldAccess(d) = SignedIntegerLiteral(0)); "
+            ~ "BlockJump(END of 2 blocks)); ConditionalBlock(if BooleanLiteral(true): "
             ~ "Assignment(FieldAccess(d) = SignedIntegerLiteral(1))))",
         interpretStmt("if false:\n d = 0\nelse if true:\n d = 1", context)
     );
     assertEqual(
-        "Block(Block(PredicateBlockJump(if not BooleanLiteral(false): END of 1 blocks); "
-            ~ "Assignment(FieldAccess(d) = SignedIntegerLiteral(0)); BlockJump(END of 2 blocks)); "
-            ~ "Block(PredicateBlockJump(if not BooleanLiteral(true): END of 1 blocks); "
+        "Block(ConditionalBlock(if BooleanLiteral(false): Assignment(FieldAccess(d) = SignedIntegerLiteral(0)); "
+            ~ "BlockJump(END of 2 blocks)); ConditionalBlock(if BooleanLiteral(true): "
             ~ "Assignment(FieldAccess(d) = SignedIntegerLiteral(1)); BlockJump(END of 2 blocks)); "
             ~ "Assignment(FieldAccess(d) = SignedIntegerLiteral(2)))",
         interpretStmt("if false:\n d = 0\nelse if true:\n d = 1\nelse:\n d = 2\n", context)
     );
     assertEqual(
-        "Block(PredicateBlockJump(if not BooleanLiteral(false): END of 1 blocks))",
+        "ConditionalBlock(if BooleanLiteral(false): )",
         interpretStmt("if false:\n  ;", context)
     );
     assertEqual(
-        "Block(PredicateBlockJump(if not BooleanLiteral(false): END of 1 blocks); "
-            ~ "Assignment(FieldAccess(d) = SignedIntegerLiteral(0)))",
+        "ConditionalBlock(if BooleanLiteral(false): Assignment(FieldAccess(d) = SignedIntegerLiteral(0)))",
         interpretStmt("if false:\n  d = 0\nelse:\n  ;", context)
     );
     assertEqual(
-        "Block(Block(PredicateBlockJump(if not BooleanLiteral(false): END of 1 blocks); "
-            ~ "BlockJump(END of 2 blocks)); Assignment(FieldAccess(d) = SignedIntegerLiteral(0)))",
+        "Block(ConditionalBlock(if BooleanLiteral(false): BlockJump(END of 2 blocks)); "
+            ~ "Assignment(FieldAccess(d) = SignedIntegerLiteral(0)))",
         interpretStmt("if false:\n  ;\nelse:\n  d = 0", context)
     );
     assertEqual(
-        "Block(Block(PredicateBlockJump(if not BooleanLiteral(false): END of 1 blocks); "
-            ~ "Assignment(FieldAccess(d) = SignedIntegerLiteral(0)); BlockJump(END of 2 blocks)); "
-            ~ "Block(PredicateBlockJump(if not BooleanLiteral(true): END of 1 blocks)))",
+        "Block(ConditionalBlock(if BooleanLiteral(false): Assignment(FieldAccess(d) = SignedIntegerLiteral(0)); "
+            ~ "BlockJump(END of 2 blocks)); ConditionalBlock(if BooleanLiteral(true): ))",
         interpretStmt("if false:\n d = 0\nelse if true:\n ;", context)
     );
     assertEqual(
-        "Block(Block(PredicateBlockJump(if not BooleanLiteral(false): END of 1 blocks); BlockJump(END of 2 blocks)); "
-            ~ "Block(PredicateBlockJump(if not BooleanLiteral(true): END of 1 blocks)))",
+        "Block(ConditionalBlock(if BooleanLiteral(false): BlockJump(END of 2 blocks)); "
+            ~ "ConditionalBlock(if BooleanLiteral(true): ))",
         interpretStmt("if false:\n ;\nelse if true:\n ;\nelse:\n ;\n", context)
     );
     assertEqual(
-        "Block(Block(PredicateBlockJump(if not BooleanLiteral(false): END of 1 blocks); "
-            ~ "VariableDeclaration(sint64 c = SignedIntegerLiteral(0)); BlockJump(END of 2 blocks)); "
-            ~ "VariableDeclaration(sint64 c = SignedIntegerLiteral(1)))",
+        "Block(ConditionalBlock(if BooleanLiteral(false): VariableDeclaration(sint64 c = SignedIntegerLiteral(0)); "
+            ~ "BlockJump(END of 2 blocks)); VariableDeclaration(sint64 c = SignedIntegerLiteral(1)))",
         interpretStmt("if false:\n  let c = 0\nelse:\n  let c = 1", context)
     );
     interpretExpFails("c", context);
     assertEqual(
-        "Block(PredicateBlockJump(if not BooleanLiteral(false): END of 1 blocks); "
-            ~ "VariableDeclaration(sint64 d = SignedIntegerLiteral(0)))",
+        "ConditionalBlock(if BooleanLiteral(false): VariableDeclaration(sint64 d = SignedIntegerLiteral(0)))",
         interpretStmt("if false:\n  let d = 0", context)
     );
     interpretStmtFails("if 'l':\n  d = 0", context);
@@ -916,17 +908,17 @@ unittest {
         interpretStmt("var sint64 d", context)
     );
     assertEqual(
-        "Block(PredicateBlockJump(if not BooleanLiteral(true): END of 1 blocks); "
-            ~ "Assignment(FieldAccess(d) = SignedIntegerLiteral(0)); BlockJump(START of 1 blocks))",
+        "ConditionalBlock(if BooleanLiteral(true): Assignment(FieldAccess(d) = SignedIntegerLiteral(0)); "
+            ~ "BlockJump(START of 1 blocks))",
         interpretStmt("while 0 == 0:\n  d = 0", context)
     );
     assertEqual(
-        "Block(PredicateBlockJump(if not BooleanLiteral(false): END of 1 blocks); BlockJump(START of 1 blocks))",
+        "ConditionalBlock(if BooleanLiteral(false): BlockJump(START of 1 blocks))",
         interpretStmt("while false:\n  ;", context)
     );
     assertEqual(
-        "Block(PredicateBlockJump(if not BooleanLiteral(true): END of 1 blocks); "
-            ~ "VariableDeclaration(sint64 c = SignedIntegerLiteral(0)); BlockJump(START of 1 blocks))",
+        "ConditionalBlock(if BooleanLiteral(true): VariableDeclaration(sint64 c = SignedIntegerLiteral(0)); "
+            ~ "BlockJump(START of 1 blocks))",
         interpretStmt("while true:\n  let c = 0", context)
     );
     interpretExpFails("c", context);

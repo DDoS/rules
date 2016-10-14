@@ -1317,7 +1317,7 @@ public immutable class BlockNode : FlowNode {
 
     mixin sourceIndexFields!false;
 
-    public override immutable(FlowNode)[] getChildren() {
+    public override immutable(Node)[] getChildren() {
         return statements;
     }
 
@@ -1330,6 +1330,27 @@ public immutable class BlockNode : FlowNode {
     }
 }
 
+public immutable class ConditionalBlockNode : BlockNode {
+    public TypedNode condition;
+
+    public this(immutable TypedNode condition, immutable FlowNode[] statements, size_t start, size_t end) {
+        super(statements, start, end);
+        this.condition = condition;
+    }
+
+    public override immutable(Node)[] getChildren() {
+        return cast(immutable Node) condition ~ cast(immutable(Node)[]) statements;
+    }
+
+    //public override Flow evaluate(Runtime runtime) {
+    //    return Evaluator.INSTANCE.evaluateConditionalBlock(runtime, this);
+    //}
+
+    public override string toString() {
+        return format("ConditionalBlock(if %s: %s)", condition.toString(), statements.join!"; "());
+    }
+}
+
 public enum BlockJumpTarget : bool {
     START = true, END = false
 }
@@ -1339,6 +1360,7 @@ public immutable class BlockJumpNode : FlowNode {
     public BlockJumpTarget target;
 
     public this(size_t blockOffset, BlockJumpTarget target, size_t start, size_t end) {
+        assert (blockOffset > 0);
         this.blockOffset = blockOffset;
         this.target = target;
         _start = start;
@@ -1347,7 +1369,7 @@ public immutable class BlockJumpNode : FlowNode {
 
     mixin sourceIndexFields!false;
 
-    public override immutable(FlowNode)[] getChildren() {
+    public override immutable(Node)[] getChildren() {
         return [];
     }
 
@@ -1357,38 +1379,6 @@ public immutable class BlockJumpNode : FlowNode {
 
     public override string toString() {
         return format("BlockJump(%s of %s blocks)", target, blockOffset);
-    }
-}
-
-public immutable class PredicateBlockJumpNode : FlowNode {
-    public TypedNode predicate;
-    public bool negated;
-    public size_t blockOffset;
-    public BlockJumpTarget target;
-
-    public this(immutable TypedNode predicate, bool negated, size_t blockOffset, BlockJumpTarget target,
-            size_t start, size_t end) {
-        this.blockOffset = blockOffset;
-        this.target = target;
-        this.predicate = predicate;
-        this.negated = negated;
-        _start = start;
-        _end = end;
-    }
-
-    mixin sourceIndexFields!false;
-
-    public override immutable(TypedNode)[] getChildren() {
-        return [predicate];
-    }
-
-    public override Flow evaluate(Runtime runtime) {
-        return Evaluator.INSTANCE.evaluatePredicateBlockJump(runtime, this);
-    }
-
-    public override string toString() {
-        auto negation = negated ? "not " : "";
-        return format("PredicateBlockJump(if %s%s: %s of %s blocks)", negation, predicate.toString(), target, blockOffset);
     }
 }
 
