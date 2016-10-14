@@ -844,8 +844,8 @@ unittest {
         interpretStmt("var sint64 d", context)
     );
     assertEqual(
-        "Block(Block(PredicateBlockJump(if not BooleanLiteral(true): END of 1 blocks); "
-            ~ "Assignment(FieldAccess(d) = SignedIntegerLiteral(0))))",
+        "Block(PredicateBlockJump(if not BooleanLiteral(true): END of 1 blocks); "
+            ~ "Assignment(FieldAccess(d) = SignedIntegerLiteral(0)))",
         interpretStmt("if 0 == 0:\n  d = 0", context)
     );
     assertEqual(
@@ -870,12 +870,12 @@ unittest {
         interpretStmt("if false:\n d = 0\nelse if true:\n d = 1\nelse:\n d = 2\n", context)
     );
     assertEqual(
-        "Block(Block(PredicateBlockJump(if not BooleanLiteral(false): END of 1 blocks)))",
+        "Block(PredicateBlockJump(if not BooleanLiteral(false): END of 1 blocks))",
         interpretStmt("if false:\n  ;", context)
     );
     assertEqual(
-        "Block(Block(PredicateBlockJump(if not BooleanLiteral(false): END of 1 blocks); "
-            ~ "Assignment(FieldAccess(d) = SignedIntegerLiteral(0))))",
+        "Block(PredicateBlockJump(if not BooleanLiteral(false): END of 1 blocks); "
+            ~ "Assignment(FieldAccess(d) = SignedIntegerLiteral(0)))",
         interpretStmt("if false:\n  d = 0\nelse:\n  ;", context)
     );
     assertEqual(
@@ -902,8 +902,8 @@ unittest {
     );
     interpretExpFails("c", context);
     assertEqual(
-        "Block(Block(PredicateBlockJump(if not BooleanLiteral(false): END of 1 blocks); "
-            ~ "VariableDeclaration(sint64 d = SignedIntegerLiteral(0))))",
+        "Block(PredicateBlockJump(if not BooleanLiteral(false): END of 1 blocks); "
+            ~ "VariableDeclaration(sint64 d = SignedIntegerLiteral(0)))",
         interpretStmt("if false:\n  let d = 0", context)
     );
     interpretStmtFails("if 'l':\n  d = 0", context);

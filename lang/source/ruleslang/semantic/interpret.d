@@ -745,9 +745,11 @@ public immutable class Interpreter {
     public immutable(FlowNode) interpretConditionalStatement(Context context, ConditionalStatement conditionalStatement) {
         // Enter the outer block which is used to end the conditional, and contains the "else" statements (if any)
         context.enterConditionBlock();
-        // Create a block node for each condition block
+        // Check if this is just an "if" with no "else if" or "else", so we can generate a simpler semantic tree
         auto hasFalseStatement = conditionalStatement.falseStatements.length > 0;
-        immutable(FlowNode)[] conditionalStatements = [];
+        auto simpleIf = conditionalStatement.conditionBlocks.length == 1 && !hasFalseStatement;
+        // Create a block node for each condition block
+        immutable(FlowNode)[] conditionalBlocks = [];
         foreach (i, block; conditionalStatement.conditionBlocks) {
             // Enter the conditional block
             context.enterConditionBlock();
@@ -767,20 +769,25 @@ public immutable class Interpreter {
             // Append the statements with a block jump to the end of the outer block, unless this is the last one
             auto statementsEnd = statements.length <= 0 ? block.end : statements[$ - 1].end;
             if (hasFalseStatement || i < conditionalStatement.conditionBlocks.length - 1) {
-                statementNodes ~= new immutable BlockJumpNode(2, BlockJumpTarget.END, statementsEnd, statementsEnd);
+                size_t blockOffset = simpleIf ? 1 : 2;
+                statementNodes ~= new immutable BlockJumpNode(blockOffset, BlockJumpTarget.END, statementsEnd, statementsEnd);
             }
             // Exit the conditional block
             context.exitBlock();
             // Create the condition block
             auto statementsStart = statements.length <= 0 ? block.end : statements[0].start;
-            conditionalStatements ~= new immutable BlockNode(statementNodes, statementsStart, statementsEnd);
+            conditionalBlocks ~= new immutable BlockNode(statementNodes, statementsStart, statementsEnd);
+        }
+        // If this is a simple "if", just return the one block that was created
+        if (simpleIf) {
+            return cast(immutable BlockNode) conditionalBlocks[0];
         }
         // Append the false statements
-        conditionalStatements ~= interpretStatements(context, conditionalStatement.falseStatements);
+        conditionalBlocks ~= interpretStatements(context, conditionalStatement.falseStatements);
         // Exit the outer condition block
         context.exitBlock();
         // Create the condition block
-        return new immutable BlockNode(conditionalStatements, conditionalStatement.start, conditionalStatement.end);
+        return new immutable BlockNode(conditionalBlocks, conditionalStatement.start, conditionalStatement.end);
     }
 
     public immutable(FlowNode) interpretLoopStatement(Context context, LoopStatement loopStatement) {
