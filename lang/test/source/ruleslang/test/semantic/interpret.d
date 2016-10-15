@@ -969,6 +969,7 @@ unittest {
     );
     interpretStmtFails("func test6() uint16:\n  return", context);
     interpretStmtFails("func test7():\n  return 1", context);
+    interpretStmtFails("func test8() uint16:\n  return 1\n  return 2", context);
 
     /*assertEqual(
         "",
