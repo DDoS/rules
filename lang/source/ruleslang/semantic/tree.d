@@ -1,7 +1,7 @@
 module ruleslang.semantic.tree;
 
 import std.conv : to;
-import std.algorithm.searching : all;
+import std.algorithm.searching : any, all;
 import std.format : format;
 import std.typecons : Rebindable;
 
@@ -22,6 +22,7 @@ public immutable interface Node {
 }
 
 public immutable interface FlowNode : Node {
+    public bool isDeclaration();
     public Flow evaluate(Runtime runtime);
 }
 
@@ -1221,6 +1222,10 @@ public immutable class TypeDefinitionNode : FlowNode {
         return [];
     }
 
+    public override bool isDeclaration() {
+        return true;
+    }
+
     public override Flow evaluate(Runtime runtime) {
         return Evaluator.INSTANCE.evaluateTypeDefinition(runtime, this);
     }
@@ -1243,6 +1248,10 @@ public immutable class FunctionCallStatementNode : FlowNode {
 
     public override immutable(TypedNode)[] getChildren() {
         return [functionCall];
+    }
+
+    public override bool isDeclaration() {
+        return false;
     }
 
     public override Flow evaluate(Runtime runtime) {
@@ -1271,6 +1280,10 @@ public immutable class VariableDeclarationNode : FlowNode {
         return [value];
     }
 
+    public override bool isDeclaration() {
+        return true;
+    }
+
     public override Flow evaluate(Runtime runtime) {
         return Evaluator.INSTANCE.evaluateVariableDeclaration(runtime, this);
     }
@@ -1297,6 +1310,10 @@ public immutable class AssignmentNode : FlowNode {
         return [target, value];
     }
 
+    public override bool isDeclaration() {
+        return false;
+    }
+
     public override Flow evaluate(Runtime runtime) {
         return Evaluator.INSTANCE.evaluateAssignment(runtime, this);
     }
@@ -1315,11 +1332,12 @@ public immutable class BlockNode : FlowNode {
     public size_t exitOffset;
     public BlockLimit exitTarget;
 
-    public this(immutable FlowNode[] statements, size_t start, size_t end) {
+    public this(immutable(FlowNode)[] statements, size_t start, size_t end) {
         this(statements, 0, BlockLimit.END, start, end);
     }
 
-    public this(immutable FlowNode[] statements, size_t exitOffset, BlockLimit exitTarget, size_t start, size_t end) {
+    public this(immutable(FlowNode)[] statements, size_t exitOffset, BlockLimit exitTarget, size_t start, size_t end) {
+        inlineTrailingBlocks(statements, exitOffset, exitTarget);
         this.statements = statements;
         this.exitOffset = exitOffset;
         this.exitTarget = exitTarget;
@@ -1329,8 +1347,16 @@ public immutable class BlockNode : FlowNode {
 
     mixin sourceIndexFields!false;
 
+    public bool isConditional() {
+        return false;
+    }
+
     public override immutable(Node)[] getChildren() {
         return statements;
+    }
+
+    public override bool isDeclaration() {
+        return any!(a => a.isDeclaration())(statements);
     }
 
     public override Flow evaluate(Runtime runtime) {
@@ -1343,7 +1369,8 @@ public immutable class BlockNode : FlowNode {
 
     protected string statementsToString() {
         auto statementsString = statements.join!"; "();
-        auto exitString = exitOffset != 0 ? format("exit to %s of %s blocks", exitTarget, exitOffset) : "";
+        auto exitString = exitOffset != 0  || exitTarget != BlockLimit.END
+                ? format("exit to %s of %s blocks", exitTarget, exitOffset) : "";
         if (statementsString.length > 0) {
             if (exitString.length > 0) {
                 return format("%s; %s", statementsString, exitString);
@@ -1351,6 +1378,42 @@ public immutable class BlockNode : FlowNode {
             return statementsString;
         }
         return exitString;
+    }
+
+    private static void inlineTrailingBlocks(ref immutable(FlowNode)[] statements, ref size_t exitOffset,
+            ref BlockLimit exitTarget) {
+        auto inlinedStatements = statements;
+        auto nextIsUnreachable = false;
+        foreach (i, statement; statements) {
+            // Check if the statement was just marked as unreachable
+            if (nextIsUnreachable) {
+                throw new SourceException("Statement is unreachable", statement);
+            }
+            // Check if the statement is a nested block
+            if (auto nestedBlock = cast(immutable BlockNode) statement) {
+                // Ignore conditional ones since they don't always execute
+                if (nestedBlock.isConditional()) {
+                    continue;
+                }
+                // Ignore blocks that exit on themselves
+                if (nestedBlock.exitOffset <= 0) {
+                    continue;
+                }
+                // We can't inline blocks that contain declarations, but the trailing ones are unreachable
+                if (nestedBlock.isDeclaration()) {
+                    nextIsUnreachable = true;
+                    continue;
+                }
+                // Change the exit information to be that of the nested block (correcting the offset for un-nesting)
+                exitOffset = nestedBlock.exitOffset - 1;
+                exitTarget = nestedBlock.exitTarget;
+                // Inline the statements
+                inlinedStatements = inlinedStatements[0 .. i] ~ nestedBlock.statements;
+                // Mark all the other statements as unreachable;
+                nextIsUnreachable = true;
+            }
+        }
+        statements = inlinedStatements;
     }
 }
 
@@ -1368,45 +1431,20 @@ public immutable class ConditionalBlockNode : BlockNode {
         this.condition = condition;
     }
 
+    public override bool isConditional() {
+        return true;
+    }
+
     public override immutable(Node)[] getChildren() {
         return cast(immutable Node) condition ~ cast(immutable(Node)[]) statements;
     }
 
-    //public override Flow evaluate(Runtime runtime) {
-    //    return Evaluator.INSTANCE.evaluateConditionalBlock(runtime, this);
-    //}
+    public override Flow evaluate(Runtime runtime) {
+        return Evaluator.INSTANCE.evaluateConditionalBlock(runtime, this);
+    }
 
     public override string toString() {
         return format("ConditionalBlock(if %s: %s)", condition.toString(), statementsToString());
-    }
-}
-
-}
-
-public immutable class BlockJumpNode : FlowNode {
-    public size_t blockOffset;
-    public BlockJumpTarget target;
-
-    public this(size_t blockOffset, BlockJumpTarget target, size_t start, size_t end) {
-        assert (blockOffset > 0);
-        this.blockOffset = blockOffset;
-        this.target = target;
-        _start = start;
-        _end = end;
-    }
-
-    mixin sourceIndexFields!false;
-
-    public override immutable(Node)[] getChildren() {
-        return [];
-    }
-
-    public override Flow evaluate(Runtime runtime) {
-        return Evaluator.INSTANCE.evaluateBlockJump(runtime, this);
-    }
-
-    public override string toString() {
-        return format("BlockJump(%s of %s blocks)", target, blockOffset);
     }
 }
 
@@ -1431,6 +1469,10 @@ public immutable class FunctionDefinitionNode : FlowNode {
         return [implementation];
     }
 
+    public override bool isDeclaration() {
+        return true;
+    }
+
     public override Flow evaluate(Runtime runtime) {
         return Flow.PROCEED;
     }
@@ -1439,6 +1481,34 @@ public immutable class FunctionDefinitionNode : FlowNode {
         auto signature = format("%s(%s) %s", func.name, stringZip!" "(func.parameterTypes, parameterNames).join!", "(),
                 func.returnType.toString());
         return format("FunctionDefinition(%s: %s)", signature, implementation.toString());
+    }
+}
+
+public immutable class ReturnValueNode : FlowNode {
+    public TypedNode value;
+
+    public this(immutable TypedNode value, size_t start, size_t end) {
+        this.value = value;
+        _start = start;
+        _end = end;
+    }
+
+    mixin sourceIndexFields!false;
+
+    public override immutable(TypedNode)[] getChildren() {
+        return [value];
+    }
+
+    public override bool isDeclaration() {
+        return false;
+    }
+
+    public override Flow evaluate(Runtime runtime) {
+        return Evaluator.INSTANCE.evaluateReturnValue(runtime, this);
+    }
+
+    public override string toString() {
+        return format("Return(%s)", value.toString());
     }
 }
 

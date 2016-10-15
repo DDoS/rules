@@ -743,11 +743,13 @@ public immutable class Interpreter {
     }
 
     public immutable(FlowNode) interpretConditionalStatement(Context context, ConditionalStatement conditionalStatement) {
-        // Enter the outer block which is used to end the conditional, and contains the "else" statements (if any)
-        context.enterConditionBlock();
         // Check if this is just an "if" with no "else if" or "else", so we can generate a simpler semantic tree
         auto hasFalseStatement = conditionalStatement.falseStatements.length > 0;
         auto simpleIf = conditionalStatement.conditionBlocks.length == 1 && !hasFalseStatement;
+        // Enter the outer block which is used to end the conditional, and contains the "else" statements (if any)
+        if (!simpleIf) {
+            context.enterConditionBlock();
+        }
         // Create a block node for each condition block
         immutable(FlowNode)[] conditionalBlocks = [];
         foreach (i, block; conditionalStatement.conditionBlocks) {
@@ -768,7 +770,7 @@ public immutable class Interpreter {
             auto statementsStart = statements.length <= 0 ? block.end : statements[0].start;
             auto statementsEnd = statements.length <= 0 ? block.end : statements[$ - 1].end;
             // Jump to the end of the outer block, unless this is the last one
-            size_t blockOffset = !hasFalseStatement && i >= conditionalStatement.conditionBlocks.length - 1 ? 0 : 2;
+            size_t blockOffset = !hasFalseStatement && i >= conditionalStatement.conditionBlocks.length - 1 ? 0 : 1;
             auto blockNode = new immutable ConditionalBlockNode(conditionNode, statementNodes, blockOffset, BlockLimit.END,
                     statementsStart, statementsEnd);
             // If this is a simple "if", just return the one block that we need
@@ -803,7 +805,7 @@ public immutable class Interpreter {
         // Create the loop block
         auto statementsStart = statements.length <= 0 ? loopStatement.end : statements[0].start;
         auto statementsEnd = statements.length <= 0 ? loopStatement.end : statements[$ - 1].end;
-        return new immutable ConditionalBlockNode(conditionNode, statementNodes, 1, BlockLimit.START,
+        return new immutable ConditionalBlockNode(conditionNode, statementNodes, 0, BlockLimit.START,
                 statementsStart, statementsEnd);
     }
 
@@ -856,12 +858,15 @@ public immutable class Interpreter {
         if (func is null) {
             throw new SourceException("Cannot use a return statement outside of a function", returnStatement);
         }
-        // Check that the return expression is specializable to the function return type
+        // If the function returns void, check that there is no return value
+        immutable(FlowNode)[] returnValue;
         if (func.returnType.specializableTo(VoidType.INSTANCE)) {
             if (returnStatement.value !is null) {
                 throw new SourceException("Cannot have a return value for a void returning function", returnStatement.value);
             }
+            returnValue = [];
         } else {
+            // Else check that the return expression is specializable to the function return type
             if (returnStatement.value is null) {
                 throw new SourceException("Expected a return value", returnStatement);
             }
@@ -870,9 +875,10 @@ public immutable class Interpreter {
                 throw new SourceException(format("Cannot convert %s to the return type %s",
                         valueNode.getType(), func.returnType), returnStatement.value);
             }
+            returnValue = [new immutable ReturnValueNode(valueNode, valueNode.start, valueNode.end)];
         }
-        // TODO: some way of placing the return value on the stack
-        return new immutable BlockJumpNode(blockOffset, BlockJumpTarget.END, returnStatement.start, returnStatement.end);
+        // Return a block node that exits from the function, which will be inlined later on
+        return new immutable BlockNode(returnValue, blockOffset + 1, BlockLimit.END, returnStatement.start, returnStatement.end);
     }
 
     private static immutable(FlowNode)[] interpretStatements(Context context, Statement[] statements) {

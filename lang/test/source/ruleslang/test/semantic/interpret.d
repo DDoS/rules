@@ -849,19 +849,19 @@ unittest {
     );
     assertEqual(
         "Block(ConditionalBlock(if BooleanLiteral(false): Assignment(FieldAccess(d) = SignedIntegerLiteral(0)); "
-            ~ "BlockJump(END of 2 blocks)); Assignment(FieldAccess(d) = SignedIntegerLiteral(1)))",
+            ~ "exit to END of 1 blocks); Assignment(FieldAccess(d) = SignedIntegerLiteral(1)))",
         interpretStmt("if false:\n  d = 0\nelse:\n  d = 1", context)
     );
     assertEqual(
         "Block(ConditionalBlock(if BooleanLiteral(false): Assignment(FieldAccess(d) = SignedIntegerLiteral(0)); "
-            ~ "BlockJump(END of 2 blocks)); ConditionalBlock(if BooleanLiteral(true): "
+            ~ "exit to END of 1 blocks); ConditionalBlock(if BooleanLiteral(true): "
             ~ "Assignment(FieldAccess(d) = SignedIntegerLiteral(1))))",
         interpretStmt("if false:\n d = 0\nelse if true:\n d = 1", context)
     );
     assertEqual(
         "Block(ConditionalBlock(if BooleanLiteral(false): Assignment(FieldAccess(d) = SignedIntegerLiteral(0)); "
-            ~ "BlockJump(END of 2 blocks)); ConditionalBlock(if BooleanLiteral(true): "
-            ~ "Assignment(FieldAccess(d) = SignedIntegerLiteral(1)); BlockJump(END of 2 blocks)); "
+            ~ "exit to END of 1 blocks); ConditionalBlock(if BooleanLiteral(true): "
+            ~ "Assignment(FieldAccess(d) = SignedIntegerLiteral(1)); exit to END of 1 blocks); "
             ~ "Assignment(FieldAccess(d) = SignedIntegerLiteral(2)))",
         interpretStmt("if false:\n d = 0\nelse if true:\n d = 1\nelse:\n d = 2\n", context)
     );
@@ -874,23 +874,23 @@ unittest {
         interpretStmt("if false:\n  d = 0\nelse:\n  ;", context)
     );
     assertEqual(
-        "Block(ConditionalBlock(if BooleanLiteral(false): BlockJump(END of 2 blocks)); "
+        "Block(ConditionalBlock(if BooleanLiteral(false): exit to END of 1 blocks); "
             ~ "Assignment(FieldAccess(d) = SignedIntegerLiteral(0)))",
         interpretStmt("if false:\n  ;\nelse:\n  d = 0", context)
     );
     assertEqual(
         "Block(ConditionalBlock(if BooleanLiteral(false): Assignment(FieldAccess(d) = SignedIntegerLiteral(0)); "
-            ~ "BlockJump(END of 2 blocks)); ConditionalBlock(if BooleanLiteral(true): ))",
+            ~ "exit to END of 1 blocks); ConditionalBlock(if BooleanLiteral(true): ))",
         interpretStmt("if false:\n d = 0\nelse if true:\n ;", context)
     );
     assertEqual(
-        "Block(ConditionalBlock(if BooleanLiteral(false): BlockJump(END of 2 blocks)); "
+        "Block(ConditionalBlock(if BooleanLiteral(false): exit to END of 1 blocks); "
             ~ "ConditionalBlock(if BooleanLiteral(true): ))",
         interpretStmt("if false:\n ;\nelse if true:\n ;\nelse:\n ;\n", context)
     );
     assertEqual(
         "Block(ConditionalBlock(if BooleanLiteral(false): VariableDeclaration(sint64 c = SignedIntegerLiteral(0)); "
-            ~ "BlockJump(END of 2 blocks)); VariableDeclaration(sint64 c = SignedIntegerLiteral(1)))",
+            ~ "exit to END of 1 blocks); VariableDeclaration(sint64 c = SignedIntegerLiteral(1)))",
         interpretStmt("if false:\n  let c = 0\nelse:\n  let c = 1", context)
     );
     interpretExpFails("c", context);
@@ -909,22 +909,22 @@ unittest {
     );
     assertEqual(
         "ConditionalBlock(if BooleanLiteral(true): Assignment(FieldAccess(d) = SignedIntegerLiteral(0)); "
-            ~ "BlockJump(START of 1 blocks))",
+            ~ "exit to START of 0 blocks)",
         interpretStmt("while 0 == 0:\n  d = 0", context)
     );
     assertEqual(
-        "ConditionalBlock(if BooleanLiteral(false): BlockJump(START of 1 blocks))",
+        "ConditionalBlock(if BooleanLiteral(false): exit to START of 0 blocks)",
         interpretStmt("while false:\n  ;", context)
     );
     assertEqual(
         "ConditionalBlock(if BooleanLiteral(true): VariableDeclaration(sint64 c = SignedIntegerLiteral(0)); "
-            ~ "BlockJump(START of 1 blocks))",
+            ~ "exit to START of 0 blocks)",
         interpretStmt("while true:\n  let c = 0", context)
     );
     interpretExpFails("c", context);
     assertEqual(
-        "Block(PredicateBlockJump(if not BooleanLiteral(false): END of 1 blocks); "
-            ~ "VariableDeclaration(sint64 d = SignedIntegerLiteral(0)); BlockJump(START of 1 blocks))",
+        "ConditionalBlock(if BooleanLiteral(false): VariableDeclaration(sint64 d = SignedIntegerLiteral(0)); "
+            ~ "exit to START of 0 blocks)",
         interpretStmt("while false:\n  let d = 0", context)
     );
     interpretStmtFails("while 'l':\n  d = 0", context);
@@ -933,24 +933,28 @@ unittest {
 unittest {
     auto context = new Context(BlockKind.SHELL);
     assertEqual(
-        "FunctionDefinition(test1() void: Block(BlockJump(END of 1 blocks)))",
+        "FunctionDefinition(test0() void: Block())",
+        interpretStmt("func test0():\n  ;", context)
+    );
+    assertEqual(
+        "FunctionDefinition(test1() void: Block())",
         interpretStmt("func test1():\n  return", context)
     );
     interpretStmtFails("func test1():\n  return", context);
     assertEqual(
-        "FunctionDefinition(test2() uint16: Block(BlockJump(END of 1 blocks)))",
+        "FunctionDefinition(test2() uint16: Block(Return(SignedIntegerLiteral(1))))",
         interpretStmt("func test2() uint16:\n  return 1", context)
     );
     interpretStmtFails("func test2() bool:\n  return true", context);
     interpretStmtFails("func test3() uint16:\n  return -1", context);
     assertEqual(
         "FunctionDefinition(test4() uint16: Block(VariableDeclaration(uint8 a = UnsignedIntegerLiteral(1));"
-            ~ " BlockJump(END of 1 blocks)))",
+            ~ " Return(FieldAccess(a))))",
         interpretStmt("func test4() uint16:\n  let uint8 a = 1\n  return a", context)
     );
     interpretStmtFails("func test4_5() uint16:\n  let a = 1\n  return a", context);
     assertEqual(
-        "FunctionDefinition(test5(bool yes) bool: Block(BlockJump(END of 1 blocks)))",
+        "FunctionDefinition(test5(bool yes) bool: Block(Return(FunctionCall(opLogicalNot(FieldAccess(yes))))))",
         interpretStmt("func test5(bool yes) bool:\n  return !yes", context)
     );
     assertEqual(
@@ -958,7 +962,9 @@ unittest {
         interpretStmt("let fp32 lol = 2", context)
     );
     assertEqual(
-        "FunctionDefinition(test5(bool yes, fp32 lol) bool: Block(BlockJump(END of 1 blocks)))",
+        "FunctionDefinition(test5(bool yes, fp32 lol) bool: "
+            ~ "Block(Return(Conditional(FunctionCall(opLogicalNot(FieldAccess(yes))),"
+            ~ " FunctionCall(opGreaterThan(FunctionCall(fp64(FieldAccess(lol))), FloatLiteral(0))), BooleanLiteral(false)))))",
         interpretStmt("func test5(bool yes, fp32 lol) bool:\n  return !yes && lol > 0", context)
     );
     interpretStmtFails("func test6() uint16:\n  return", context);

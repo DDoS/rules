@@ -412,7 +412,7 @@ public class SourceNameSpace : NameSpace {
             blockOffset += 1;
             return func;
         }
-        blockOffset = 1;
+        blockOffset = 0;
         return enclosingFunction;
     }
 }
