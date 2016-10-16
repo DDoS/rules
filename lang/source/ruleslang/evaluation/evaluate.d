@@ -386,13 +386,20 @@ public immutable class Evaluator {
             // Keep track of the number of executed statements for clean up
             count += 1;
         }
+        return immutable Flow(block.exitOffset, block.exitTarget);
+    }
+
+    public immutable(Flow) evaluateConditionalBlock(Runtime runtime, immutable ConditionalBlockNode conditionalBlock) {
+        // First evaluate the condition node
+        conditionalBlock.condition.evaluate(runtime);
+        // If the value is true then evaluate the block, else just skip it
+        return runtime.stack.pop!bool() ? evaluateBlock(runtime, conditionalBlock) : Flow.PROCEED;
+    }
+
+    public immutable(Flow) evaluateReturnValue(Runtime runtime, immutable ReturnValueNode returnValue) {
+        // Evaluate the return value and leave it on the stack
+        returnValue.value.evaluate(runtime);
         return Flow.PROCEED;
-    }
-
-    public immutable(Flow) evaluateBlockJump(Runtime runtime, immutable BlockJumpNode blockJump) {
-        return immutable Flow(blockJump.blockOffset, blockJump.target);
-    }
-
     }
 }
 
