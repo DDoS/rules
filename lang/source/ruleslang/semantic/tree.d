@@ -1356,7 +1356,7 @@ public immutable class BlockNode : FlowNode {
     }
 
     public override bool isDeclaration() {
-        return any!(a => a.isDeclaration())(statements);
+        return any!(a => a.isDeclaration() || cast(immutable BlockNode) a !is null)(statements);
     }
 
     public override Flow evaluate(Runtime runtime) {
@@ -1399,9 +1399,8 @@ public immutable class BlockNode : FlowNode {
                 if (nestedBlock.exitOffset <= 0) {
                     continue;
                 }
-                // We can't inline blocks that contain declarations, but the trailing ones are unreachable
+                // We can't inline blocks that contain declarations
                 if (nestedBlock.isDeclaration()) {
-                    nextIsUnreachable = true;
                     continue;
                 }
                 // Change the exit information to be that of the nested block (correcting the offset for un-nesting)

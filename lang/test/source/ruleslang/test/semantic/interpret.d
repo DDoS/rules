@@ -970,7 +970,11 @@ unittest {
     interpretStmtFails("func test6() uint16:\n  return", context);
     interpretStmtFails("func test7():\n  return 1", context);
     interpretStmtFails("func test8() uint16:\n  return 1\n  return 2", context);
-
+    assertEqual(
+        "FunctionDefinition(test9() bool: Block(Block(ConditionalBlock(if BooleanLiteral(true): exit to END of 1 blocks);"
+            ~ " Return(BooleanLiteral(true)); exit to END of 1 blocks); Return(BooleanLiteral(false))))",
+        interpretStmt("func test9() bool:\n if true:\n  ;\n else:\n  return true\n return false", context)
+    );
     /*assertEqual(
         "",
         interpretStmt("func test", context)
