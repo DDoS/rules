@@ -766,13 +766,11 @@ public immutable class Interpreter {
             auto statementNodes = interpretStatements(context, statements);
             // Exit the condition block
             context.exitBlock();
-            // Create the conditional block
-            auto statementsStart = statements.length <= 0 ? block.end : statements[0].start;
-            auto statementsEnd = statements.length <= 0 ? block.end : statements[$ - 1].end;
             // Jump to the end of the outer block, unless this is the last one
             size_t blockOffset = !hasFalseStatement && i >= conditionalStatement.conditionBlocks.length - 1 ? 0 : 1;
+            // Create the conditional block
             auto blockNode = new immutable ConditionalBlockNode(conditionNode, statementNodes, blockOffset, BlockLimit.END,
-                    statementsStart, statementsEnd);
+                    block.start, block.end);
             // If this is a simple "if", just return the one block that we need
             if (simpleIf) {
                 return blockNode;
@@ -803,10 +801,8 @@ public immutable class Interpreter {
         // Exit the loop block
         context.exitBlock();
         // Create the loop block
-        auto statementsStart = statements.length <= 0 ? loopStatement.end : statements[0].start;
-        auto statementsEnd = statements.length <= 0 ? loopStatement.end : statements[$ - 1].end;
         return new immutable ConditionalBlockNode(conditionNode, statementNodes, 0, BlockLimit.START,
-                statementsStart, statementsEnd);
+                loopStatement.start, loopStatement.end);
     }
 
     public immutable(FlowNode) interpretFunctionDefinition(Context context, FunctionDefinition functionDefinition) {
@@ -846,6 +842,11 @@ public immutable class Interpreter {
         auto statementsStart = statements.length <= 0 ? functionDefinition.end : statements[0].start;
         auto statementsEnd = statements.length <= 0 ? functionDefinition.end : statements[$ - 1].end;
         auto blockNode = new immutable BlockNode(statementNodes, statementsStart, statementsEnd);
+        // Check that the return statements are all there and that no statement is unreachable
+        if (!func.returnType.specializableTo(VoidType.INSTANCE)) {
+            import ruleslang.semantic.codegraph;
+            import std.stdio; writeln('\n', checkReturns(blockNode));
+        }
         // Create the function definition node
         return new immutable FunctionDefinitionNode(func, parameterNames, blockNode,
                 functionDefinition.start, functionDefinition.end);
