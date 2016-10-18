@@ -98,10 +98,12 @@ private static void expandCodePaths(CodeGraphInnerNode root) {
         // We are looking for the nodes that are executed after the exit
         // These are found in the exit parent, after the index where the exiting ended
         size_t nextChildIndex;
+        bool cyclical = false;
         // This loop traces the exit sequence
         do {
             // First we go up once in the parent chain for every exit we do
-            size_t exitOffset = exitChild.block.exitOffset;
+            auto exitOffset = exitChild.block.exitOffset;
+            auto exitTarget = exitChild.block.exitTarget;
             foreach (i; 0 .. exitOffset) {
                 // There should always be a parent, except maybe at the last iteration
                 // Since we can reach the root block, but not past it
@@ -117,16 +119,28 @@ private static void expandCodePaths(CodeGraphInnerNode root) {
             auto exitChildrenCount = exitParent.children.length;
             nextChildIndex = size_t.max;
             foreach (i, node; exitParent.children) {
-                // Just find the index (plus one) of the exited block in the parent's children
+                // Just find the index of the exited block in the parent's children
                 if (exitChild is node) {
-                    nextChildIndex = i + 1;
+                    nextChildIndex = i;
                     break;
                 }
             }
             // We should always be able to find it
             assert (nextChildIndex != size_t.max);
+            // Next we might need to offset the index based on the exit target
+            final switch (exitTarget) with (BlockLimit) {
+                case START:
+                    // Since we go back to the start the index is the same
+                    break;
+                case END:
+                    // We're breaking and proceeding onto the next statement
+                    nextChildIndex += 1;
+                    break;
+            }
             // Check that the exited block isn't the last
             if (nextChildIndex < exitChildrenCount) {
+                // Note that this condition always passes when exit is START
+                cyclical = exitTarget is BlockLimit.START;
                 break;
             }
             // If it is the last, then we exit to the parent block and start over
@@ -136,8 +150,12 @@ private static void expandCodePaths(CodeGraphInnerNode root) {
         // Check that we aren't outside the root block
         if (exitParent !is null) {
             // Add the next code code in the path to our node
-            innerNodeChild.children ~= exitParent.children[nextChildIndex .. $];
+            auto nextCodePath = exitParent.children[nextChildIndex .. $];
+            if (cyclical) {
+                innerNodeChild.cycleChildren ~= nextCodePath;
+            } else {
+                innerNodeChild.children ~= nextCodePath;
+            }
         }
     }
-    // TODO: exit to START
 }
