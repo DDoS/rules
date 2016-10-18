@@ -268,7 +268,7 @@ public class SourceException : Exception {
             buffer ~= " in \n" ~ line ~ '\n';
             // We'll underline the problem area, so first pad to the start index
             foreach (i; 0 .. startIndex) {
-                buffer ~= ' ';
+                buffer ~= line[i] == '\t' ? '\t' : ' ';
             }
             // Now underline, using a circumflex for a single character or tildes for many
             if (startIndex == endIndex) {
