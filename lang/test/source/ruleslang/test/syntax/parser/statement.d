@@ -195,6 +195,13 @@ unittest {
     assertParseFail("while a == 0:let b = 12");
     assertParseFail("while a == 0:\n\nlet b = 12");
     assertParseFail("while a == 0:\n  \nlet b = 12");
+    assertEqual(
+        "FunctionDefinition(func test(): "
+            ~ "LoopStatement(while BooleanLiteral(true): VariableDeclaration(let a = SignedIntegerLiteral(1)); "
+            ~ "LoopStatement(while BooleanLiteral(false): )); VariableDeclaration(let b = SignedIntegerLiteral(1)))",
+        parse("func test():\n while true:\n  let a = 1\n  while false:\n   ;\n let b = 1")
+    );
+    assertParseFail("func test():\n while true:\n  let a = 1\n  while false:\n let b = 1");
 }
 
 unittest {

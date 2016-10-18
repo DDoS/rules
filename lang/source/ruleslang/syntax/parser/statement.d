@@ -53,6 +53,9 @@ private struct IndentSpec {
                 mixedError(w, c);
             }
         }
+        if (source.length <= count) {
+            throw new SourceException("Not enough indentation", indentation);
+        }
         return IndentSpec(w, source.length);
     }
 
