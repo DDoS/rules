@@ -20,11 +20,10 @@ import ruleslang.evaluation.evaluate;
 void main() {
     /*
         TODO:
-            Parse control flow
-            Interpret control flow
+            Function definition evaluation
+            Add break and continue statements to loops
     */
-    auto context = new Context();
-    context.enterFunction();
+    auto context = new Context(BlockKind.SHELL);
     auto runtime = new IntrinsicRuntime();
     bool expressionMode = false;
     while (true) {
@@ -38,6 +37,14 @@ void main() {
             continue;
         }
         try {
+            source = "func test9() bool:\n var a = true\n if true:\n  a = false\n else:\n  a = true\n if true:\n  a = true\n else:\n  a = false\n return a";
+            //source = "func test9() bool:\n var a = true\n if true:\n  a = false\n else:\n  a = true\n a ^^= false\n return a";
+            //source = "func test9() bool:\n var bool b\n if true:\n  b = false\n else:\n  b = true\n if true:\n  if false:\n   let a = 1\n return b";
+            //source = "func test9() bool:\n if true:\n  ;\n else:\n  return true\n return false";
+            //source = "func test9() bool:\n var d = -1\n if false:\n  d = 0\n else if true:\n  d = 1\n else:\n  d = 2\n";
+            //source = "func test9() bool:\n var d = -1\n if false:\n  return true\n else if true:\n  d = 1\n else:\n  d = 2\n";
+            //source = "func test9() bool:\n if true:\n  return false\n else:\n  return true\n return !false";
+            //source = "func test9() bool:\n if true:\n  return false\n else:\n  return true";
             auto tokenizer = new Tokenizer(new DCharReader(source));
             if (expressionMode) {
                 while (tokenizer.head().getKind() == Kind.INDENTATION) {
@@ -120,7 +127,10 @@ private void evaluate(Statement statement, Context context, Runtime runtime) {
     }
     stdout.writeln("semantic: ", node.toString());
     try {
-        node.evaluate(runtime);
+        Flow flow;
+        do {
+            flow = node.evaluate(runtime);
+        } while (flow.action == Flow.Action.RERUN);
     } catch (NotImplementedException ignored) {
         stdout.writeln("value not implemented: ", ignored.msg);
     }

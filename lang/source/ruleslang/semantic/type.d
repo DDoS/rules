@@ -173,6 +173,43 @@ public immutable interface Type {
     public bool opEquals(immutable Type type);
 }
 
+public immutable class VoidType : Type {
+    public static immutable VoidType INSTANCE = new immutable VoidType();
+
+    private this() {
+    }
+
+    public override bool convertibleTo(immutable Type type, TypeConversionChain conversions = new TypeConversionChain()) {
+        // Can only perform an identity conversion
+        if (opEquals(type)) {
+            conversions.thenIdentity();
+            return true;
+        }
+        return false;
+    }
+
+    public override bool specializableTo(immutable Type type, TypeConversionChain conversions = new TypeConversionChain()) {
+        return convertibleTo(type, conversions);
+    }
+
+    public override immutable(Type) lowestUpperBound(immutable Type other) {
+        // There is only a lowest upper bound with itself
+        return opEquals(other) ? this : null;
+    }
+
+    public override immutable(VoidType) withoutLiteral() {
+        return this;
+    }
+
+    public override string toString() {
+        return "void";
+    }
+
+    public override bool opEquals(immutable Type type) {
+        return type.exactCastImmutable!VoidType() !is null;
+    }
+}
+
 public immutable class AtomicType : Type {
     private immutable struct DataInfo {
         private uint bitCount;

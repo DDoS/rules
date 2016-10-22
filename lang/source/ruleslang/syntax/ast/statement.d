@@ -20,7 +20,7 @@ public interface Statement {
     @property public void start(size_t start);
     @property public void end(size_t end);
     public Statement map(StatementMapper mapper);
-    public immutable(Node) interpret(Context context);
+    public immutable(FlowNode) interpret(Context context);
     public string toString();
 }
 
@@ -50,12 +50,41 @@ public class TypeDefinition : Statement {
         return mapper.mapTypeDefinition(this);
     }
 
-    public override immutable(Node) interpret(Context context) {
+    public override immutable(FlowNode) interpret(Context context) {
         return Interpreter.INSTANCE.interpretTypeDefinition(context, this);
     }
 
     public override string toString() {
         return format("TypeDefinition(def %s: %s)", _name.getSource(), _type.toString());
+    }
+}
+
+public class FunctionCallStatement : Statement {
+    private FunctionCall _call;
+
+    public this(FunctionCall call) {
+        _call = call;
+        _start = call.start;
+        _end = call.end;
+    }
+
+    @property public FunctionCall call() {
+        return _call;
+    }
+
+    mixin sourceIndexFields;
+
+    public override Statement map(StatementMapper mapper) {
+        _call = _call.map(mapper).castOrFail!FunctionCall();
+        return mapper.mapFunctionCallStatement(this);
+    }
+
+    public override immutable(FlowNode) interpret(Context context) {
+        return Interpreter.INSTANCE.interpretFunctionCallStatement(context, this);
+    }
+
+    public override string toString() {
+        return _call.toString();
     }
 }
 
@@ -115,7 +144,7 @@ public class VariableDeclaration : Statement {
         return mapper.mapVariableDeclaration(this);
     }
 
-    public override immutable(Node) interpret(Context context) {
+    public override immutable(FlowNode) interpret(Context context) {
         return Interpreter.INSTANCE.interpretVariableDeclaration(context, this);
     }
 
@@ -164,7 +193,7 @@ public class Assignment : Statement {
         return mapper.mapAssignment(this);
     }
 
-    public override immutable(Node) interpret(Context context) {
+    public override immutable(FlowNode) interpret(Context context) {
         return Interpreter.INSTANCE.interpretAssignment(context, this);
     }
 
@@ -174,6 +203,46 @@ public class Assignment : Statement {
 }
 
 public class ConditionalStatement : Statement {
+    private Block[] _conditionBlocks;
+    private Statement[] _falseStatements;
+
+    public this(Block[] conditionBlocks, Statement[] falseStatements, size_t end) {
+        assert (conditionBlocks.length > 0);
+        _conditionBlocks = conditionBlocks;
+        _falseStatements = falseStatements;
+        _start = conditionBlocks[0].start;
+        _end = end;
+    }
+
+    @property public Block[] conditionBlocks() {
+        return _conditionBlocks;
+    }
+
+    @property public Statement[] falseStatements() {
+        return _falseStatements;
+    }
+
+    mixin sourceIndexFields;
+
+    public override Statement map(StatementMapper mapper) {
+        foreach (i; 0 .. _conditionBlocks.length) {
+            _conditionBlocks[i].map(mapper);
+        }
+        foreach (i, statement; _falseStatements) {
+            _falseStatements[i] = statement.map(mapper);
+        }
+        return mapper.mapConditionalStatement(this);
+    }
+
+    public override immutable(FlowNode) interpret(Context context) {
+        return Interpreter.INSTANCE.interpretConditionalStatement(context, this);
+    }
+
+    public override string toString() {
+        auto falseBlockString = falseStatements.length > 0 ? format("; else: %s", _falseStatements.join!"; "()) : "";
+        return format("ConditionalStatement(%s%s)", _conditionBlocks.join!"; else "(), falseBlockString);
+    }
+
     public struct Block {
         private Expression _condition;
         private Statement[] _statements;
@@ -206,46 +275,6 @@ public class ConditionalStatement : Statement {
             return format("if %s: %s", _condition.toString(), _statements.join!"; "());
         }
     }
-
-    private Block[] _conditionBlocks;
-    private Statement[] _falseStatements;
-
-    public this(Block[] conditionBlocks, Statement[] falseStatements, size_t end) {
-        assert (conditionBlocks.length > 0);
-        _conditionBlocks = conditionBlocks;
-        _falseStatements = falseStatements;
-        _start = conditionBlocks[0].start;
-        _end = end;
-    }
-
-    @property public Block[] conditionBlocks() {
-        return _conditionBlocks;
-    }
-
-    @property public Statement[] falseStatements() {
-        return _falseStatements;
-    }
-
-    mixin sourceIndexFields;
-
-    public override Statement map(StatementMapper mapper) {
-        foreach (i; 0 .. _conditionBlocks.length) {
-            _conditionBlocks[i].map(mapper);
-        }
-        foreach (i, statement; _falseStatements) {
-            _falseStatements[i] = statement.map(mapper);
-        }
-        return mapper.mapConditionalStatement(this);
-    }
-
-    public override immutable(Node) interpret(Context context) {
-        return Interpreter.INSTANCE.interpretConditionalStatement(context, this);
-    }
-
-    public override string toString() {
-        auto falseBlockString = falseStatements.length > 0 ? format("; else: %s", _falseStatements.join!"; "()) : "";
-        return format("ConditionalStatement(%s%s)", _conditionBlocks.join!"; else "(), falseBlockString);
-    }
 }
 
 public class LoopStatement : Statement {
@@ -277,11 +306,130 @@ public class LoopStatement : Statement {
         return mapper.mapLoopStatement(this);
     }
 
-    public override immutable(Node) interpret(Context context) {
+    public override immutable(FlowNode) interpret(Context context) {
         return Interpreter.INSTANCE.interpretLoopStatement(context, this);
     }
 
     public override string toString() {
         return format("LoopStatement(while %s: %s)", _condition.toString(), _statements.join!"; "());
+    }
+}
+
+public class FunctionDefinition : Statement {
+    private Identifier _name;
+    private Parameter[] _parameters;
+    private NamedTypeAst _returnType;
+    private Statement[] _statements;
+
+    public this(Identifier name, Parameter[] parameters, NamedTypeAst returnType, Statement[] statements,
+            size_t start, size_t end) {
+        _name = name;
+        _parameters = parameters;
+        _returnType = returnType;
+        _statements = statements;
+        _start = start;
+        _end = end;
+    }
+
+    @property public Identifier name() {
+        return _name;
+    }
+
+    @property public Parameter[] parameters() {
+        return _parameters;
+    }
+
+    @property public NamedTypeAst returnType() {
+        return _returnType;
+    }
+
+    @property public Statement[] statements() {
+        return _statements;
+    }
+
+    mixin sourceIndexFields;
+
+    public override Statement map(StatementMapper mapper) {
+        foreach (i; 0 .. _parameters.length) {
+            _parameters[i].map(mapper);
+        }
+        if (_returnType !is null) {
+            _returnType = _returnType.map(mapper).castOrFail!NamedTypeAst();
+        }
+        foreach (i, statement; _statements) {
+            _statements[i] = statement.map(mapper);
+        }
+        return mapper.mapFunctionDefinition(this);
+    }
+
+    public override immutable(FlowNode) interpret(Context context) {
+        return Interpreter.INSTANCE.interpretFunctionDefinition(context, this);
+    }
+
+    public override string toString() {
+        auto returnString = _returnType is null ? "" : " " ~ _returnType.toString();
+        return format("FunctionDefinition(func %s(%s)%s: %s)", _name.getSource(), _parameters.join!", "(),
+                returnString, _statements.join!"; "());
+    }
+
+    public struct Parameter {
+        private NamedTypeAst _type;
+        private Identifier _name;
+
+        public this(NamedTypeAst type, Identifier name) {
+            _type = type;
+            _name = name;
+            _start = type.start;
+            _end = name.end;
+        }
+
+        @property public NamedTypeAst type() {
+            return _type;
+        }
+
+        @property public Identifier name() {
+            return _name;
+        }
+
+        mixin sourceIndexFields;
+
+        private void map(StatementMapper mapper) {
+            _type = _type.map(mapper).castOrFail!NamedTypeAst();
+        }
+
+        public string toString() {
+            return format("%s %s", _type.toString(), _name.getSource());
+        }
+    }
+}
+
+public class ReturnStatement : Statement {
+    private Expression _value;
+
+    public this(Expression value, size_t start, size_t end) {
+        _value = value;
+        _start = start;
+        _end = end;
+    }
+
+    @property public Expression value() {
+        return _value;
+    }
+
+    mixin sourceIndexFields;
+
+    public override Statement map(StatementMapper mapper) {
+        if (_value !is null) {
+            _value = _value.map(mapper);
+        }
+        return mapper.mapReturnStatement(this);
+    }
+
+    public override immutable(FlowNode) interpret(Context context) {
+        return Interpreter.INSTANCE.interpretReturnStatement(context, this);
+    }
+
+    public override string toString() {
+        return format("ReturnStatement(return%s)", _value is null ? "" : " " ~ value.toString());
     }
 }

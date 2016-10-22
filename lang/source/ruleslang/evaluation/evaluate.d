@@ -318,28 +318,39 @@ public immutable class Evaluator {
         }
     }
 
-    public void evaluateTypeDefinition(Runtime runtime, immutable TypeDefinitionNode typeDefinition) {
+    public immutable(Flow) evaluateTypeDefinition(Runtime runtime, immutable TypeDefinitionNode typeDefinition) {
         // Nothing to do, this is purely used at compile time
+        return Flow.PROCEED;
     }
 
-    public void evaluateVariableDeclaration(Runtime runtime, immutable VariableDeclarationNode variableDeclaration) {
+    public immutable(Flow) evaluateFunctionCallStatement(Runtime runtime, immutable FunctionCallStatementNode functionCall) {
+        // Evaluate the function call expression within
+        functionCall.functionCall.evaluate(runtime);
+        // Since this is a statement we must remove the return value from the stack
+        runtime.stack.pop(functionCall.functionCall.getType());
+        return Flow.PROCEED;
+    }
+
+    public immutable(Flow) evaluateVariableDeclaration(Runtime runtime, immutable VariableDeclarationNode variableDeclaration) {
         // First evaluate the declaration value
         variableDeclaration.value.evaluate(runtime);
         // Then we declare a field using the top of the stack (the value stays on the stack)
         auto address = runtime.stack.peekAddress(variableDeclaration.value.getType());
         runtime.registerField(variableDeclaration.field, address);
+        return Flow.PROCEED;
     }
 
-    public void evaluateAssignment(Runtime runtime, immutable AssignmentNode assignment) {
+    public immutable(Flow) evaluateAssignment(Runtime runtime, immutable AssignmentNode assignment) {
         // First evaluate the target address
         auto address = assignment.target.evaluateAddress(runtime);
         // Then evaluate the value
         assignment.value.evaluate(runtime);
         // Finally copy the value to the target
         runtime.stack.popTo(assignment.value.getType(), address);
+        return Flow.PROCEED;
     }
 
-    public void evaluateBlock(Runtime runtime, immutable BlockNode block) {
+    public immutable(Flow) evaluateBlock(Runtime runtime, immutable BlockNode block) {
         // The count of successfully evaluated statements in the block
         size_t count = 0;
         // We use a scope guard here to ensure the stack gets cleaned even if an exception occurs
@@ -356,38 +367,39 @@ public immutable class Evaluator {
                 runtime.stack.pop(variableDeclaration.value.getType());
             }
         }
-        // Sequentially evaluate every statemen node in the block
+        // Sequentially evaluate every statement node in the block
         foreach (statement; block.statements) {
-            statement.evaluate(runtime);
+            // Evaluate the statement as long as the flow action is "rerun"
+            Flow flow;
+            do {
+                flow = statement.evaluate(runtime);
+            } while (flow.action == Flow.Action.RERUN);
+            // Next break from the block or proceed to the next statement
+            final switch (flow.action) with (Flow.Action) {
+                case BREAK:
+                    return flow.next();
+                case PROCEED:
+                    break;
+                case RERUN:
+                    assert (0);
+            }
+            // Keep track of the number of executed statements for clean up
             count += 1;
         }
+        return immutable Flow(block.exitOffset, block.exitTarget);
     }
 
-    public void evaluateConditionalStatement(Runtime runtime, immutable ConditionalStatementNode conditionalStatement) {
+    public immutable(Flow) evaluateConditionalBlock(Runtime runtime, immutable ConditionalBlockNode conditionalBlock) {
         // First evaluate the condition node
-        conditionalStatement.condition.evaluate(runtime);
-        // Branch on the value, which is on the top of the stack
-        if (runtime.stack.pop!bool()) {
-            // Evaluate the true statements
-            conditionalStatement.whenTrue.evaluate(runtime);
-        } else {
-            // Evaluate the false statements
-            conditionalStatement.whenFalse.evaluate(runtime);
-        }
+        conditionalBlock.condition.evaluate(runtime);
+        // If the value is true then evaluate the block, else just skip it
+        return runtime.stack.pop!bool() ? evaluateBlock(runtime, conditionalBlock) : Flow.PROCEED;
     }
 
-    public void evaluateLoopStatement(Runtime runtime, immutable LoopStatementNode loopStatement) {
-        while (true) {
-            // Evaluate the condition node
-            loopStatement.condition.evaluate(runtime);
-            // Check if the loop condition is true
-            if (!runtime.stack.pop!bool()) {
-                // If not then exit
-                break;
-            }
-            // Otherwise evaluate the statements
-            loopStatement.whileTrue.evaluate(runtime);
-        }
+    public immutable(Flow) evaluateReturnValue(Runtime runtime, immutable ReturnValueNode returnValue) {
+        // Evaluate the return value and leave it on the stack
+        returnValue.value.evaluate(runtime);
+        return Flow.PROCEED;
     }
 }
 

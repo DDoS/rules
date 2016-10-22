@@ -6,7 +6,6 @@ import ruleslang.syntax.dchars;
 import ruleslang.syntax.source;
 import ruleslang.syntax.token;
 import ruleslang.syntax.ast.type;
-import ruleslang.syntax.ast.statement;
 import ruleslang.syntax.ast.mapper;
 import ruleslang.semantic.tree;
 import ruleslang.semantic.context;
@@ -243,7 +242,7 @@ public class IndexAccess : AssignableExpression {
     }
 }
 
-public class FunctionCall : Expression, Statement {
+public class FunctionCall : Expression {
     private Expression _value;
     private Expression[] _arguments;
 
@@ -278,10 +277,6 @@ public class FunctionCall : Expression, Statement {
 
     public override immutable(TypedNode) interpret(Context context) {
         return Interpreter.INSTANCE.interpretFunctionCall(context, this);
-    }
-
-    public override Statement map(StatementMapper mapper) {
-        return map(mapper.castOrFail!ExpressionMapper()).castOrFail!Statement();
     }
 
     public override string toString() {

@@ -665,7 +665,7 @@ public immutable class Interpreter {
         return new immutable ConditionalNode(conditionNode, trueNode, falseNode, conditional.start, conditional.end);
     }
 
-    public immutable(Node) interpretTypeDefinition(Context context, TypeDefinition typeDefinition) {
+    public immutable(FlowNode) interpretTypeDefinition(Context context, TypeDefinition typeDefinition) {
         auto name = typeDefinition.name.getSource();
         auto type = typeDefinition.type.interpret(context);
         try {
@@ -676,7 +676,14 @@ public immutable class Interpreter {
         return new immutable TypeDefinitionNode(name, type, typeDefinition.start, typeDefinition.end);
     }
 
-    public immutable(Node) interpretVariableDeclaration(Context context, VariableDeclaration variableDeclaration) {
+    public immutable(FlowNode) interpretFunctionCallStatement(Context context, FunctionCallStatement functionCallStatement) {
+        // Interpret the actual function call
+        auto functionCallNode = functionCallStatement.call.interpret(context).castOrFail!(immutable FunctionCallNode);
+        // Wrap it in a flow node and return it
+        return new immutable FunctionCallStatementNode(functionCallNode);
+    }
+
+    public immutable(FlowNode) interpretVariableDeclaration(Context context, VariableDeclaration variableDeclaration) {
         // Get the type and value, which will vary depending on whether or not type inference is used
         Rebindable!(immutable Type) type;
         Rebindable!(immutable TypedNode) value;
@@ -716,7 +723,7 @@ public immutable class Interpreter {
         }
     }
 
-    public immutable(Node) interpretAssignment(Context context, Assignment assignment) {
+    public immutable(FlowNode) interpretAssignment(Context context, Assignment assignment) {
         assert (assignment.operator == "=");
         auto target = assignment.target.interpret(context).castOrFail!(immutable AssignableNode);
         // Check if the target is assignable (for a field)
@@ -735,54 +742,151 @@ public immutable class Interpreter {
         return new immutable AssignmentNode(target, value, assignment.start, assignment.end);
     }
 
-    public immutable(Node) interpretConditionalStatement(Context context, ConditionalStatement conditionalStatement) {
-        // Go backwards to build the nested sequence of blocks. Start with the false statements
-        context.enterBlock();
-        Rebindable!(immutable Node) falseBlockNode = interpretStatements(context, conditionalStatement.falseStatements,
-                conditionalStatement.end);
-        context.exitScope();
-        // Now wrap it in the condition blocks, from the bottom up
-        foreach_reverse (block; conditionalStatement.conditionBlocks) {
-            // Interpret the block condition
-            auto conditionNode = block.condition.interpret(context).reduceLiterals();
-            if (!conditionNode.getType().convertibleTo(AtomicType.BOOL)) {
-                throw new SourceException(format("Condition type must be bool, not %s", conditionNode.getType()),
-                        block.condition);
-            }
-            // Interpret the true block statements
-            context.enterBlock();
-            auto trueBlockNode = interpretStatements(context, block.statements, block.end);
-            context.exitScope();
-            // Create the conditional statement node
-            falseBlockNode = new immutable ConditionalStatementNode(conditionNode, trueBlockNode, falseBlockNode,
-                    block.start, falseBlockNode.end);
+    public immutable(FlowNode) interpretConditionalStatement(Context context, ConditionalStatement conditionalStatement) {
+        // Check if this is just an "if" with no "else if" or "else", so we can generate a simpler semantic tree
+        auto hasFalseStatement = conditionalStatement.falseStatements.length > 0;
+        auto simpleIf = conditionalStatement.conditionBlocks.length == 1 && !hasFalseStatement;
+        // Enter the outer block which is used to end the conditional, and contains the "else" statements (if any)
+        if (!simpleIf) {
+            context.enterConditionBlock();
         }
-        return falseBlockNode;
+        // Create a block node for each condition block
+        immutable(FlowNode)[] conditionalBlocks = [];
+        foreach (i, block; conditionalStatement.conditionBlocks) {
+            // Enter the conditional block
+            context.enterConditionBlock();
+            // Interpret the block condition
+            auto condition = block.condition;
+            auto conditionNode = condition.interpret(context).reduceLiterals();
+            if (!conditionNode.getType().convertibleTo(AtomicType.BOOL)) {
+                throw new SourceException(format("Condition type must be bool, not %s", conditionNode.getType()), condition);
+            }
+            // Interpret the block statements
+            auto statements = block.statements;
+            auto statementNodes = interpretStatements(context, statements);
+            // Exit the condition block
+            context.exitBlock();
+            // Jump to the end of the outer block, unless this is the last one
+            size_t blockOffset = !hasFalseStatement && i >= conditionalStatement.conditionBlocks.length - 1 ? 0 : 1;
+            // Create the conditional block
+            auto blockNode = new immutable ConditionalBlockNode(conditionNode, statementNodes, blockOffset, BlockLimit.END,
+                    block.start, block.end);
+            // If this is a simple "if", just return the one block that we need
+            if (simpleIf) {
+                return blockNode;
+            }
+            conditionalBlocks ~= blockNode;
+        }
+        // Append the false statements
+        conditionalBlocks ~= interpretStatements(context, conditionalStatement.falseStatements);
+        // Exit the outer condition block
+        context.exitBlock();
+        // Create the condition block
+        return new immutable BlockNode(conditionalBlocks, conditionalStatement.start, conditionalStatement.end);
     }
 
-    public immutable(Node) interpretLoopStatement(Context context, LoopStatement loopStatement) {
+    public immutable(FlowNode) interpretLoopStatement(Context context, LoopStatement loopStatement) {
+        // Enter the loop block
+        context.enterLoopBlock();
         // Interpret the condition
-        auto conditionNode = loopStatement.condition.interpret(context).reduceLiterals();
+        auto condition = loopStatement.condition;
+        auto conditionNode = condition.interpret(context).reduceLiterals();
         if (!conditionNode.getType().convertibleTo(AtomicType.BOOL)) {
             throw new SourceException(format("Condition type must be bool, not %s", conditionNode.getType()),
-                    loopStatement.condition);
+                    condition);
         }
         // Interpret the statements
-        context.enterBlock();
-        auto blockNode = interpretStatements(context, loopStatement.statements, loopStatement.end);
-        context.exitScope();
-        // Create the loop statement node
-        return new immutable LoopStatementNode(conditionNode, blockNode, loopStatement.start, loopStatement.end);
+        auto statements = loopStatement.statements;
+        auto statementNodes = interpretStatements(context, statements);
+        // Exit the loop block
+        context.exitBlock();
+        // Create the loop block
+        return new immutable ConditionalBlockNode(conditionNode, statementNodes, 0, BlockLimit.START,
+                loopStatement.start, loopStatement.end);
     }
 
-    private static immutable(BlockNode) interpretStatements(Context context, Statement[] statements, size_t end) {
-        if (statements.length <= 0) {
-            return new immutable BlockNode([], end, end);
+    public immutable(FlowNode) interpretFunctionDefinition(Context context, FunctionDefinition functionDefinition) {
+        // Interpret the function parameters
+        immutable(string)[] parameterNames = [];
+        immutable(Type)[] parameterTypes = [];
+        foreach (parameter; functionDefinition.parameters) {
+            parameterNames ~= parameter.name.getSource();
+            parameterTypes ~= parameter.type.interpret(context);
         }
-        immutable(Node)[] block = [];
+        // The return type is void if missing
+        auto returnType = functionDefinition.returnType is null ? VoidType.INSTANCE
+                : functionDefinition.returnType.interpret(context);
+        // Create the function symbol and define it in the context
+        string exceptionMessage;
+        auto func = collectExceptionMessage(
+            context.defineFunction(functionDefinition.name.getSource(), parameterTypes, returnType),
+            exceptionMessage
+        );
+        if (exceptionMessage !is null) {
+            throw new SourceException(exceptionMessage, functionDefinition);
+        }
+        // Enter the function body
+        context.enterFunctionImpl(func);
+        // Define each parameter as a field
+        foreach (i, name; parameterNames) {
+            collectExceptionMessage(context.declareField(name, parameterTypes[i], false), exceptionMessage);
+            if (exceptionMessage !is null) {
+                throw new SourceException(exceptionMessage, functionDefinition.parameters[i]);
+            }
+        }
+        // Interpret the statements
+        auto statements = functionDefinition.statements;
+        auto statementNodes = interpretStatements(context, statements);
+        context.exitBlock();
+        // Create the implementation block
+        auto statementsStart = statements.length <= 0 ? functionDefinition.end : statements[0].start;
+        auto statementsEnd = statements.length <= 0 ? functionDefinition.end : statements[$ - 1].end;
+        auto blockNode = new immutable BlockNode(statementNodes, statementsStart, statementsEnd);
+        // Check that the return statements are all there and that no statement is unreachable
+        if (!func.returnType.specializableTo(VoidType.INSTANCE)) {
+            import ruleslang.semantic.codegraph;
+            import std.stdio; writeln('\n', checkReturns(blockNode));
+        }
+        // Create the function definition node
+        return new immutable FunctionDefinitionNode(func, parameterNames, blockNode,
+                functionDefinition.start, functionDefinition.end);
+    }
+
+    public immutable(FlowNode) interpretReturnStatement(Context context, ReturnStatement returnStatement) {
+        // Get the enclosing function
+        size_t blockOffset;
+        auto func = context.getEnclosingFunction(blockOffset);
+        if (func is null) {
+            throw new SourceException("Cannot use a return statement outside of a function", returnStatement);
+        }
+        // If the function returns void, check that there is no return value
+        immutable(FlowNode)[] returnValue;
+        if (func.returnType.specializableTo(VoidType.INSTANCE)) {
+            if (returnStatement.value !is null) {
+                throw new SourceException("Cannot have a return value for a void returning function", returnStatement.value);
+            }
+            returnValue = [];
+        } else {
+            // Else check that the return expression is specializable to the function return type
+            if (returnStatement.value is null) {
+                throw new SourceException("Expected a return value", returnStatement);
+            }
+            auto valueNode = returnStatement.value.interpret(context).reduceLiterals();
+            if (!valueNode.getType().specializableTo(func.returnType)) {
+                throw new SourceException(format("Cannot convert %s to the return type %s",
+                        valueNode.getType(), func.returnType), returnStatement.value);
+            }
+            returnValue = [new immutable ReturnValueNode(valueNode, valueNode.start, valueNode.end)];
+        }
+        // Return a block node that exits from the function, which will be inlined later on
+        return new immutable BlockNode(returnValue, blockOffset + 1, BlockLimit.END, returnStatement.start, returnStatement.end);
+    }
+
+    private static immutable(FlowNode)[] interpretStatements(Context context, Statement[] statements) {
+        immutable(FlowNode)[] statementNodes = [];
         foreach (statement; statements) {
-            block ~= statement.interpret(context);
+            statementNodes ~= statement.interpret(context);
         }
-        return new immutable BlockNode(block, statements[0].start, statements[$ - 1].end);
+        return statementNodes;
     }
 }

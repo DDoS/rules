@@ -35,36 +35,35 @@ private struct IndentSpec {
         return true;
     }
 
-    private IndentSpec opBinary(string op)(Indentation indentation) {
-        static if (op == "+") {
-            void mixedError(char w, char c) {
-                throw new SourceException(format("Mixed indentation: should be '%s', but got '%s'",
-                        this.w.escapeChar(), c.escapeChar()), indentation);
-            }
-            auto source = indentation.getSource();
-            if (source.length <= 0) {
-                throw new SourceException("Expected some indentation", indentation);
-            }
-            char w = source[0];
-            if (count > 0 && this.w != w) {
-                mixedError(this.w, w);
-            }
-            foreach (c; source) {
-                if (w != c) {
-                    mixedError(w, c);
-                }
-            }
-            return IndentSpec(w, count + source.length);
-        } else {
-            static assert(0);
+    private IndentSpec increaseTo(Indentation indentation) {
+        void mixedError(char w, char c) {
+            throw new SourceException(format("Mixed indentation: should be '%s', but got '%s'",
+                    this.w.escapeChar(), c.escapeChar()), indentation);
         }
+        auto source = indentation.getSource();
+        if (source.length <= 0) {
+            throw new SourceException("Expected some indentation", indentation);
+        }
+        char w = source[0];
+        if (count > 0 && this.w != w) {
+            mixedError(this.w, w);
+        }
+        foreach (c; source) {
+            if (w != c) {
+                mixedError(w, c);
+            }
+        }
+        if (source.length <= count) {
+            throw new SourceException("Not enough indentation", indentation);
+        }
+        return IndentSpec(w, source.length);
     }
 
     private string toString() {
         if (count == 0) {
             return "no indentation";
         }
-        return format("%d of '%s' of indentation", count, w.escapeChar());
+        return format("%d of '%s' as indentation", count, w.escapeChar());
     }
 }
 
@@ -89,6 +88,24 @@ private TypeDefinition parseTypeDefinition(Tokenizer tokens) {
     tokens.advance();
     auto type = parseType(tokens);
     return new TypeDefinition(name, type, start);
+}
+
+private Statement parseAssigmnentOrFunctionCall(Tokenizer tokens) {
+    auto access = parseAccess(tokens);
+    auto call = cast(FunctionCall) access;
+    if (call !is null) {
+        return new FunctionCallStatement(call);
+    }
+    auto reference = cast(AssignableExpression) access;
+    if (reference is null) {
+        throw new SourceException("Not an assignable expression", access);
+    }
+    if (tokens.head().getKind() != Kind.ASSIGNMENT_OPERATOR) {
+        throw new SourceException("Expected an assignment operator", tokens.head());
+    }
+    auto operator = tokens.head().castOrFail!AssignmentOperator();
+    tokens.advance();
+    return new Assignment(reference, parseExpression(tokens), operator);
 }
 
 private VariableDeclaration parseVariableDeclaration(Tokenizer tokens) {
@@ -135,24 +152,6 @@ private VariableDeclaration parseVariableDeclaration(Tokenizer tokens) {
     return new VariableDeclaration(kind, type, name, value, start);
 }
 
-private Statement parseAssigmnentOrFunctionCall(Tokenizer tokens) {
-    auto access = parseAccess(tokens);
-    auto call = cast(FunctionCall) access;
-    if (call !is null) {
-        return call;
-    }
-    auto reference = cast(AssignableExpression) access;
-    if (reference is null) {
-        throw new SourceException("Not an assignable expression", access);
-    }
-    if (tokens.head().getKind() != Kind.ASSIGNMENT_OPERATOR) {
-        throw new SourceException("Expected an assignment operator", tokens.head());
-    }
-    auto operator = tokens.head().castOrFail!AssignmentOperator();
-    tokens.advance();
-    return new Assignment(reference, parseExpression(tokens), operator);
-}
-
 private ConditionalStatement parseConditionalStatement(Tokenizer tokens, IndentSpec indentSpec = noIndent()) {
     if (tokens.head() != "if") {
         throw new SourceException("Expected \"if\"", tokens.head());
@@ -172,7 +171,7 @@ private ConditionalStatement parseConditionalStatement(Tokenizer tokens, IndentS
         throw new SourceException("Expected some indentation", tokens.head());
     }
     // Combine the current indentation to the found one
-    auto blockIndentSpec = indentSpec + tokens.head().castOrFail!Indentation();
+    auto blockIndentSpec = indentSpec.increaseTo(tokens.head().castOrFail!Indentation());
     // Parse the statements in the block
     auto trueStatements = parseStatements(tokens, blockIndentSpec);
     if (trueStatements.length > 0) {
@@ -241,13 +240,107 @@ public LoopStatement parseLoopStatement(Tokenizer tokens, IndentSpec indentSpec 
         throw new SourceException("Expected some indentation", tokens.head());
     }
     // Combine the current indentation to the found one
-    auto blockIndentSpec = indentSpec + tokens.head().castOrFail!Indentation();
+    auto blockIndentSpec = indentSpec.increaseTo(tokens.head().castOrFail!Indentation());
     // Parse the statements in the block
     auto statements = parseStatements(tokens, blockIndentSpec);
     if (statements.length > 0) {
         end = statements[$ - 1].end;
     }
     return new LoopStatement(condition, statements, start, end);
+}
+
+public FunctionDefinition parseFunctionDefinition(Tokenizer tokens, IndentSpec indentSpec = noIndent()) {
+    if (tokens.head() != "func") {
+        throw new SourceException("Expected \"func\"", tokens.head());
+    }
+    auto start = tokens.head().start;
+    tokens.advance();
+    // Get the function name
+    if (tokens.head().getKind() != Kind.IDENTIFIER) {
+        throw new SourceException("Expected an identifier", tokens.head());
+    }
+    auto name = tokens.head().castOrFail!Identifier();
+    tokens.advance();
+    // Parse the parameter types
+    auto parameters = parseFunctionDefinitionParameters(tokens);
+    // Parse the return type
+    NamedTypeAst returnType = null;
+    if (tokens.head() != ":") {
+        returnType = parseNamedType(tokens);
+    }
+    // Terminate the function signature
+    if (tokens.head() != ":") {
+        throw new SourceException("Expected ':'", tokens.head());
+    }
+    auto end = tokens.head().end;
+    tokens.advance();
+    // The indentation of the block will be that of the first statement
+    if (tokens.head().getKind() != Kind.INDENTATION) {
+        throw new SourceException("Expected some indentation", tokens.head());
+    }
+    // Combine the current indentation to the found one
+    auto blockIndentSpec = indentSpec.increaseTo(tokens.head().castOrFail!Indentation());
+    // Parse the statements in the block
+    auto statements = parseStatements(tokens, blockIndentSpec);
+    if (statements.length > 0) {
+        end = statements[$ - 1].end;
+    }
+    return new FunctionDefinition(name, parameters, returnType, statements, start, end);
+}
+
+public FunctionDefinition.Parameter[] parseFunctionDefinitionParameters(Tokenizer tokens) {
+    if (tokens.head() != "(") {
+        throw new SourceException("Expected '('", tokens.head());
+    }
+    tokens.advance();
+    if (tokens.head() == ")") {
+        tokens.advance();
+        return [];
+    }
+    // Parse comma separated pairs of named types and names
+    FunctionDefinition.Parameter[] parameters = [parseFunctionDefinitionParameter(tokens)];
+    while (tokens.head() == ",") {
+        tokens.advance();
+        parameters ~= parseFunctionDefinitionParameter(tokens);
+    }
+    if (tokens.head() != ")") {
+        throw new SourceException("Expected ')'", tokens.head());
+    }
+    tokens.advance();
+    return parameters;
+}
+
+public FunctionDefinition.Parameter parseFunctionDefinitionParameter(Tokenizer tokens) {
+    auto type = parseNamedType(tokens);
+    if (tokens.head().getKind() != Kind.IDENTIFIER) {
+        throw new SourceException("Expected an identifier", tokens.head());
+    }
+    auto name = tokens.head().castOrFail!Identifier();
+    tokens.advance();
+    return FunctionDefinition.Parameter(type, name);
+}
+
+public ReturnStatement parseReturnStatement(Tokenizer tokens) {
+    if (tokens.head() != "return") {
+        throw new SourceException("Expected \"return\"", tokens.head());
+    }
+    auto start = tokens.head().start;
+    auto end = tokens.head().end;
+    tokens.advance();
+    // Check for a return value
+    Expression value = void;
+    switch (tokens.head().getKind()) with (Kind) {
+        case INDENTATION:
+        case TERMINATOR:
+        case EOF:
+            value = null;
+            break;
+        default:
+            value = parseExpression(tokens);
+            end = value.end;
+            break;
+    }
+    return new ReturnStatement(value, start, end);
 }
 
 public Statement parseStatement(Tokenizer tokens, IndentSpec indentSpec = noIndent()) {
@@ -261,6 +354,10 @@ public Statement parseStatement(Tokenizer tokens, IndentSpec indentSpec = noInde
             return parseConditionalStatement(tokens, indentSpec);
         case "while":
             return parseLoopStatement(tokens, indentSpec);
+        case "func":
+            return parseFunctionDefinition(tokens, indentSpec);
+        case "return":
+            return parseReturnStatement(tokens);
         default:
             return parseAssigmnentOrFunctionCall(tokens);
     }

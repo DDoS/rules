@@ -49,13 +49,24 @@ assignment = referenceExpression, assignmentOperator, expression ;
 
 indentation = indentationToken, {indentationToken} ;
 
+(* Python style "if", except "else if" is used instead of "elif" *)
 conditionalStatement = "if", expression, ":", indentation, statements,
     {"else", "if", expression, ":", indentation, statements},
     ["else", ":", indentation, statements] ;
 
+(* Python style "while" loops *)
 loopStatement = "while", expression, ":", indentation, statements ;
 
+paramList = {namedType, identifier} ;
+
+(* Function definitions. Signature example: "func isZero(uint32 a) bool" *)
+functionDef = "func", identifier, "(", paramList, ")", [namedType], ":",
+    indentation, statements ;
+
+returnStatement = "return", expression ;
+
 statement = functionCall | typeDef | variableDecl | assignment
-    | conditionalStatement | loopStatement ;
+    | conditionalStatement | loopStatement | functionDef
+    | returnStatement ;
 
 statements = {indentation, (EOF | (statement, (indentation | ";" | EOF)))} ;

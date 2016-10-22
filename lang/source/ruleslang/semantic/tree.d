@@ -1,7 +1,7 @@
 module ruleslang.semantic.tree;
 
 import std.conv : to;
-import std.algorithm.searching : all;
+import std.algorithm.searching : any, all;
 import std.format : format;
 import std.typecons : Rebindable;
 
@@ -18,14 +18,45 @@ public immutable interface Node {
     @property public size_t start();
     @property public size_t end();
     public immutable(Node)[] getChildren();
-    public void evaluate(Runtime runtime);
     public string toString();
+}
+
+public immutable interface FlowNode : Node {
+    public bool isDeclaration();
+    public Flow evaluate(Runtime runtime);
+}
+
+public struct Flow {
+    public enum Action {
+        PROCEED, BREAK, RERUN
+    }
+
+    public static immutable Flow PROCEED = Flow(0, false);
+    private size_t targetOffset;
+    private bool restart;
+    public Action action;
+
+    public this(size_t targetOffset, bool restart) inout {
+        this.targetOffset = targetOffset;
+        this.restart = restart;
+        if (targetOffset > 0) {
+            action = Action.BREAK;
+        } else {
+            action = restart ? Action.RERUN : Action.PROCEED;
+        }
+    }
+
+    public immutable(Flow) next() inout {
+        assert (targetOffset > 0);
+        return immutable Flow(targetOffset - 1, restart);
+    }
 }
 
 public immutable interface TypedNode : Node {
     public immutable(TypedNode)[] getChildren();
     public immutable(Type) getType();
     public bool isIntrinsicEvaluable();
+    public void evaluate(Runtime runtime);
 }
 
 public immutable interface AssignableNode : TypedNode {
@@ -35,10 +66,6 @@ public immutable interface AssignableNode : TypedNode {
 public immutable interface LiteralNode : TypedNode {
     public immutable(LiteralType) getType();
     public immutable(LiteralNode) specializeTo(immutable Type type);
-}
-
-public immutable interface ReferenceNode : TypedNode {
-    public immutable(ReferenceType) getType();
 }
 
 public immutable class NullNode : TypedNode {
@@ -151,7 +178,7 @@ public immutable class BooleanLiteralNode : LiteralNode {
     }
 }
 
-public immutable class StringLiteralNode : ReferenceNode, LiteralNode {
+public immutable class StringLiteralNode : TypedNode, LiteralNode {
     private StringLiteralType type;
 
     public this(string value, size_t start, size_t end) {
@@ -370,7 +397,7 @@ public immutable class FloatLiteralNode : LiteralNode {
     }
 }
 
-public immutable class EmptyLiteralNode : ReferenceNode, LiteralNode {
+public immutable class EmptyLiteralNode : TypedNode, LiteralNode {
     public this(size_t start, size_t end) {
         _start = start;
         _end = end;
@@ -440,7 +467,7 @@ public immutable class EmptyLiteralNode : ReferenceNode, LiteralNode {
     }
 }
 
-public immutable class TupleLiteralNode : ReferenceNode, LiteralNode {
+public immutable class TupleLiteralNode : TypedNode, LiteralNode {
     public TypedNode[] values;
     private TupleLiteralType type;
 
@@ -545,7 +572,7 @@ public immutable struct StructLabel {
     }
 }
 
-public immutable class StructLiteralNode : ReferenceNode, LiteralNode {
+public immutable class StructLiteralNode : TypedNode, LiteralNode {
     public TypedNode[] values;
     private StructLabel[] labels;
     private StructureLiteralType type;
@@ -671,7 +698,7 @@ public immutable struct ArrayLabel {
     }
 }
 
-public immutable class ArrayLiteralNode : LiteralNode, ReferenceNode {
+public immutable class ArrayLiteralNode : TypedNode, LiteralNode {
     public TypedNode[] values;
     public ArrayLabel[] labels;
     private SizedArrayLiteralType type;
@@ -1015,7 +1042,7 @@ public immutable class FunctionCallNode : TypedNode {
     }
 
     public override bool isIntrinsicEvaluable() {
-        return arguments.all!(a => a.isIntrinsicEvaluable());
+        return func.prefix == IntrinsicNameSpace.PREFIX && arguments.all!(a => a.isIntrinsicEvaluable());
     }
 
     public override void evaluate(Runtime runtime) {
@@ -1178,7 +1205,7 @@ public immutable class ConditionalNode : TypedNode {
     }
 }
 
-public immutable class TypeDefinitionNode : Node {
+public immutable class TypeDefinitionNode : FlowNode {
     public string name;
     public Type type;
 
@@ -1195,8 +1222,12 @@ public immutable class TypeDefinitionNode : Node {
         return [];
     }
 
-    public override void evaluate(Runtime runtime) {
-        Evaluator.INSTANCE.evaluateTypeDefinition(runtime, this);
+    public override bool isDeclaration() {
+        return true;
+    }
+
+    public override Flow evaluate(Runtime runtime) {
+        return Evaluator.INSTANCE.evaluateTypeDefinition(runtime, this);
     }
 
     public override string toString() {
@@ -1204,7 +1235,35 @@ public immutable class TypeDefinitionNode : Node {
     }
 }
 
-public immutable class VariableDeclarationNode : Node {
+public immutable class FunctionCallStatementNode : FlowNode {
+    public FunctionCallNode functionCall;
+
+    public this(immutable FunctionCallNode functionCall) {
+        this.functionCall = functionCall;
+        _start = functionCall.start;
+        _end = functionCall.end;
+    }
+
+    mixin sourceIndexFields!false;
+
+    public override immutable(TypedNode)[] getChildren() {
+        return [functionCall];
+    }
+
+    public override bool isDeclaration() {
+        return false;
+    }
+
+    public override Flow evaluate(Runtime runtime) {
+        return Evaluator.INSTANCE.evaluateFunctionCallStatement(runtime, this);
+    }
+
+    public override string toString() {
+        return functionCall.toString();
+    }
+}
+
+public immutable class VariableDeclarationNode : FlowNode {
     public Field field;
     public TypedNode value;
 
@@ -1221,8 +1280,12 @@ public immutable class VariableDeclarationNode : Node {
         return [value];
     }
 
-    public override void evaluate(Runtime runtime) {
-        Evaluator.INSTANCE.evaluateVariableDeclaration(runtime, this);
+    public override bool isDeclaration() {
+        return true;
+    }
+
+    public override Flow evaluate(Runtime runtime) {
+        return Evaluator.INSTANCE.evaluateVariableDeclaration(runtime, this);
     }
 
     public override string toString() {
@@ -1230,7 +1293,7 @@ public immutable class VariableDeclarationNode : Node {
     }
 }
 
-public immutable class AssignmentNode : Node {
+public immutable class AssignmentNode : FlowNode {
     public AssignableNode target;
     public TypedNode value;
 
@@ -1247,8 +1310,12 @@ public immutable class AssignmentNode : Node {
         return [target, value];
     }
 
-    public override void evaluate(Runtime runtime) {
-        Evaluator.INSTANCE.evaluateAssignment(runtime, this);
+    public override bool isDeclaration() {
+        return false;
+    }
+
+    public override Flow evaluate(Runtime runtime) {
+        return Evaluator.INSTANCE.evaluateAssignment(runtime, this);
     }
 
     public override string toString() {
@@ -1256,82 +1323,191 @@ public immutable class AssignmentNode : Node {
     }
 }
 
-public immutable class BlockNode : Node {
-    public Node[] statements;
+public enum BlockLimit : bool {
+    START = true, END = false
+}
 
-    public this(immutable Node[] statements, size_t start, size_t end) {
+public immutable class BlockNode : FlowNode {
+    public FlowNode[] statements;
+    public size_t exitOffset;
+    public BlockLimit exitTarget;
+
+    public this(immutable(FlowNode)[] statements, size_t start, size_t end) {
+        this(statements, 0, BlockLimit.END, start, end);
+    }
+
+    public this(immutable(FlowNode)[] statements, size_t exitOffset, BlockLimit exitTarget, size_t start, size_t end) {
+        inlineTrailingBlocks(statements, exitOffset, exitTarget);
         this.statements = statements;
+        this.exitOffset = exitOffset;
+        this.exitTarget = exitTarget;
         _start = start;
         _end = end;
     }
 
     mixin sourceIndexFields!false;
+
+    public bool isConditional() {
+        return false;
+    }
 
     public override immutable(Node)[] getChildren() {
         return statements;
     }
 
-    public override void evaluate(Runtime runtime) {
-        Evaluator.INSTANCE.evaluateBlock(runtime, this);
+    public override bool isDeclaration() {
+        return any!(a => a.isDeclaration() || cast(immutable BlockNode) a !is null)(statements);
+    }
+
+    public override Flow evaluate(Runtime runtime) {
+        return Evaluator.INSTANCE.evaluateBlock(runtime, this);
     }
 
     public override string toString() {
-        return format("Block(%s)", statements.join!"; "());
+        return format("Block(%s)", statementsToString());
+    }
+
+    protected string statementsToString() {
+        auto statementsString = statements.join!"; "();
+        auto exitString = exitOffset != 0  || exitTarget != BlockLimit.END
+                ? format("exit to %s of %s blocks", exitTarget, exitOffset) : "";
+        if (statementsString.length > 0) {
+            if (exitString.length > 0) {
+                return format("%s; %s", statementsString, exitString);
+            }
+            return statementsString;
+        }
+        return exitString;
+    }
+
+    private static void inlineTrailingBlocks(ref immutable(FlowNode)[] statements, ref size_t exitOffset,
+            ref BlockLimit exitTarget) {
+        auto inlinedStatements = statements;
+        auto nextIsUnreachable = false;
+        foreach (i, statement; statements) {
+            // Check if the statement was just marked as unreachable
+            if (nextIsUnreachable) {
+                throw new SourceException("Statement is unreachable", statement);
+            }
+            // Check if the statement is a nested block
+            if (auto nestedBlock = cast(immutable BlockNode) statement) {
+                // Ignore conditional ones since they don't always execute
+                if (nestedBlock.isConditional()) {
+                    continue;
+                }
+                // Ignore blocks that exit on themselves
+                if (nestedBlock.exitOffset <= 0) {
+                    continue;
+                }
+                // We can't inline blocks that contain declarations
+                if (nestedBlock.isDeclaration()) {
+                    continue;
+                }
+                // Change the exit information to be that of the nested block (correcting the offset for un-nesting)
+                exitOffset = nestedBlock.exitOffset - 1;
+                exitTarget = nestedBlock.exitTarget;
+                // Inline the statements
+                inlinedStatements = inlinedStatements[0 .. i] ~ nestedBlock.statements;
+                // Mark all the other statements as unreachable;
+                nextIsUnreachable = true;
+            }
+        }
+        statements = inlinedStatements;
     }
 }
 
-public immutable class ConditionalStatementNode : Node {
+public immutable class ConditionalBlockNode : BlockNode {
     public TypedNode condition;
-    public Node whenTrue;
-    public Node whenFalse;
 
-    public this(immutable TypedNode condition, immutable Node whenTrue, immutable Node whenFalse, size_t start, size_t end) {
-        this.condition = condition.addCastNode(AtomicType.BOOL);
-        this.whenTrue = whenTrue;
-        this.whenFalse = whenFalse;
+    public this(immutable TypedNode condition, immutable FlowNode[] statements, size_t start, size_t end) {
+        super(statements, start, end);
+        this.condition = condition;
+    }
+
+    public this(immutable TypedNode condition, immutable FlowNode[] statements, size_t exitOffset, BlockLimit exitTarget,
+            size_t start, size_t end) {
+        super(statements, exitOffset, exitTarget, start, end);
+        this.condition = condition;
+    }
+
+    public override bool isConditional() {
+        return true;
+    }
+
+    public override immutable(Node)[] getChildren() {
+        return cast(immutable Node) condition ~ cast(immutable(Node)[]) statements;
+    }
+
+    public override Flow evaluate(Runtime runtime) {
+        return Evaluator.INSTANCE.evaluateConditionalBlock(runtime, this);
+    }
+
+    public override string toString() {
+        return format("ConditionalBlock(if %s: %s)", condition.toString(), statementsToString());
+    }
+}
+
+public immutable class FunctionDefinitionNode : FlowNode {
+    public Function func;
+    public string[] parameterNames;
+    public BlockNode implementation;
+
+    public this(immutable Function func, immutable(string)[] parameterNames, immutable BlockNode implementation,
+            size_t start, size_t end) {
+        assert (func.parameterTypes.length == parameterNames.length);
+        this.func = func;
+        this.parameterNames = parameterNames;
+        this.implementation = implementation;
         _start = start;
         _end = end;
     }
 
     mixin sourceIndexFields!false;
 
-    public override immutable(Node)[] getChildren() {
-        return [condition, whenTrue, whenFalse];
+    public override immutable(FlowNode)[] getChildren() {
+        return [implementation];
     }
 
-    public override void evaluate(Runtime runtime) {
-        Evaluator.INSTANCE.evaluateConditionalStatement(runtime, this);
+    public override bool isDeclaration() {
+        return true;
+    }
+
+    public override Flow evaluate(Runtime runtime) {
+        return Flow.PROCEED;
     }
 
     public override string toString() {
-        return format("ConditionalStatement(if %s: %s else: %s)", condition.toString(),
-                whenTrue.toString(), whenFalse.toString());
+        auto signature = format("%s(%s) %s", func.name, stringZip!" "(func.parameterTypes, parameterNames).join!", "(),
+                func.returnType.toString());
+        return format("FunctionDefinition(%s: %s)", signature, implementation.toString());
     }
 }
 
-public immutable class LoopStatementNode : Node {
-    public TypedNode condition;
-    public Node whileTrue;
+public immutable class ReturnValueNode : FlowNode {
+    public TypedNode value;
 
-    public this(immutable TypedNode condition, immutable Node whileTrue, size_t start, size_t end) {
-        this.condition = condition.addCastNode(AtomicType.BOOL);
-        this.whileTrue = whileTrue;
+    public this(immutable TypedNode value, size_t start, size_t end) {
+        this.value = value;
         _start = start;
         _end = end;
     }
 
     mixin sourceIndexFields!false;
 
-    public override immutable(Node)[] getChildren() {
-        return [condition, whileTrue];
+    public override immutable(TypedNode)[] getChildren() {
+        return [value];
     }
 
-    public override void evaluate(Runtime runtime) {
-        Evaluator.INSTANCE.evaluateLoopStatement(runtime, this);
+    public override bool isDeclaration() {
+        return false;
+    }
+
+    public override Flow evaluate(Runtime runtime) {
+        return Evaluator.INSTANCE.evaluateReturnValue(runtime, this);
     }
 
     public override string toString() {
-        return format("LoopStatement(while %s: %s)", condition.toString(), whileTrue.toString());
+        return format("Return(%s)", value.toString());
     }
 }
 
@@ -1362,7 +1538,7 @@ private immutable(TypedNode) addCastNode(immutable TypedNode fromNode, immutable
             return specializeNode(fromLiteralNode, toType);
         }
         // Add a call to the appropriate cast function
-        auto castFunc = IntrinsicNameSpace.getExactFunction(toType.toString(), [fromType]);
+        auto castFunc = IntrinsicNameSpace.getExactFunctionStatic(toType.toString(), [fromType]);
         assert (castFunc !is null);
         return new immutable FunctionCallNode(castFunc, [fromNode], fromNode.start, fromNode.end);
     }
