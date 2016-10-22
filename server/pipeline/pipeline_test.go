@@ -8,7 +8,7 @@ import (
 
 func TestNewPipeline(t *testing.T) {
 	in := CreateInput()
-	p := NewPipeline("Default", in)
+	p := NewPipeline("Default", nil, in)
 
 	assert.NotNil(t, in)
 	assert.NotNil(t, p)
@@ -17,7 +17,7 @@ func TestNewPipeline(t *testing.T) {
 
 func TestPipeline_Start(t *testing.T) {
 	in := CreateInput()
-	p := NewPipeline("Default", in)
+	p := NewPipeline("Default", nil, in)
 
 	assert.NotNil(t, in)
 	assert.NotNil(t, p)
@@ -29,7 +29,7 @@ func TestPipeline_Start(t *testing.T) {
 
 func TestPipeline_Stop(t *testing.T) {
 	in := CreateInput()
-	p := NewPipeline("Default", in)
+	p := NewPipeline("Default", nil, in)
 
 	assert.NotNil(t, in)
 	assert.NotNil(t, p)
