@@ -1,0 +1,15 @@
+{
+	"name": "langserver",
+	"targetType": "none",
+	"dependencies": {
+		"langserver:ruleslang": "*"
+	},
+	"subPackages": [
+		{
+			"name": "ruleslang",
+			"targetType": "library",
+			"sourcePaths": ["../../lang/source"],
+			"importPaths": ["../../lang/source"]
+		}
+	]
+}
