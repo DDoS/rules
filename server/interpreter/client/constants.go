@@ -6,7 +6,7 @@ package interpreter
 import (
 	"bytes"
 	"fmt"
-	"git.apache.org/thrift.git/lib/go/thrift"
+	"github.com/michael-golfi/go-thrift"
 )
 
 // (needed to ensure safety because of naive import list construction.)

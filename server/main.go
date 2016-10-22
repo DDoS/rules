@@ -17,7 +17,7 @@ func main() {
 }
 
 func setRoutes(r *mux.Router) {
-	compiler := compiler.Handler{}
+	compiler := interpreter.NewHandler("localhost:9090")
 	pipeline := pipeline.PipelineHandler{}
 
 	compiler.SetRoutes(r)
