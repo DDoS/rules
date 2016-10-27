@@ -1,18 +1,26 @@
 module ruleslang.semantic.codegraph;
 
+import ruleslang.syntax.source;
 import ruleslang.semantic.tree;
+import ruleslang.util;
 
-private static class CodeGraphNode {
-    private CodeGraphInnerNode parent;
+private class GraphNode {
+    private GraphInnerNode parent;
 
+    @property protected abstract immutable(FlowNode) code();
     protected abstract string asString(size_t indentCount = 0);
 }
 
-private static class CodeGraphLeafNode : CodeGraphNode {
+private class GraphLeafNode : GraphNode {
     private immutable FlowNode statement;
+    private bool reached = false;
 
     private this(immutable FlowNode statement) {
         this.statement = statement;
+    }
+
+    @property protected override immutable(FlowNode) code() {
+        return statement;
     }
 
     protected override string asString(size_t indentCount = 0) {
@@ -20,13 +28,16 @@ private static class CodeGraphLeafNode : CodeGraphNode {
     }
 }
 
-private static class CodeGraphInnerNode : CodeGraphNode {
-    private CodeGraphNode[] children;
-    private CodeGraphNode[] cycleChildren;
+private class GraphInnerNode : GraphNode {
+    private GraphNode[] children;
     private immutable BlockNode block;
 
     private this(immutable BlockNode block) {
         this.block = block;
+    }
+
+    @property protected override immutable(BlockNode) code() {
+        return block;
     }
 
     protected override string asString(size_t indentCount = 0) {
@@ -48,26 +59,31 @@ private static class CodeGraphInnerNode : CodeGraphNode {
     }
 }
 
-public static string checkReturns(immutable BlockNode block) {
+public void checkReturns(immutable BlockNode block) {
     // First create the code graph
-    auto root = createCodeGraph(block);
+    auto root = block.createGraph();
     // Then expand all code paths so we can trace from the root the end of the block
-    expandCodePaths(root);
-    return root.asString();
+    root.expandCodePaths();
+
+    import std.stdio; writeln('\n', root.asString());
+
+    root.checkPathsReturn();
+
+    root.checkAllReachable();
 }
 
-private static CodeGraphInnerNode createCodeGraph(immutable BlockNode block) {
+private GraphInnerNode createGraph(immutable BlockNode block) {
     // Create the node for the root block
-    auto root = new CodeGraphInnerNode(block);
+    auto root = new GraphInnerNode(block);
     foreach (i, statement; block.statements) {
         // For each statement, create the child node
-        CodeGraphNode child;
+        GraphNode child;
         if (auto nestedBlock = cast(immutable BlockNode) statement) {
             // For nested blocks we use recursion
-            child = createCodeGraph(nestedBlock);
+            child = createGraph(nestedBlock);
         } else {
             // Any other block is just a leaf
-            child = new CodeGraphLeafNode(statement);
+            child = new GraphLeafNode(statement);
         }
         // Set the root as the parent of the child
         child.parent = root;
@@ -77,10 +93,10 @@ private static CodeGraphInnerNode createCodeGraph(immutable BlockNode block) {
     return root;
 }
 
-private static void expandCodePaths(CodeGraphInnerNode root) {
+private void expandCodePaths(GraphInnerNode root) {
     // First recursively expand the path of each child of the root
     foreach (child; root.children) {
-        if (auto innerNodeChild = cast(CodeGraphInnerNode) child) {
+        if (auto innerNodeChild = cast(GraphInnerNode) child) {
             // We only need to expand the inner nodes
             expandCodePaths(innerNodeChild);
         }
@@ -88,7 +104,7 @@ private static void expandCodePaths(CodeGraphInnerNode root) {
     // Next expand the paths from the root node
     foreach (child; root.children) {
         // We can ignore the leaf nodes, since they have no path
-        auto innerNodeChild = cast(CodeGraphInnerNode) child;
+        auto innerNodeChild = cast(GraphInnerNode) child;
         if (innerNodeChild is null) {
             continue;
         }
@@ -101,9 +117,15 @@ private static void expandCodePaths(CodeGraphInnerNode root) {
         bool cyclical = false;
         // This loop traces the exit sequence
         do {
-            // First we go up once in the parent chain for every exit we do
+            // Get the block exit offset and target
             auto exitOffset = exitChild.block.exitOffset;
             auto exitTarget = exitChild.block.exitTarget;
+            // Ignore paths that cycle back
+            if (exitTarget is BlockLimit.START && !exitChild.block.isConditional()) {
+                cyclical = true;
+                break;
+            }
+            // First we go up once in the parent chain for every exit we do
             foreach (i; 0 .. exitOffset) {
                 // There should always be a parent, except maybe at the last iteration
                 // Since we can reach the root block, but not past it
@@ -127,35 +149,57 @@ private static void expandCodePaths(CodeGraphInnerNode root) {
             }
             // We should always be able to find it
             assert (nextChildIndex != size_t.max);
-            // Next we might need to offset the index based on the exit target
-            final switch (exitTarget) with (BlockLimit) {
-                case START:
-                    // Since we go back to the start the index is the same
-                    break;
-                case END:
-                    // We're breaking and proceeding onto the next statement
-                    nextChildIndex += 1;
-                    break;
-            }
+            // Continue the path into the next child
+            nextChildIndex += 1;
             // Check that the exited block isn't the last
             if (nextChildIndex < exitChildrenCount) {
-                // Note that this condition always passes when exit is START
-                cyclical = exitTarget is BlockLimit.START;
                 break;
             }
             // If it is the last, then we exit to the parent block and start over
             exitChild = exitParent;
             exitParent = exitChild.parent;
         } while (exitParent !is null);
-        // Check that we aren't outside the root block
-        if (exitParent !is null) {
+        // Check that we aren't outside the root block or adding a cycle
+        if (exitParent !is null && !cyclical) {
             // Add the next code code in the path to our node
-            auto nextCodePath = exitParent.children[nextChildIndex .. $];
-            if (cyclical) {
-                innerNodeChild.cycleChildren ~= nextCodePath;
-            } else {
-                innerNodeChild.children ~= nextCodePath;
+            innerNodeChild.children ~= exitParent.children[nextChildIndex .. $];
+        }
+    }
+}
+
+private void checkPathsReturn(GraphInnerNode root) {
+    // Check all the paths out of the root
+    foreach (child; root.children) {
+        // If we have a leaf node, check for a return value
+        if (auto leaf = cast(GraphLeafNode) child) {
+            // Mark the leaf as reachable
+            leaf.reached = true;
+            // If we find one then this path returns
+            if (auto return_ = cast(ReturnValueNode) leaf.statement) {
+                return;
             }
+        } else {
+            // For an inner node, check recursively
+            auto inner = child.castOrFail!GraphInnerNode();
+            checkPathsReturn(inner);
+            // If the node isn't conditional then only the path must return
+            if (!inner.block.isConditional()) {
+                return;
+            }
+        }
+    }
+    throw new SourceException("Missing return statement", root.block.end);
+}
+
+private void checkAllReachable(GraphInnerNode root) {
+    foreach (child; root.children) {
+        if (auto leaf = cast(GraphLeafNode) child) {
+            if (!leaf.reached) {
+                throw new SourceException("Statement is unreachable", leaf.statement);
+            }
+        } else {
+            // For an inner node, check recursively
+            checkAllReachable(child.castOrFail!GraphInnerNode());
         }
     }
 }

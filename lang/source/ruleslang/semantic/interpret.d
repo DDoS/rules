@@ -845,7 +845,7 @@ public immutable class Interpreter {
         // Check that the return statements are all there and that no statement is unreachable
         if (!func.returnType.specializableTo(VoidType.INSTANCE)) {
             import ruleslang.semantic.codegraph;
-            import std.stdio; writeln('\n', checkReturns(blockNode));
+            checkReturns(blockNode);
         }
         // Create the function definition node
         return new immutable FunctionDefinitionNode(func, parameterNames, blockNode,
