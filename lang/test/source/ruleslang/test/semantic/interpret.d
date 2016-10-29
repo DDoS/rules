@@ -975,6 +975,54 @@ unittest {
             ~ " Return(BooleanLiteral(true)); exit to END of 1 blocks); Return(BooleanLiteral(false))))",
         interpretStmt("func test9() bool:\n if true:\n  ;\n else:\n  return true\n return false", context)
     );
+
+    assertEqual(
+        "FunctionDefinition(test10() bool: Block(VariableDeclaration(bool a = BooleanLiteral(true)); "
+        ~   "Block(ConditionalBlock(if BooleanLiteral(true): Assignment(FieldAccess(a) = BooleanLiteral(false)); "
+        ~   "exit to END of 1 blocks); Assignment(FieldAccess(a) = BooleanLiteral(true))); "
+        ~   "Block(ConditionalBlock(if BooleanLiteral(true): Assignment(FieldAccess(a) = BooleanLiteral(true)); "
+        ~   "exit to END of 1 blocks); Assignment(FieldAccess(a) = BooleanLiteral(false))); Return(FieldAccess(a))))",
+        interpretStmt("func test10() bool:\n var a = true\n if true:\n  a = false\n else:\n  a = true\n"
+            ~ " if true:\n  a = true\n else:\n  a = false\n return a", context)
+    );
+    assertEqual(
+        "FunctionDefinition(test11() bool: Block(VariableDeclaration(bool a = BooleanLiteral(true)); "
+        ~   "Block(ConditionalBlock(if BooleanLiteral(true): Assignment(FieldAccess(a) = BooleanLiteral(false)); "
+        ~   "exit to END of 1 blocks); Assignment(FieldAccess(a) = BooleanLiteral(true))); "
+        ~   "Assignment(FieldAccess(a) = FunctionCall(opLogicalXor(FieldAccess(a), BooleanLiteral(false)))); "
+        ~   "Return(FieldAccess(a))))",
+        interpretStmt("func test11() bool:\n var a = true\n if true:\n  a = false\n"
+            ~ " else:\n  a = true\n a ^^= false\n return a", context)
+    );
+    assertEqual(
+        "FunctionDefinition(test12() bool: Block(VariableDeclaration(bool b = BooleanLiteral(false)); "
+        ~   "Block(ConditionalBlock(if BooleanLiteral(true): Assignment(FieldAccess(b) = BooleanLiteral(false)); "
+        ~   "exit to END of 1 blocks); Assignment(FieldAccess(b) = BooleanLiteral(true))); "
+        ~   "ConditionalBlock(if BooleanLiteral(true): ConditionalBlock(if BooleanLiteral(false): "
+        ~   "VariableDeclaration(sint64 a = SignedIntegerLiteral(1)))); Return(FieldAccess(b))))",
+        interpretStmt("func test12() bool:\n var bool b\n if true:\n  b = false\n"
+            ~ " else:\n  b = true\n if true:\n  if false:\n   let a = 1\n return b", context)
+    );
+    assertEqual(
+        "FunctionDefinition(test13() bool: Block(Block(ConditionalBlock(if BooleanLiteral(true): exit to END of 1 blocks);"
+        ~   " Return(BooleanLiteral(true)); exit to END of 1 blocks); Return(BooleanLiteral(false))))",
+        interpretStmt("func test13() bool:\n if true:\n  ;\n else:\n  return true\n return false", context)
+    );
+    interpretStmtFails("func test14() bool:\n var d = -1\n if false:\n  d = 0\n else if true:\n  d = 1\n else:\n  d = 2");
+    interpretStmtFails("func test15() bool:\n var d = -1\n if false:\n  return true\n else if true:\n  d = 1\n else:\n  d = 2");
+    interpretStmtFails("func test16() bool:\n if true:\n  return false\n else:\n  return true\n let a = 0");
+    assertEqual(
+        "FunctionDefinition(test17() bool: Block(Block(ConditionalBlock(if BooleanLiteral(true): Return(BooleanLiteral(false));"
+            ~ " exit to END of 2 blocks); Return(BooleanLiteral(true)); exit to END of 1 blocks)))",
+        interpretStmt("func test17() bool:\n if true:\n  return false\n else:\n  return true", context)
+    );
+    interpretStmtFails("func test18() bool:\n while true:\n  let a = 1\n  while false:\n   return false");
+    assertEqual(
+        "FunctionDefinition(test19() bool: Block(ConditionalBlock(if BooleanLiteral(true): "
+            ~ "VariableDeclaration(sint64 a = SignedIntegerLiteral(1)); ConditionalBlock(if BooleanLiteral(false):"
+            ~  " exit to START of 0 blocks); exit to START of 0 blocks); Return(BooleanLiteral(false))))",
+        interpretStmt("func test19() bool:\n while true:\n  let a = 1\n  while false:\n   ;\n return false", context)
+    );
     /*assertEqual(
         "",
         interpretStmt("func test", context)

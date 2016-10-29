@@ -13,6 +13,7 @@ import ruleslang.semantic.tree;
 import ruleslang.semantic.context;
 import ruleslang.semantic.type;
 import ruleslang.semantic.symbol;
+import ruleslang.semantic.codegraph;
 import ruleslang.util;
 
 public immutable class Interpreter {
@@ -844,7 +845,6 @@ public immutable class Interpreter {
         auto blockNode = new immutable BlockNode(statementNodes, statementsStart, statementsEnd);
         // Check that the return statements are all there and that no statement is unreachable
         if (!func.returnType.specializableTo(VoidType.INSTANCE)) {
-            import ruleslang.semantic.codegraph;
             checkReturns(blockNode);
         }
         // Create the function definition node

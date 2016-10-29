@@ -64,11 +64,9 @@ public void checkReturns(immutable BlockNode block) {
     auto root = block.createGraph();
     // Then expand all code paths so we can trace from the root the end of the block
     root.expandCodePaths();
-
-    import std.stdio; writeln('\n', root.asString());
-
+    // Check that all code paths have a return statement
     root.checkPathsReturn();
-
+    // Make sure that all statements are reachable
     root.checkAllReachable();
 }
 
@@ -167,7 +165,7 @@ private void expandCodePaths(GraphInnerNode root) {
     }
 }
 
-private void checkPathsReturn(GraphInnerNode root) {
+private void checkPathsReturn(GraphInnerNode root, bool hasReturn = false) {
     // Check all the paths out of the root
     foreach (child; root.children) {
         // If we have a leaf node, check for a return value
@@ -176,19 +174,21 @@ private void checkPathsReturn(GraphInnerNode root) {
             leaf.reached = true;
             // If we find one then this path returns
             if (auto return_ = cast(ReturnValueNode) leaf.statement) {
-                return;
+                hasReturn = true;
             }
         } else {
             // For an inner node, check recursively
             auto inner = child.castOrFail!GraphInnerNode();
-            checkPathsReturn(inner);
+            checkPathsReturn(inner, hasReturn);
             // If the node isn't conditional then only the path must return
             if (!inner.block.isConditional()) {
                 return;
             }
         }
     }
-    throw new SourceException("Missing return statement", root.block.end);
+    if (!hasReturn) {
+        throw new SourceException("Missing return statement", root.block.end);
+    }
 }
 
 private void checkAllReachable(GraphInnerNode root) {

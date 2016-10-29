@@ -37,16 +37,6 @@ void main() {
             continue;
         }
         try {
-            //source = "func test9() bool:\n var a = true\n if true:\n  a = false\n else:\n  a = true\n if true:\n  a = true\n else:\n  a = false\n return a";
-            //source = "func test9() bool:\n var a = true\n if true:\n  a = false\n else:\n  a = true\n a ^^= false\n return a";
-            //source = "func test9() bool:\n var bool b\n if true:\n  b = false\n else:\n  b = true\n if true:\n  if false:\n   let a = 1\n return b";
-            //source = "func test9() bool:\n if true:\n  ;\n else:\n  return true\n return false";
-            //source = "func test9() bool:\n var d = -1\n if false:\n  d = 0\n else if true:\n  d = 1\n else:\n  d = 2\n";
-            //source = "func test9() bool:\n var d = -1\n if false:\n  return true\n else if true:\n  d = 1\n else:\n  d = 2\n";
-            //source = "func test9() bool:\n if true:\n  return false\n else:\n  return true\n let a = 0";
-            //source = "func test9() bool:\n if true:\n  return false\n else:\n  return true";
-            //source = "func test9() bool:\n while true:\n  let a = 1\n  while false:\n   return false";
-            //source = "func test9() bool:\n while true:\n  let a = 1\n  while false:\n   ;\n return false";
             //source = "func test9() bool:\n while true:\n  let a = 1\n  while false:\n   break\n return false";
             auto tokenizer = new Tokenizer(new DCharReader(source));
             if (expressionMode) {
