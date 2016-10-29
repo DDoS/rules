@@ -251,6 +251,14 @@ unittest {
     assertParseFail("func test():\n  \nlet b = 12");
 }
 
+unittest {
+    assertEqual(
+        "LoopStatement(while BooleanLiteral(true): VariableDeclaration(let a = SignedIntegerLiteral(1)); BreakStatement(break))",
+        parse("while true:\n\t\n  let a = 1\n  break")
+    );
+    assertParseFail("while true:\n\t\n  let a = 1\n\tbreak");
+}
+
 private string parse(string source) {
     try {
         auto statements = new Tokenizer(new DCharReader(source)).parseStatements();
