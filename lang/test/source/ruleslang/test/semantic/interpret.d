@@ -928,6 +928,19 @@ unittest {
         interpretStmt("while false:\n  let d = 0", context)
     );
     interpretStmtFails("while 'l':\n  d = 0", context);
+    assertEqual(
+        "ConditionalBlock(if BooleanLiteral(true): )",
+        interpretStmt("while true:\n  break", context)
+    );
+    assertEqual(
+        "ConditionalBlock(if BooleanLiteral(true): exit to START of 0 blocks)",
+        interpretStmt("while true:\n  continue", context)
+    );
+    assertEqual(
+        "ConditionalBlock(if BooleanLiteral(true): Block(ConditionalBlock(if BooleanLiteral(true): exit to END of 2 blocks);"
+            ~ " exit to START of 1 blocks); exit to START of 0 blocks)",
+        interpretStmt("while true:\n if true:\n  break\n else:\n  continue", context)
+    );
 }
 
 unittest {

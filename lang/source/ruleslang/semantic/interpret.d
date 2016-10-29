@@ -882,12 +882,21 @@ public immutable class Interpreter {
         return new immutable BlockNode(returnValue, blockOffset + 1, BlockLimit.END, returnStatement.start, returnStatement.end);
     }
 
-    public immutable(FlowNode) interpretBreakStatement(Context context, BreakStatement breakStatement) {
-        return new immutable BlockNode([], 0, BlockLimit.END, breakStatement.start, breakStatement.end);
-    }
+    public alias interpretBreakStatement = interpretAbortStatement!BreakStatement;
+    public alias interpretContinueStatement = interpretAbortStatement!ContinueStatement;
 
-    public immutable(FlowNode) interpretContinueStatement(Context context, ContinueStatement continueStatement) {
-        return new immutable BlockNode([], 0, BlockLimit.END, continueStatement.start, continueStatement.end);
+    private immutable(FlowNode) interpretAbortStatement(AbortStatement)(Context context, AbortStatement abortStatement) {
+        // Get the enclosing loop
+        auto label = abortStatement.label is null ? null : abortStatement.label.getSource();
+        size_t blockOffset;
+        auto hasLoop = context.hasEnclosingLoop(label, blockOffset);
+        if (!hasLoop) {
+            enum abort = is(AbortStatement == BreakStatement) ? "break" : "continue";
+            throw new SourceException("Cannot use a " ~ abort ~ " statement outside of a loop", abortStatement);
+        }
+        // Return a block node that exits from the loop, which will be inlined later on
+        enum exit = is(AbortStatement == BreakStatement) ? BlockLimit.END : BlockLimit.START;
+        return new immutable BlockNode([], blockOffset + 1, exit, abortStatement.start, abortStatement.end);
     }
 
     private static immutable(FlowNode)[] interpretStatements(Context context, Statement[] statements) {

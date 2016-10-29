@@ -126,6 +126,10 @@ public class Context {
     public immutable(Function) getEnclosingFunction(out size_t blockOffset) {
         return sourceNames.getEnclosingFunction(blockOffset);
     }
+
+    public bool hasEnclosingLoop(string label, out size_t blockOffset) {
+        return sourceNames.hasEnclosingLoop(label, blockOffset);
+    }
 }
 
 public immutable(Function) resolveOverloads(immutable(ApplicableFunction)[] applicables) {
@@ -285,6 +289,7 @@ public class SourceNameSpace : NameSpace {
     public immutable BlockKind blockKind;
     public immutable size_t depth;
     private immutable Function enclosingFunction;
+    private immutable string label;
     private Rebindable!(immutable Type)[string] typesByName;
     private Rebindable!(immutable Field)[string] fieldsByName;
     private immutable(Function)[][string] functionsByName;
@@ -295,6 +300,7 @@ public class SourceNameSpace : NameSpace {
         this.blockKind = blockKind;
         depth = 0;
         enclosingFunction = null;
+        label = null;
     }
 
     public this(SourceNameSpace parent, immutable Function func) {
@@ -304,15 +310,18 @@ public class SourceNameSpace : NameSpace {
         this.blockKind = BlockKind.FUNCTION_IMPL;
         depth = parent.depth + 1;
         enclosingFunction = func;
+        label = null;
     }
 
-    public this(SourceNameSpace parent, BlockKind blockKind) {
+    public this(SourceNameSpace parent, BlockKind blockKind, string label = null) {
         assert (parent !is null);
         assert (blockKind == BlockKind.CONDITION || blockKind == BlockKind.LOOP);
+        assert (label is null || blockKind == BlockKind.LOOP);
         _parent = parent;
         this.blockKind = blockKind;
         depth = parent.depth + 1;
         enclosingFunction = null;
+        this.label = label;
     }
 
     @property public SourceNameSpace parent() {
@@ -414,6 +423,23 @@ public class SourceNameSpace : NameSpace {
         }
         blockOffset = 0;
         return enclosingFunction;
+    }
+
+    public bool hasEnclosingLoop(string label, out size_t blockOffset) {
+        if (blockKind != BlockKind.LOOP || label !is null && label != this.label) {
+            // Don't escape the function block
+            if (blockKind == BlockKind.FUNCTION_IMPL) {
+                return false;
+            }
+            if (_parent is null) {
+                return false;
+            }
+            auto hasLoop = _parent.hasEnclosingLoop(label, blockOffset);
+            blockOffset += 1;
+            return hasLoop;
+        }
+        blockOffset = 0;
+        return true;
     }
 }
 
