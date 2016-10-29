@@ -343,6 +343,30 @@ public ReturnStatement parseReturnStatement(Tokenizer tokens) {
     return new ReturnStatement(value, start, end);
 }
 
+public auto parseAbortStatement(bool _continue)(Tokenizer tokens) {
+    enum keyword = _continue ? "continue" : "break";
+    if (tokens.head() != keyword) {
+        throw new SourceException("Expected \"" ~ keyword ~ "\"", tokens.head());
+    }
+    auto start = tokens.head().start;
+    auto end = tokens.head().end;
+    tokens.advance();
+    // Check for a label
+    Identifier label = void;
+    if (tokens.head().getKind() == Kind.IDENTIFIER) {
+        label = tokens.head().castOrFail!Identifier();
+        end = label.end;
+        tokens.advance();
+    } else {
+        label = null;
+    }
+    static if (_continue) {
+        return new ContinueStatement(label, start, end);
+    } else {
+        return new BreakStatement(label, start, end);
+    }
+}
+
 public Statement parseStatement(Tokenizer tokens, IndentSpec indentSpec = noIndent()) {
     switch (tokens.head().getSource()) {
         case "def":
@@ -358,6 +382,10 @@ public Statement parseStatement(Tokenizer tokens, IndentSpec indentSpec = noInde
             return parseFunctionDefinition(tokens, indentSpec);
         case "return":
             return parseReturnStatement(tokens);
+        case "break":
+            return parseAbortStatement!false(tokens);
+        case "continue":
+            return parseAbortStatement!true(tokens);
         default:
             return parseAssigmnentOrFunctionCall(tokens);
     }

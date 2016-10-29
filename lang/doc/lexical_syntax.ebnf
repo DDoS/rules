@@ -20,7 +20,8 @@ symbol = "!" | "@" | "%" | "?" | "&" | "*" | "(" | ")" | "-" | "=" | "+"
     | "*=" | "/=" | "%=" | "+=" | "-=" | "<<=" | ">>=" | ">>>=" | "&=" | "^="
     | "|=" | "&&=" | "^^=" | "||=" | "~=" ;
 
-keyword = "def" | "let" | "var" | "if" | "else" | "while" | "for" | "func" ;
+keyword = "def" | "let" | "var" | "if" | "else" | "while" | "for" | "func"
+    | "return" | "break" | "continue" ;
 
 (* Excludes the backslash so we can use it for escape sequences *)
 printChar = ?all ASCII print characters? ;

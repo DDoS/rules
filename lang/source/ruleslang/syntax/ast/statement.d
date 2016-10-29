@@ -433,3 +433,45 @@ public class ReturnStatement : Statement {
         return format("ReturnStatement(return%s)", _value is null ? "" : " " ~ value.toString());
     }
 }
+
+public alias BreakStatement = AbortStatement!false;
+public alias ContinueStatement = AbortStatement!true;
+
+private template AbortStatement(bool _continue) {
+    public class AbortStatement : Statement {
+        private Identifier _label;
+
+        public this(Identifier label, size_t start, size_t end) {
+            _label = label;
+            _start = start;
+            _end = end;
+        }
+
+        @property public Identifier label() {
+            return _label;
+        }
+
+        mixin sourceIndexFields;
+
+        public override Statement map(StatementMapper mapper) {
+            static if (_continue) {
+                return mapper.mapContinueStatement(this);
+            } else {
+                return mapper.mapBreakStatement(this);
+            }
+        }
+
+        public override immutable(FlowNode) interpret(Context context) {
+            static if (_continue) {
+                return Interpreter.INSTANCE.interpretContinueStatement(context, this);
+            } else {
+                return Interpreter.INSTANCE.interpretBreakStatement(context, this);
+            }
+        }
+
+        public override string toString() {
+            enum formatString = _continue ? "ContinueStatement(continue%s)" : "BreakStatement(break%s)";
+            return format(formatString, _label is null ? "" : " " ~ _label.getSource());
+        }
+    }
+}

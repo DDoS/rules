@@ -952,10 +952,10 @@ unittest {
             ~ " Return(FieldAccess(a))))",
         interpretStmt("func test4() uint16:\n  let uint8 a = 1\n  return a", context)
     );
-    interpretStmtFails("func test4_5() uint16:\n  let a = 1\n  return a", context);
+    interpretStmtFails("func test5() uint16:\n  let a = 1\n  return a", context);
     assertEqual(
-        "FunctionDefinition(test5(bool yes) bool: Block(Return(FunctionCall(opLogicalNot(FieldAccess(yes))))))",
-        interpretStmt("func test5(bool yes) bool:\n  return !yes", context)
+        "FunctionDefinition(test4(bool yes) bool: Block(Return(FunctionCall(opLogicalNot(FieldAccess(yes))))))",
+        interpretStmt("func test4(bool yes) bool:\n  return !yes", context)
     );
     assertEqual(
         "VariableDeclaration(fp32 lol = FloatLiteral(2))",

@@ -193,4 +193,12 @@ public abstract class StatementMapper : ExpressionMapper {
     public Statement mapReturnStatement(ReturnStatement statement) {
         return statement;
     }
+
+    public Statement mapBreakStatement(BreakStatement statement) {
+        return statement;
+    }
+
+    public Statement mapContinueStatement(ContinueStatement statement) {
+        return statement;
+    }
 }

@@ -882,6 +882,14 @@ public immutable class Interpreter {
         return new immutable BlockNode(returnValue, blockOffset + 1, BlockLimit.END, returnStatement.start, returnStatement.end);
     }
 
+    public immutable(FlowNode) interpretBreakStatement(Context context, BreakStatement breakStatement) {
+        return new immutable BlockNode([], 0, BlockLimit.END, breakStatement.start, breakStatement.end);
+    }
+
+    public immutable(FlowNode) interpretContinueStatement(Context context, ContinueStatement continueStatement) {
+        return new immutable BlockNode([], 0, BlockLimit.END, continueStatement.start, continueStatement.end);
+    }
+
     private static immutable(FlowNode)[] interpretStatements(Context context, Statement[] statements) {
         immutable(FlowNode)[] statementNodes = [];
         foreach (statement; statements) {

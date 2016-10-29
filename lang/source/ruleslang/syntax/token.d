@@ -83,7 +83,7 @@ public class Terminator : Token {
     }
 }
 
-public template SourceToken(Kind kind) {
+private template SourceToken(Kind kind) {
     public class SourceToken : Token {
         private string source;
 

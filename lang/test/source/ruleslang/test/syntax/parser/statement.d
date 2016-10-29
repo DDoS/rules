@@ -202,6 +202,22 @@ unittest {
         parse("func test():\n while true:\n  let a = 1\n  while false:\n   ;\n let b = 1")
     );
     assertParseFail("func test():\n while true:\n  let a = 1\n  while false:\n let b = 1");
+    assertEqual(
+        "LoopStatement(while Compare(a == SignedIntegerLiteral(0)): BreakStatement(break))",
+        parse("while a == 0:\n  break")
+    );
+    assertEqual(
+        "LoopStatement(while Compare(a == SignedIntegerLiteral(0)): BreakStatement(break test))",
+        parse("while a == 0:\n  break test")
+    );
+    assertEqual(
+        "LoopStatement(while Compare(a == SignedIntegerLiteral(0)): ContinueStatement(continue))",
+        parse("while a == 0:\n  continue")
+    );
+    assertEqual(
+        "LoopStatement(while Compare(a == SignedIntegerLiteral(0)): ContinueStatement(continue test))",
+        parse("while a == 0:\n  continue test")
+    );
 }
 
 unittest {
@@ -220,6 +236,14 @@ unittest {
     assertEqual(
         "FunctionDefinition(func test(uint32[] a, fp64 b) bool: VariableDeclaration(let b = SignedIntegerLiteral(12)))",
         parse("func test(uint32[] a, fp64 b) bool:\n  let b = 12")
+    );
+    assertEqual(
+        "FunctionDefinition(func test(): ReturnStatement(return))",
+        parse("func test():\n  return")
+    );
+    assertEqual(
+        "FunctionDefinition(func test() bool: ReturnStatement(return BooleanLiteral(false)))",
+        parse("func test() bool:\n  return false")
     );
     assertParseFail("func test():\nlet b = 12");
     assertParseFail("func test():let b = 12");
