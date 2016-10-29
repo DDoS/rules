@@ -268,7 +268,14 @@ public class SourceException : Exception {
             buffer ~= " in \n" ~ line ~ '\n';
             // We'll underline the problem area, so first pad to the start index
             foreach (i; 0 .. startIndex) {
-                buffer ~= line[i] == '\t' ? '\t' : ' ';
+                char pad;
+                if (i < line.length) {
+                    // Use a tab if the source does so to ensure correct alignment
+                    pad = line[i] == '\t' ? '\t' : ' ';
+                } else {
+                    pad = ' ';
+                }
+                buffer ~= pad;
             }
             // Now underline, using a circumflex for a single character or tildes for many
             if (startIndex == endIndex) {
