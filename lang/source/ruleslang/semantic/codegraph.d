@@ -6,9 +6,6 @@ import ruleslang.util;
 
 private class GraphNode {
     private GraphInnerNode parent;
-
-    @property protected abstract immutable(FlowNode) code();
-    protected abstract string asString(size_t indentCount = 0);
 }
 
 private class GraphLeafNode : GraphNode {
@@ -18,14 +15,6 @@ private class GraphLeafNode : GraphNode {
     private this(immutable FlowNode statement) {
         this.statement = statement;
     }
-
-    @property protected override immutable(FlowNode) code() {
-        return statement;
-    }
-
-    protected override string asString(size_t indentCount = 0) {
-        return statement.toString();
-    }
 }
 
 private class GraphInnerNode : GraphNode {
@@ -34,28 +23,6 @@ private class GraphInnerNode : GraphNode {
 
     private this(immutable BlockNode block) {
         this.block = block;
-    }
-
-    @property protected override immutable(BlockNode) code() {
-        return block;
-    }
-
-    protected override string asString(size_t indentCount = 0) {
-        string s = "";
-        if (auto conditionalBlock = cast(immutable ConditionalBlockNode) block) {
-            s ~= "if " ~ conditionalBlock.condition.toString() ~ ":";
-        } else {
-            s ~= "do:";
-        }
-        s ~= "\n";
-        string indent = "";
-        foreach (i; 0 .. indentCount + 1) {
-            indent ~= "    ";
-        }
-        foreach (child; children) {
-            s ~= indent ~ child.asString(indentCount + 1) ~ "\n";
-        }
-        return s;
     }
 }
 
