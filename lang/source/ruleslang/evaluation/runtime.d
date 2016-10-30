@@ -215,39 +215,8 @@ public class Stack {
     }
 
     public void push(immutable Type type, Variant data) {
-        if (AtomicType.BOOL.opEquals(type)) {
-            push!bool(data.get!bool());
-        } else if (AtomicType.SINT8.opEquals(type)) {
-            push!byte(data.get!byte());
-        } else if (AtomicType.UINT8.opEquals(type)) {
-            push!ubyte(data.get!ubyte());
-        } else if (AtomicType.SINT16.opEquals(type)) {
-            push!short(data.get!short());
-        } else if (AtomicType.UINT16.opEquals(type)) {
-            push!ushort(data.get!ushort());
-        } else if (AtomicType.SINT32.opEquals(type)) {
-            push!int(data.get!int());
-        } else if (AtomicType.UINT32.opEquals(type)) {
-            push!uint(data.get!uint());
-        } else if (AtomicType.SINT64.opEquals(type)) {
-            push!long(data.get!long());
-        } else if (AtomicType.UINT64.opEquals(type)) {
-            push!ulong(data.get!ulong());
-        } else if (AtomicType.FP32.opEquals(type)) {
-            push!float(data.get!float());
-        } else if (AtomicType.FP64.opEquals(type)) {
-            push!double(data.get!double());
-        } else if (cast(immutable ReferenceType) type !is null) {
-            push!(void*)(data.get!(void*));
-        } else {
-            assert (0);
-        }
+        mixin (buildTypeSwitch!"push!($0)(data.get!($0));");
     }
-
-    /*
-        func fact(uint64 n) uint64:
-         	return 1u if n == 0u else fact(n - 1u) * n
-    */
 
     public void pushFrom(T)(void* from) {
         // Copy the data from the given location
