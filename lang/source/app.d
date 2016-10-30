@@ -24,7 +24,7 @@ void main() {
             Add break and continue statements to loops
     */
     auto context = new Context(BlockKind.SHELL);
-    auto runtime = new IntrinsicRuntime();
+    auto runtime = new Runtime();
     bool expressionMode = false;
     while (true) {
         auto source = readSource(expressionMode);

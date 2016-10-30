@@ -1446,14 +1446,14 @@ public immutable class ConditionalBlockNode : BlockNode {
 
 public immutable class FunctionDefinitionNode : FlowNode {
     public Function func;
-    public string[] parameterNames;
+    public Field[] parameters;
     public BlockNode implementation;
 
-    public this(immutable Function func, immutable(string)[] parameterNames, immutable BlockNode implementation,
+    public this(immutable Function func, immutable(Field)[] parameters, immutable BlockNode implementation,
             size_t start, size_t end) {
-        assert (func.parameterTypes.length == parameterNames.length);
+        assert (func.parameterTypes.length == parameters.length);
         this.func = func;
-        this.parameterNames = parameterNames;
+        this.parameters = parameters;
         this.implementation = implementation;
         _start = start;
         _end = end;
@@ -1470,13 +1470,12 @@ public immutable class FunctionDefinitionNode : FlowNode {
     }
 
     public override Flow evaluate(Runtime runtime) {
-        return Flow.PROCEED;
+        return Evaluator.INSTANCE.evaluateFunctionDefinition(runtime, this);
     }
 
     public override string toString() {
-        auto signature = format("%s(%s) %s", func.name, stringZip!" "(func.parameterTypes, parameterNames).join!", "(),
-                func.returnType.toString());
-        return format("FunctionDefinition(%s: %s)", signature, implementation.toString());
+        return format("FunctionDefinition(%s(%s) %s: %s)", func.name, parameters.join!", "(), func.returnType.toString(),
+                implementation.toString());
     }
 }
 
@@ -1570,7 +1569,7 @@ public immutable(TypedNode) reduceLiterals(immutable TypedNode node) {
         return node;
     }
     // If it can, then do so
-    auto runtime = new IntrinsicRuntime();
+    auto runtime = new Runtime();
     try {
         node.evaluate(runtime);
     } catch (NotImplementedException) {

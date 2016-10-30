@@ -377,7 +377,7 @@ public class SourceNameSpace : NameSpace {
         if (existing !is null) {
             throw new Exception(format("Cannot re-declare function %s", existing.toString()));
         }
-        // The prefix is '$' followed by the scope depth
+        // The prefix is the scope depth
         auto func = new immutable Function(depth.to!string(), name, parameterTypes, returnType);
         functionsByName[name] ~= func;
         return func;
@@ -473,13 +473,15 @@ public enum OperatorFunction : string {
 
 public immutable struct IntrinsicFunction {
     public Function func;
-    public FunctionImpl impl;
+    public IntrinsicImpl impl;
 
-    public this(immutable Function func, immutable FunctionImpl impl) {
+    public this(immutable Function func, immutable IntrinsicImpl impl) {
         this.func = func;
         this.impl = impl;
     }
 }
+
+private alias IntrinsicImpl = void function(Runtime, immutable Function);
 
 public class IntrinsicNameSpace : NameSpace {
     private alias IntrinsicFunctions = immutable IntrinsicFunction[];
@@ -488,11 +490,11 @@ public class IntrinsicNameSpace : NameSpace {
     public static enum string PREFIX = "_";
     private static enum string LENGTH_NAME = "len";
     private static enum string LENGTH_SYMBOLIC_NAME = LENGTH_NAME ~ "({})";
-    private static immutable FunctionImpl LENGTH_IMPLEMENTATION;
+    private static immutable IntrinsicImpl LENGTH_IMPLEMENTATION;
     private static enum string CONCATENATE_NAME = OperatorFunction.CONCATENATE_FUNCTION;
     private static enum string CONCATENATE_SYMBOLIC_NAME = CONCATENATE_NAME ~ "({}, {})";
-    private static immutable FunctionImpl CONCATENATE_IMPLEMENTATION;
-    public static immutable FunctionImpl[string] FUNCTION_IMPLEMENTATIONS;
+    private static immutable IntrinsicImpl CONCATENATE_IMPLEMENTATION;
+    public static immutable IntrinsicImpl[string] FUNCTION_IMPLEMENTATIONS;
 
     public static this() {
         string getName(immutable IntrinsicFunction intrinsic) {
@@ -596,12 +598,12 @@ public class IntrinsicNameSpace : NameSpace {
             runtime.stack.push!(void*)(addressC);
         };
         // Create the function implementation lookup table
-        void addNoReplace(ref FunctionImpl[string] array, string symbolicName, FunctionImpl impl) {
+        void addNoReplace(ref IntrinsicImpl[string] array, string symbolicName, IntrinsicImpl impl) {
             auto already = symbolicName in array;
             assert (already is null);
             array[symbolicName] = impl;
         }
-        FunctionImpl[string] functionImpls;
+        IntrinsicImpl[string] functionImpls;
         foreach (intrinsic; unaryFunctions) {
             addNoReplace(functionImpls, intrinsic.func.symbolicName, intrinsic.impl);
         }
@@ -873,31 +875,31 @@ private enum string[string] FUNCTION_TO_DLANG_OPERATOR = [
     "opLogicalXor": "$0 ^ $1",
 ];
 
-private FunctionImpl genUnaryOperatorImpl(OperatorFunction opFunc, Inner, Return)() {
-    FunctionImpl implementation = (runtime, func) {
+private IntrinsicImpl genUnaryOperatorImpl(OperatorFunction opFunc, Inner, Return)() {
+    IntrinsicImpl implementation = (runtime, func) {
         enum op = FUNCTION_TO_DLANG_OPERATOR[opFunc].positionalReplace("runtime.stack.pop!Inner()");
         mixin("runtime.stack.push!Return(cast(Return) (" ~ op ~ "));");
     };
     return implementation;
 }
 
-private FunctionImpl genCastImpl(From, To)() {
-    FunctionImpl implementation = (runtime, func) {
+private IntrinsicImpl genCastImpl(From, To)() {
+    IntrinsicImpl implementation = (runtime, func) {
         mixin("runtime.stack.push!To(cast(To) runtime.stack.pop!From());");
     };
     return implementation;
 }
 
-private FunctionImpl genBinaryOperatorImpl(OperatorFunction opFunc, Left, Right, Return)() {
-    FunctionImpl implementation = (runtime, func) {
+private IntrinsicImpl genBinaryOperatorImpl(OperatorFunction opFunc, Left, Right, Return)() {
+    IntrinsicImpl implementation = (runtime, func) {
         enum op = FUNCTION_TO_DLANG_OPERATOR[opFunc].positionalReplace("runtime.stack.pop!Left()", "runtime.stack.pop!Right()");
         mixin("runtime.stack.push!Return(cast(Return) (" ~ op ~ "));");
     };
     return implementation;
 }
 
-private FunctionImpl genRangeOperatorImpl(Param)() {
-    FunctionImpl implementation = (runtime, func) {
+private IntrinsicImpl genRangeOperatorImpl(Param)() {
+    IntrinsicImpl implementation = (runtime, func) {
         auto returnType = func.returnType.castOrFail!(immutable ReferenceType);
         auto address = runtime.allocateComposite(returnType);
         auto dataLayout = returnType.getDataLayout();

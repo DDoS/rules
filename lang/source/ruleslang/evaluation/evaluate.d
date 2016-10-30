@@ -4,6 +4,7 @@ import std.format : format;
 import std.variant : Variant;
 
 import ruleslang.syntax.source;
+import ruleslang.semantic.symbol;
 import ruleslang.semantic.type;
 import ruleslang.semantic.tree;
 import ruleslang.evaluation.runtime;
@@ -356,15 +357,16 @@ public immutable class Evaluator {
         // We use a scope guard here to ensure the stack gets cleaned even if an exception occurs
         scope (exit) {
             // Then we have to delete and pop-off any created variables
-            foreach_reverse (i; 0 .. count) {
-                auto variableDeclaration = cast(immutable VariableDeclarationNode) block.statements[i];
-                if (variableDeclaration is null) {
-                    continue;
+            foreach_reverse (statement; block.statements[0 .. count]) {
+                if (auto variableDeclaration = cast(immutable VariableDeclarationNode) statement) {
+                    // Delete the field mapping from the runtime
+                    runtime.deleteField(variableDeclaration.field);
+                    // Pop the field of the stack
+                    runtime.stack.pop(variableDeclaration.value.getType());
+                } else if (auto functionDefinition = cast(immutable FunctionDefinitionNode) statement) {
+                    // Delete the function implementation mapping from the runtime
+                    runtime.deleteFunctionImpl(functionDefinition.func);
                 }
-                // Delete the variable mapping from the runtime
-                runtime.deleteField(variableDeclaration.field);
-                // Pop the field of the stack
-                runtime.stack.pop(variableDeclaration.value.getType());
             }
         }
         // Sequentially evaluate every statement node in the block
@@ -394,6 +396,48 @@ public immutable class Evaluator {
         conditionalBlock.condition.evaluate(runtime);
         // If the value is true then evaluate the block, else just skip it
         return runtime.stack.pop!bool() ? evaluateBlock(runtime, conditionalBlock) : Flow.PROCEED;
+    }
+
+    public immutable(Flow) evaluateFunctionDefinition(Runtime runtime, immutable FunctionDefinitionNode functionDefinition) {
+        class SourceFunctionImpl : FunctionImpl {
+            private immutable(Field)[] parameters;
+            private immutable BlockNode implementation;
+
+            private this(immutable(Field)[] parameters, immutable BlockNode implementation) {
+                this.parameters = parameters;
+                this.implementation = implementation;
+            }
+
+            public override void call(Runtime runtime, immutable Function func) {
+                // Map the arguments of the caller to the function parameters
+                ptrdiff_t stackOffset = 0;
+                foreach (parameter; parameters) {
+                    // Get the address of the parameter, removing an offset if it is not the first
+                    auto address = runtime.stack.peekAddress(parameter.type) - stackOffset;
+                    // Register the field at the address
+                    runtime.registerField(parameter, address);
+                    // Calculate the next stack offset
+                    stackOffset = runtime.stack.topAddress() - address;
+                }
+                // Evaluate the implementation block
+                implementation.evaluate(runtime);
+                // Pop the return value off the stack
+                auto returnValue = runtime.stack.pop(func.returnType);
+                // Cleanup the parameters
+                foreach (parameter; parameters) {
+                    // Delete the field mapping from the runtime
+                    runtime.deleteField(parameter);
+                    // Pop the field of the stack
+                    runtime.stack.pop(parameter.type);
+                }
+                // Push the return value back on the stack
+                runtime.stack.push(func.returnType, returnValue);
+            }
+        }
+        // We simply have to register the function implementation to the runtime
+        auto impl = new SourceFunctionImpl(functionDefinition.parameters, functionDefinition.implementation);
+        runtime.registerFunctionImpl(functionDefinition.func, impl);
+        return Flow.PROCEED;
     }
 
     public immutable(Flow) evaluateReturnValue(Runtime runtime, immutable ReturnValueNode returnValue) {

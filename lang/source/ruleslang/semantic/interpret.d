@@ -829,8 +829,9 @@ public immutable class Interpreter {
         // Enter the function body
         context.enterFunctionImpl(func);
         // Define each parameter as a field
+        immutable(Field)[] parameters = [];
         foreach (i, name; parameterNames) {
-            collectExceptionMessage(context.declareField(name, parameterTypes[i], false), exceptionMessage);
+            parameters ~= collectExceptionMessage(context.declareField(name, parameterTypes[i], false), exceptionMessage);
             if (exceptionMessage !is null) {
                 throw new SourceException(exceptionMessage, functionDefinition.parameters[i]);
             }
@@ -848,7 +849,7 @@ public immutable class Interpreter {
             checkReturns(blockNode);
         }
         // Create the function definition node
-        return new immutable FunctionDefinitionNode(func, parameterNames, blockNode,
+        return new immutable FunctionDefinitionNode(func, parameters, blockNode,
                 functionDefinition.start, functionDefinition.end);
     }
 

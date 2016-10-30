@@ -10,13 +10,17 @@ import ruleslang.semantic.context;
 import ruleslang.util;
 
 public alias TypeIndex = size_t;
-public alias FunctionImpl = void function(Runtime, immutable Function);
 
-public abstract class Runtime {
+public interface FunctionImpl {
+    public void call(Runtime runtime, immutable Function func);
+}
+
+public class Runtime {
     private Stack _stack;
     private Heap _heap;
     private immutable(ReferenceType)[] types;
     private void*[string] fieldsByName;
+    private FunctionImpl[string] functionImplsByName;
 
     public this() {
         _stack = new Stack(4 * 1024);
@@ -30,8 +34,6 @@ public abstract class Runtime {
     @property public Heap heap() {
         return _heap;
     }
-
-    public abstract void call(immutable Function func);
 
     public TypeIndex registerType(immutable ReferenceType type) {
         // If it already exists in the list, return the index
@@ -60,6 +62,14 @@ public abstract class Runtime {
 
     public void deleteField(immutable Field field) {
         fieldsByName.remove(field.symbolicName);
+    }
+
+    public void registerFunctionImpl(immutable Function func, FunctionImpl impl) {
+        functionImplsByName[func.symbolicName] = impl;
+    }
+
+    public void deleteFunctionImpl(immutable Function func) {
+        functionImplsByName.remove(func.symbolicName);
     }
 
     public void* allocateComposite(immutable ReferenceType type) {
@@ -95,16 +105,18 @@ public abstract class Runtime {
         *(cast (size_t*) (address + TypeIndex.sizeof)) = length;
         return address;
     }
-}
 
-public class IntrinsicRuntime : Runtime {
-    public override void call(immutable Function func) {
+    public void call(immutable Function func) {
         auto symbolicName = func.symbolicName;
-        auto impl = symbolicName in IntrinsicNameSpace.FUNCTION_IMPLEMENTATIONS;
-        if (impl is null) {
-            throw new Exception(format("Unknown function %s", symbolicName));
+        if (func.prefix == IntrinsicNameSpace.PREFIX) {
+            auto impl = symbolicName in IntrinsicNameSpace.FUNCTION_IMPLEMENTATIONS;
+            assert (impl !is null);
+            (*impl)(this, func);
+        } else {
+            auto impl = symbolicName in functionImplsByName;
+            assert (impl !is null);
+            impl.call(this, func);
         }
-        (*impl)(this, func);
     }
 }
 
@@ -128,6 +140,10 @@ public class Stack {
         return byteIndex;
     }
 
+    @property public void* topAddress() {
+        return memory + byteIndex;
+    }
+
     public bool isEmpty() {
         return byteIndex <= 0;
     }
@@ -147,7 +163,7 @@ public class Stack {
         byteIndex += dataByteSize;
     }
 
-    public void push(T)(immutable Type type, T data) {
+    public void push(T)(immutable Type type, T data) if (!is(T == Variant)) {
         static if (is(T : long)) {
             if (AtomicType.BOOL.opEquals(type)) {
                 push!bool(cast(bool) data);
@@ -188,6 +204,41 @@ public class Stack {
             static assert (0);
         }
     }
+
+    public void push(immutable Type type, Variant data) {
+        if (AtomicType.BOOL.opEquals(type)) {
+            push!bool(data.get!bool());
+        } else if (AtomicType.SINT8.opEquals(type)) {
+            push!byte(data.get!byte());
+        } else if (AtomicType.UINT8.opEquals(type)) {
+            push!ubyte(data.get!ubyte());
+        } else if (AtomicType.SINT16.opEquals(type)) {
+            push!short(data.get!short());
+        } else if (AtomicType.UINT16.opEquals(type)) {
+            push!ushort(data.get!ushort());
+        } else if (AtomicType.SINT32.opEquals(type)) {
+            push!int(data.get!int());
+        } else if (AtomicType.UINT32.opEquals(type)) {
+            push!uint(data.get!uint());
+        } else if (AtomicType.SINT64.opEquals(type)) {
+            push!long(data.get!long());
+        } else if (AtomicType.UINT64.opEquals(type)) {
+            push!ulong(data.get!ulong());
+        } else if (AtomicType.FP32.opEquals(type)) {
+            push!float(data.get!float());
+        } else if (AtomicType.FP64.opEquals(type)) {
+            push!double(data.get!double());
+        } else if (cast(immutable ReferenceType) type !is null) {
+            push!(void*)(data.get!(void*));
+        } else {
+            assert (0);
+        }
+    }
+
+    /*
+        func fact(uint64 n) uint64:
+         	return 1u if n == 0u else fact(n - 1u) * n
+    */
 
     public void pushFrom(T)(void* from) {
         // Copy the data from the given location
