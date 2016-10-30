@@ -615,6 +615,8 @@ unittest {
             new immutable FloatLiteralType(1));
     assertLUB(new immutable FloatLiteralType(1), new immutable FloatLiteralType(1), new immutable FloatLiteralType(1));
     assertLUB(new immutable FloatLiteralType(1), new immutable FloatLiteralType(2), AtomicType.FP64);
+    assertLUB(AtomicType.UINT64, new immutable UnsignedIntegerLiteralType(1), AtomicType.UINT64);
+    assertLUB(new immutable UnsignedIntegerLiteralType(1), AtomicType.UINT64, AtomicType.UINT64);
     assertLUB(new immutable StringLiteralType("he"), new immutable StringLiteralType("he"),
             new immutable StringLiteralType("he"));
     assertLUB(new immutable StringLiteralType("hello"), new immutable StringLiteralType("hell"),

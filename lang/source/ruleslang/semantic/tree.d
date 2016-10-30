@@ -1164,20 +1164,17 @@ public immutable class ConditionalNode : TypedNode {
     public this(immutable TypedNode condition, immutable TypedNode whenTrue, immutable TypedNode whenFalse,
             size_t start, size_t end) {
         this.condition = condition.addCastNode(AtomicType.BOOL);
-        // Reduce the literals of the possible values
-        auto reducedTrue = whenTrue;
-        auto reducedFalse = whenFalse;
         // The type is the LUB of the two possible values
-        type = reducedTrue.getType().lowestUpperBound(reducedFalse.getType());
+        type = whenTrue.getType().lowestUpperBound(whenFalse.getType());
         if (type is null) {
             throw new SourceException(
-                format("No common supertype for %s and %s", reducedTrue.getType(), reducedFalse.getType()),
+                format("No common supertype for %s and %s", whenTrue.getType(), whenFalse.getType()),
                 start, end
             );
         }
         // Add the cast nodes to make the conversions explicit
-        this.whenTrue = reducedTrue.addCastNode(type);
-        this.whenFalse = reducedFalse.addCastNode(type);
+        this.whenTrue = whenTrue.addCastNode(type);
+        this.whenFalse = whenFalse.addCastNode(type);
         _start = start;
         _end = end;
     }

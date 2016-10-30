@@ -397,17 +397,10 @@ public immutable class AtomicType : Type {
             return null;
         }
         // If any type is a super type of the other, it is the LUB
-        auto thisToOther = convertibleTo(other);
-        auto otherToThis = other.convertibleTo(this);
-        // This also includes the case where they are the same type
-        if (thisToOther && otherToThis) {
-            assert(opEquals(other));
-            return this;
-        }
-        if (thisToOther && !otherToThis) {
+        if (convertibleTo(other)) {
             return other;
         }
-        if (!thisToOther && otherToThis) {
+        if (other.convertibleTo(this)) {
             return this;
         }
         // Otherwise we get the super types of each
@@ -585,9 +578,6 @@ private template IntegerLiteralTypeTemplate(T) {
         }
 
         public override immutable(Type) lowestUpperBound(immutable Type other) {
-            if (opEquals(other)) {
-                return this;
-            }
             if (convertibleTo(other)) {
                 return other;
             }
@@ -680,9 +670,6 @@ public immutable class FloatLiteralType : AtomicType, AtomicLiteralType {
     }
 
     public override immutable(Type) lowestUpperBound(immutable Type other) {
-        if (opEquals(other)) {
-            return this;
-        }
         if (convertibleTo(other)) {
             return other;
         }
@@ -749,10 +736,6 @@ public immutable class NullType : ReferenceType {
     }
 
     public override immutable(Type) lowestUpperBound(immutable Type other) {
-        // There is a bound with itself
-        if (opEquals(other)) {
-            return this;
-        }
         // If the other type is a reference type, null is always smaller
         if (cast(immutable ReferenceType) other !is null) {
             return other;
@@ -876,9 +859,6 @@ public immutable class TupleType : CompositeType {
     }
 
     public override immutable(Type) lowestUpperBound(immutable Type other) {
-        if (opEquals(other)) {
-            return this;
-        }
         if (convertibleTo(other)) {
             return other;
         }
@@ -1070,9 +1050,6 @@ public immutable class ArrayType : ReferenceType {
     }
 
     public override immutable(Type) lowestUpperBound(immutable Type other) {
-        if (opEquals(other)) {
-            return this;
-        }
         if (convertibleTo(other)) {
             return other;
         }
@@ -1541,9 +1518,6 @@ public immutable class StringLiteralType : SizedArrayLiteralType {
     }
 
     public override immutable(Type) lowestUpperBound(immutable Type other) {
-        if (opEquals(other)) {
-            return this;
-        }
         if (convertibleTo(other)) {
             return other;
         }
