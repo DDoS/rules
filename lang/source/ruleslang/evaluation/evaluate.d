@@ -421,8 +421,6 @@ public immutable class Evaluator {
                 }
                 // Evaluate the implementation block
                 implementation.evaluate(runtime);
-                // Pop the return value off the stack
-                auto returnValue = runtime.stack.pop(func.returnType);
                 // Cleanup the parameters
                 foreach (parameter; parameters) {
                     // Delete the field mapping from the runtime
@@ -430,8 +428,8 @@ public immutable class Evaluator {
                     // Pop the field of the stack
                     runtime.stack.pop(parameter.type);
                 }
-                // Push the return value back on the stack
-                runtime.stack.push(func.returnType, returnValue);
+                // Push the return value on the stack
+                runtime.stack.push(func.returnType, runtime.returnValue);
             }
         }
         // We simply have to register the function implementation to the runtime
@@ -441,8 +439,12 @@ public immutable class Evaluator {
     }
 
     public immutable(Flow) evaluateReturnValue(Runtime runtime, immutable ReturnValueNode returnValue) {
-        // Evaluate the return value and leave it on the stack
+        // Evaluate the return value
         returnValue.value.evaluate(runtime);
+        // Pop it off the stack
+        auto value = runtime.stack.pop(returnValue.value.getType());
+        // Set it in the runtime, as if using a return value register
+        runtime.returnValue = value;
         return Flow.PROCEED;
     }
 }

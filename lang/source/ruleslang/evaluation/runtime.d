@@ -21,6 +21,7 @@ public class Runtime {
     private immutable(ReferenceType)[] types;
     private void*[string] fieldsByName;
     private FunctionImpl[string] functionImplsByName;
+    private Variant _returnValue;
 
     public this() {
         _stack = new Stack(4 * 1024);
@@ -117,6 +118,14 @@ public class Runtime {
             assert (impl !is null);
             impl.call(this, func);
         }
+    }
+
+    @property public void returnValue(Variant value) {
+        _returnValue = value;
+    }
+
+    @property public Variant returnValue() {
+        return _returnValue;
     }
 }
 
