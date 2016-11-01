@@ -21,7 +21,7 @@ symbol = "!" | "@" | "%" | "?" | "&" | "*" | "(" | ")" | "-" | "=" | "+"
     | "|=" | "&&=" | "^^=" | "||=" | "~=" ;
 
 keyword = "def" | "let" | "var" | "if" | "else" | "while" | "for" | "func"
-    | "return" | "break" | "continue" ;
+    | "return" | "break" | "continue" | "when" | "then" ;
 
 (* Excludes the backslash so we can use it for escape sequences *)
 printChar = ?all ASCII print characters? ;

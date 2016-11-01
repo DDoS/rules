@@ -410,7 +410,7 @@ public immutable dstring[] SYMBOLS = [
 
 public immutable dstring[] KEYWORDS = [
     "def"d, "let"d, "var"d, "if"d, "else"d, "while"d, "for"d, "func"d,
-    "return"d, "break"d, "continue"d
+    "return"d, "break"d, "continue"d, "when"d, "then"d
 ];
 
 private immutable dstring NULL_LITERAL = "null"d;

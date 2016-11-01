@@ -40,13 +40,13 @@ private template RulePartDefinition(bool then) {
         mixin sourceIndexFields;
 
         public override string toString() {
-            enum formatString = then ? "ThenDefinition(then (%s %): %s)" : "WhenDefinition(when (%s %): %s)";
+            enum formatString = then ? "ThenDefinition(then (%s %s): %s)" : "WhenDefinition(when (%s %s): %s)";
             return format(formatString, _type.toString(), _name.getSource(), _statements.join!"; "());
         }
     }
 }
 
-public class FileAst {
+public class Rule {
     private TypeDefinition[] _typeDefinitions;
     private VariableDeclaration[] _variableDeclarations;
     private FunctionDefinition[] _functionDefinitions;
@@ -69,6 +69,4 @@ public class FileAst {
     @property public FunctionDefinition[] functionDefinitions() {
         return _functionDefinitions;
     }
-
-    mixin sourceIndexFields;
 }
