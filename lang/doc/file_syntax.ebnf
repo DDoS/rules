@@ -1,0 +1,13 @@
+(* Top level definitions are types, variables and functions*)
+topLevelDef = typeDef | variableDecl | functionDef ;
+
+ruleDef = "(", namedType, identifier, ")", ":", indentation, statements;
+
+(* When definitions are syntax sugar for functions *)
+whenDef = "when", ruleDef ;
+
+(* Then definitions are syntax sugar for functions *)
+thenDef = "then", ruleDef ;
+
+(* The file is a when and then with other definitions mixed it *)
+file = {topLevelDef}, whenDef, {topLevelDef}, thenDef, {topLevelDef} ;
