@@ -152,7 +152,7 @@ private VariableDeclaration parseVariableDeclaration(Tokenizer tokens) {
     return new VariableDeclaration(kind, type, name, value, start);
 }
 
-private IndentSpec getBlockIdentation(Tokenizer tokens, IndentSpec parentIndent) {
+public IndentSpec getBlockIdentation(Tokenizer tokens, IndentSpec parentIndent = noIndent()) {
     // The indentation of the block will be that of the first statement
     // Which is the last one if we encounter many
     Indentation nextIndent = null;
@@ -234,7 +234,7 @@ private Statement[] parseConditionBlocks(Tokenizer tokens, IndentSpec indentSpec
     return statements;
 }
 
-public LoopStatement parseLoopStatement(Tokenizer tokens, IndentSpec indentSpec = noIndent()) {
+private LoopStatement parseLoopStatement(Tokenizer tokens, IndentSpec indentSpec = noIndent()) {
     if (tokens.head() != "while") {
         throw new SourceException("Expected \"while\"", tokens.head());
     }
@@ -258,7 +258,7 @@ public LoopStatement parseLoopStatement(Tokenizer tokens, IndentSpec indentSpec 
     return new LoopStatement(condition, statements, start, end);
 }
 
-public FunctionDefinition parseFunctionDefinition(Tokenizer tokens, IndentSpec indentSpec = noIndent()) {
+private FunctionDefinition parseFunctionDefinition(Tokenizer tokens, IndentSpec indentSpec = noIndent()) {
     if (tokens.head() != "func") {
         throw new SourceException("Expected \"func\"", tokens.head());
     }
@@ -293,7 +293,7 @@ public FunctionDefinition parseFunctionDefinition(Tokenizer tokens, IndentSpec i
     return new FunctionDefinition(name, parameters, returnType, statements, start, end);
 }
 
-public FunctionDefinition.Parameter[] parseFunctionDefinitionParameters(Tokenizer tokens) {
+private FunctionDefinition.Parameter[] parseFunctionDefinitionParameters(Tokenizer tokens) {
     if (tokens.head() != "(") {
         throw new SourceException("Expected '('", tokens.head());
     }
@@ -315,7 +315,7 @@ public FunctionDefinition.Parameter[] parseFunctionDefinitionParameters(Tokenize
     return parameters;
 }
 
-public FunctionDefinition.Parameter parseFunctionDefinitionParameter(Tokenizer tokens) {
+private FunctionDefinition.Parameter parseFunctionDefinitionParameter(Tokenizer tokens) {
     auto type = parseNamedType(tokens);
     if (tokens.head().getKind() != Kind.IDENTIFIER) {
         throw new SourceException("Expected an identifier", tokens.head());
@@ -325,7 +325,7 @@ public FunctionDefinition.Parameter parseFunctionDefinitionParameter(Tokenizer t
     return FunctionDefinition.Parameter(type, name);
 }
 
-public ReturnStatement parseReturnStatement(Tokenizer tokens) {
+private ReturnStatement parseReturnStatement(Tokenizer tokens) {
     if (tokens.head() != "return") {
         throw new SourceException("Expected \"return\"", tokens.head());
     }
@@ -348,7 +348,10 @@ public ReturnStatement parseReturnStatement(Tokenizer tokens) {
     return new ReturnStatement(value, start, end);
 }
 
-public auto parseAbortStatement(AbortStatement)(Tokenizer tokens) {
+private alias parseBreakStatement = parseAbortStatement!BreakStatement;
+private alias parseContinueStatement = parseAbortStatement!ContinueStatement;
+
+private AbortStatement parseAbortStatement(AbortStatement)(Tokenizer tokens) {
     enum keyword = is(AbortStatement == BreakStatement) ? "break" : "continue";
     if (tokens.head() != keyword) {
         throw new SourceException("Expected \"" ~ keyword ~ "\"", tokens.head());
@@ -384,9 +387,9 @@ public Statement parseStatement(Tokenizer tokens, IndentSpec indentSpec = noInde
         case "return":
             return parseReturnStatement(tokens);
         case "break":
-            return parseAbortStatement!BreakStatement(tokens);
+            return parseBreakStatement(tokens);
         case "continue":
-            return parseAbortStatement!ContinueStatement(tokens);
+            return parseContinueStatement(tokens);
         default:
             return parseAssigmnentOrFunctionCall(tokens);
     }
