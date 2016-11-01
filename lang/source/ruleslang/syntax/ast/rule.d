@@ -1,4 +1,4 @@
-module ruleslang.syntax.ast.file;
+module ruleslang.syntax.ast.rule;
 
 import std.format : format;
 
@@ -8,11 +8,11 @@ import ruleslang.syntax.ast.type;
 import ruleslang.syntax.ast.statement;
 import ruleslang.util;
 
-public alias WhenDefinition = RuleDefinition!false;
-public alias ThenDefinition = RuleDefinition!true;
+public alias WhenDefinition = RulePartDefinition!false;
+public alias ThenDefinition = RulePartDefinition!true;
 
-private template RuleDefinition(bool then) {
-    public class RuleDefinition {
+private template RulePartDefinition(bool then) {
+    public class RulePartDefinition {
         private NamedTypeAst _type;
         private Identifier _name;
         private Statement[] _statements;
