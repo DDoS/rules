@@ -11,12 +11,12 @@ import ruleslang.test.assertion;
 
 unittest {
     assertEqual(
-        "WhenDefinition(when (Something data): ReturnStatement(return Compare(data.m == SignedIntegerLiteral(0))))",
+        "Rule(WhenDefinition(when (Something data): ReturnStatement(return Compare(data.m == SignedIntegerLiteral(0)))))",
         parse("when (Something data):\n return data.m == 0")
     );
     assertEqual(
-        "ThenDefinition(then (Stuff[SignedIntegerLiteral(2)] data): "
-            ~ "ReturnStatement(return IndexAccess(data[SignedIntegerLiteral(1)])))",
+        "Rule(ThenDefinition(then (Stuff[SignedIntegerLiteral(2)] data): "
+            ~ "ReturnStatement(return IndexAccess(data[SignedIntegerLiteral(1)]))))",
         parse("then (Stuff[2] data):\n return data[1]")
     );
 }
@@ -24,7 +24,7 @@ unittest {
 private string parse(string source) {
     try {
         auto rule = new Tokenizer(new DCharReader(source)).parseRule();
-        return rule;
+        return rule.toString();
     } catch (SourceException exception) {
         stderr.writeln(exception.getErrorInformation(source).toString());
         assert (0);

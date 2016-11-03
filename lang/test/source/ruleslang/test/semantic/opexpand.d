@@ -150,7 +150,7 @@ unittest {
 }
 
 private string parseAndExpand(string source) {
-    auto statements = new Tokenizer(new DCharReader(source)).parseStatements();
+    auto statements = new Tokenizer(new DCharReader(source)).parseFlowStatements();
     foreach (i, statement; statements) {
         statements[i] = statement.expandOperators();
     }

@@ -9,6 +9,7 @@ import ruleslang.syntax.token;
 import ruleslang.syntax.ast.type;
 import ruleslang.syntax.ast.expression;
 import ruleslang.syntax.ast.statement;
+import ruleslang.syntax.ast.rule;
 import ruleslang.semantic.tree;
 import ruleslang.semantic.context;
 import ruleslang.semantic.type;
@@ -898,6 +899,14 @@ public immutable class Interpreter {
         // Return a block node that exits from the loop, which will be inlined later on
         enum exit = is(AbortStatement == BreakStatement) ? BlockLimit.END : BlockLimit.START;
         return new immutable BlockNode([], blockOffset + 1, exit, abortStatement.start, abortStatement.end);
+    }
+
+    public immutable(FlowNode) interpretWhenDefinition(Context context, WhenDefinition whenDefinition) {
+        return new immutable BlockNode([], 0, BlockLimit.END, whenDefinition.start, whenDefinition.end);
+    }
+
+    public immutable(FlowNode) interpretThenDefinition(Context context, ThenDefinition thenDefinition) {
+        return new immutable BlockNode([], 0, BlockLimit.END, thenDefinition.start, thenDefinition.end);
     }
 
     private static immutable(FlowNode)[] interpretStatements(Context context, Statement[] statements) {

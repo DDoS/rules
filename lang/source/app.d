@@ -37,7 +37,6 @@ void main() {
             continue;
         }
         try {
-            //source = "func test9() bool:\n while true:\n  let a = 1\n  while false:\n   break\n return false";
             auto tokenizer = new Tokenizer(new DCharReader(source));
             if (expressionMode) {
                 while (tokenizer.head().getKind() == Kind.INDENTATION) {

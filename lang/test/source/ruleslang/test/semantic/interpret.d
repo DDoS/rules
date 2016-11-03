@@ -1036,10 +1036,6 @@ unittest {
             ~  " exit to START of 0 blocks); exit to START of 0 blocks); Return(BooleanLiteral(false))))",
         interpretStmt("func test19() bool:\n while true:\n  let a = 1\n  while false:\n   ;\n return false", context)
     );
-    /*assertEqual(
-        "",
-        interpretStmt("func test", context)
-    );*/
 }
 
 private string interpretExp(alias info = getAllInfo)(string source, Context context = new Context()) {
@@ -1065,7 +1061,7 @@ private void interpretExpFails(string source, Context context = new Context()) {
 private string interpretStmt(string source, Context context = new Context()) {
     auto tokenizer = new Tokenizer(new DCharReader(source));
     string[] results;
-    foreach (statement; tokenizer.parseStatements()) {
+    foreach (statement; tokenizer.parseFlowStatements()) {
         results ~= statement.expandOperators().interpret(context).getTreeInfo();
     }
     return results.join!"\n"();

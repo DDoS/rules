@@ -5,6 +5,7 @@ import std.format : format;
 import ruleslang.syntax.source;
 import ruleslang.syntax.token;
 import ruleslang.syntax.tokenizer;
+import ruleslang.syntax.ast.statement;
 import ruleslang.syntax.ast.rule;
 import ruleslang.syntax.parser.type;
 import ruleslang.syntax.parser.statement;
@@ -46,27 +47,58 @@ private RulePartDefinition parseRulePartDefinition(RulePartDefinition)(Tokenizer
     // Get the indentation of the implementation block
     auto blockIndentSpec = getBlockIdentation(tokens);
     // Parse the statements in the block
-    auto statements = parseStatements(tokens, blockIndentSpec);
+    auto statements = parseFlowStatements(tokens, blockIndentSpec);
     if (statements.length > 0) {
         end = statements[$ - 1].end;
     }
     return new RulePartDefinition(type, name, statements, start, end);
 }
 
-public string parseRule(Tokenizer tokens) {
-    while (tokens.head().getKind() == Kind.INDENTATION) {
-        auto indentation = tokens.head().castOrFail!Indentation();
-        if (indentation.getSource().length > 0) {
-            throw new SourceException("Expected no indentation", indentation);
-        }
-        tokens.advance();
-    }
+public Statement parseDefinition(Tokenizer tokens, IndentSpec parentIndent = noIndent()) {
+    assert (parentIndent.isEmpty());
     switch (tokens.head().getSource()) {
+        case "def":
+            return parseTypeDefinition(tokens);
+        case "let":
+        case "var":
+            return parseVariableDeclaration(tokens);
+        case "func":
+            return parseFunctionDefinition(tokens);
         case "when":
-            return parseWhenDefinition(tokens).toString();
+            return parseWhenDefinition(tokens);
         case "then":
-            return parseThenDefinition(tokens).toString();
+            return parseThenDefinition(tokens);
         default:
-            assert (0);
+            throw new SourceException("Not a definition", tokens.head());
     }
+}
+
+public Rule parseRule(Tokenizer tokens) {
+    TypeDefinition[] typeDefinitions;
+    VariableDeclaration[] variableDeclarations;
+    FunctionDefinition[] functionDefinitions;
+    WhenDefinition whenDefinition = null;
+    ThenDefinition thenDefinition = null;
+    foreach (definition; parseStatements!parseDefinition(tokens)) {
+        if (auto typeDef = cast(TypeDefinition) definition) {
+            typeDefinitions ~= typeDef;
+        } else if (auto varDecl = cast(VariableDeclaration) definition) {
+            variableDeclarations ~= varDecl;
+        } else if (auto funcDef = cast(FunctionDefinition) definition) {
+            functionDefinitions ~= funcDef;
+        } else if (auto whenDef = cast(WhenDefinition) definition) {
+            if (whenDefinition !is null) {
+                throw new SourceException("Cannot have multiple \"when\" definitions", whenDef);
+            }
+            whenDefinition = whenDef;
+        } else if (auto thenDef = cast(ThenDefinition) definition) {
+            if (thenDefinition !is null) {
+                throw new SourceException("Cannot have multiple \"when\" definitions", thenDef);
+            }
+            thenDefinition = thenDef;
+        } else {
+            assert (0);
+        }
+    }
+    return new Rule(typeDefinitions, variableDeclarations, functionDefinitions, whenDefinition, thenDefinition);
 }

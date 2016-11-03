@@ -261,7 +261,7 @@ unittest {
 
 private string parse(string source) {
     try {
-        auto statements = new Tokenizer(new DCharReader(source)).parseStatements();
+        auto statements = new Tokenizer(new DCharReader(source)).parseFlowStatements();
         return statements.join!"\n"();
     } catch (SourceException exception) {
         stderr.writeln(exception.getErrorInformation(source).toString());
@@ -271,7 +271,7 @@ private string parse(string source) {
 
 private void assertParseFail(string source, string file = __FILE__, size_t line = __LINE__) {
     try {
-        auto statements = new Tokenizer(new DCharReader(source)).parseStatements();
+        auto statements = new Tokenizer(new DCharReader(source)).parseFlowStatements();
         throw new AssertionError(format("Expected a source exception at %s line %d, but got statements:\n%s",
                 file, line, statements.join!"\n"()));
     } catch (SourceException exception) {

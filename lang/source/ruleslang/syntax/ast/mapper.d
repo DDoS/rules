@@ -4,6 +4,7 @@ import ruleslang.syntax.token;
 import ruleslang.syntax.ast.type;
 import ruleslang.syntax.ast.expression;
 import ruleslang.syntax.ast.statement;
+import ruleslang.syntax.ast.rule;
 
 public abstract class TypeAstMapper {
     public TypeAst mapNamedType(NamedTypeAst type) {
@@ -200,5 +201,19 @@ public abstract class StatementMapper : ExpressionMapper {
 
     public Statement mapContinueStatement(ContinueStatement statement) {
         return statement;
+    }
+
+    public Statement mapWhenDefinition(WhenDefinition statement) {
+        return statement;
+    }
+
+    public Statement mapThenDefinition(ThenDefinition statement) {
+        return statement;
+    }
+}
+
+public abstract class RuleMapper : StatementMapper {
+    public Rule mapRule(Rule rule) {
+        return rule;
     }
 }

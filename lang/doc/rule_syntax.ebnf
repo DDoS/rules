@@ -10,4 +10,4 @@ whenDef = "when", rulePartDef ;
 thenDef = "then", rulePartDef ;
 
 (* The file is a when and then with other definitions mixed it *)
-file = {topLevelDef}, whenDef, {topLevelDef}, thenDef, {topLevelDef} ;
+file = {topLevelDef}, [whenDef], {topLevelDef}, [thenDef], {topLevelDef} ;

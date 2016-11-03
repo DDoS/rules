@@ -13,7 +13,7 @@ import ruleslang.syntax.parser.type;
 import ruleslang.syntax.parser.expression;
 import ruleslang.util;
 
-private struct IndentSpec {
+public struct IndentSpec {
     private size_t count;
     private char w;
     private bool nextIndentIgnored = false;
@@ -21,6 +21,10 @@ private struct IndentSpec {
     private this(char w, size_t count) {
         this.w = w;
         this.count = count;
+    }
+
+    public bool isEmpty() {
+        return count == 0;
     }
 
     private bool validate(Indentation indentation) {
@@ -45,7 +49,7 @@ private struct IndentSpec {
             throw new SourceException("Expected some indentation", indentation);
         }
         char w = source[0];
-        if (count > 0 && this.w != w) {
+        if (!isEmpty() && this.w != w) {
             mixedError(this.w, w);
         }
         foreach (c; source) {
@@ -60,18 +64,18 @@ private struct IndentSpec {
     }
 
     private string toString() {
-        if (count == 0) {
+        if (isEmpty()) {
             return "no indentation";
         }
         return format("%d of '%s' as indentation", count, w.escapeChar());
     }
 }
 
-private IndentSpec noIndent() {
+public IndentSpec noIndent() {
     return IndentSpec(' ', 0);
 }
 
-private TypeDefinition parseTypeDefinition(Tokenizer tokens) {
+public TypeDefinition parseTypeDefinition(Tokenizer tokens) {
     if (tokens.head() != "def") {
         throw new SourceException("Expected \"def\"", tokens.head());
     }
@@ -108,7 +112,7 @@ private Statement parseAssigmnentOrFunctionCall(Tokenizer tokens) {
     return new Assignment(reference, parseExpression(tokens), operator);
 }
 
-private VariableDeclaration parseVariableDeclaration(Tokenizer tokens) {
+public VariableDeclaration parseVariableDeclaration(Tokenizer tokens) {
     // Try to parse "let" or "var" first
     VariableDeclaration.Kind kind;
     if (tokens.head() == "let") {
@@ -186,7 +190,7 @@ private ConditionalStatement parseConditionalStatement(Tokenizer tokens, IndentS
     // Get the indentation of the condition block
     auto blockIndentSpec = getBlockIdentation(tokens, indentSpec);
     // Parse the statements in the block
-    auto trueStatements = parseStatements(tokens, blockIndentSpec);
+    auto trueStatements = parseFlowStatements(tokens, blockIndentSpec);
     if (trueStatements.length > 0) {
         end = trueStatements[$ - 1].end;
     }
@@ -222,7 +226,7 @@ private Statement[] parseConditionBlocks(Tokenizer tokens, IndentSpec indentSpec
     end = tokens.head().end;
     tokens.advance();
     // Reuse the indentation of the "if" block to parse the statements
-    auto statements = parseStatements(tokens, blockIndentSpec);
+    auto statements = parseFlowStatements(tokens, blockIndentSpec);
     if (statements.length > 0) {
         end = statements[$ - 1].end;
     }
@@ -251,14 +255,14 @@ private LoopStatement parseLoopStatement(Tokenizer tokens, IndentSpec indentSpec
     // Get the indentation of the loop block
     auto blockIndentSpec = getBlockIdentation(tokens, indentSpec);
     // Parse the statements in the block
-    auto statements = parseStatements(tokens, blockIndentSpec);
+    auto statements = parseFlowStatements(tokens, blockIndentSpec);
     if (statements.length > 0) {
         end = statements[$ - 1].end;
     }
     return new LoopStatement(condition, statements, start, end);
 }
 
-private FunctionDefinition parseFunctionDefinition(Tokenizer tokens, IndentSpec indentSpec = noIndent()) {
+public FunctionDefinition parseFunctionDefinition(Tokenizer tokens, IndentSpec indentSpec = noIndent()) {
     if (tokens.head() != "func") {
         throw new SourceException("Expected \"func\"", tokens.head());
     }
@@ -286,7 +290,7 @@ private FunctionDefinition parseFunctionDefinition(Tokenizer tokens, IndentSpec 
     // Get the indentation of the implementation block
     auto blockIndentSpec = getBlockIdentation(tokens, indentSpec);
     // Parse the statements in the block
-    auto statements = parseStatements(tokens, blockIndentSpec);
+    auto statements = parseFlowStatements(tokens, blockIndentSpec);
     if (statements.length > 0) {
         end = statements[$ - 1].end;
     }
@@ -371,7 +375,7 @@ private AbortStatement parseAbortStatement(AbortStatement)(Tokenizer tokens) {
     return new AbortStatement(label, start, end);
 }
 
-public Statement parseStatement(Tokenizer tokens, IndentSpec indentSpec = noIndent()) {
+public Statement parseFlowStatement(Tokenizer tokens, IndentSpec indentSpec = noIndent()) {
     switch (tokens.head().getSource()) {
         case "def":
             return parseTypeDefinition(tokens);
@@ -395,7 +399,9 @@ public Statement parseStatement(Tokenizer tokens, IndentSpec indentSpec = noInde
     }
 }
 
-public Statement[] parseStatements(Tokenizer tokens, IndentSpec indentSpec = noIndent()) {
+public alias parseFlowStatements = parseStatements!parseFlowStatement;
+
+public Statement[] parseStatements(alias parseStatement)(Tokenizer tokens, IndentSpec indentSpec = noIndent()) {
     Statement[] statements = [];
     bool empty = true;
     while (tokens.has()) {
