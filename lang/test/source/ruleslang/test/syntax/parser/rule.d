@@ -19,6 +19,17 @@ unittest {
             ~ "ReturnStatement(return IndexAccess(data[SignedIntegerLiteral(1)]))))",
         parse("then (Stuff[2] data):\n return data[1]")
     );
+    assertEqual(
+        "Rule(WhenDefinition(when (S d): ReturnStatement(return BooleanLiteral(true))); "
+            ~ "ThenDefinition(then (S d): FunctionCall(a())))",
+        parse("when (S d):\n return true\nthen(S d):\n a()")
+    );
+    assertEqual(
+        "Rule(TypeDefinition(def S: {int a}); VariableDeclaration(let b = BooleanLiteral(true)); "
+            ~ "FunctionDefinition(func a(): FunctionCall(exit(Sign(-SignedIntegerLiteral(1))))); "
+            ~ "WhenDefinition(when (S d): ReturnStatement(return b)); ThenDefinition(then (S d): FunctionCall(a())))",
+        parse("def S: {int a}\nlet b = true\nwhen (S d):\n return b\nthen(S d):\n a()\nfunc a():\n exit(-1)")
+    );
 }
 
 private string parse(string source) {
