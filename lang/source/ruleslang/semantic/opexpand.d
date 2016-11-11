@@ -9,15 +9,11 @@ import ruleslang.syntax.ast.statement;
 import ruleslang.syntax.ast.mapper;
 import ruleslang.semantic.symbol;
 
-public Expression expandOperators(Expression target) {
+public Ast expandOperators(Ast)(Ast target) {
     return target.map(new OperatorExpander()).map(new OperatorConverter());
 }
 
-public Statement expandOperators(Statement target) {
-    return target.map(new OperatorExpander()).map(new OperatorConverter());
-}
-
-private class OperatorExpander : StatementMapper {
+private class OperatorExpander : RuleMapper {
     public override Statement mapAssignment(Assignment assignment) {
         final switch (assignment.operator.getSource()) {
             case "**=":
@@ -88,7 +84,7 @@ private class OperatorExpander : StatementMapper {
     }
 }
 
-private class OperatorConverter : StatementMapper {
+private class OperatorConverter : RuleMapper {
     public override Expression mapSign(Sign expression) {
         // Don't convert signs for signed decimal integer literals
         // because they are actually part of the literal
