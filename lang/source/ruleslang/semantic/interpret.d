@@ -2,7 +2,7 @@ module ruleslang.semantic.interpret;
 
 import std.format : format;
 import std.typecons : Rebindable;
-import std.algorithm.searching : any;
+import std.algorithm.searching : any, countUntil;
 
 import ruleslang.syntax.source;
 import ruleslang.syntax.token;
@@ -912,5 +912,83 @@ public immutable class Interpreter {
             statementNodes ~= statement.interpret(context);
         }
         return statementNodes;
+    }
+
+    public immutable(Node) interpretRule(Context context, Rule rule) {
+        // Create a mapping from type names to type defs
+        TypeDefinition[string] nameToTypeDef;
+        foreach (typeDef; rule.typeDefinitions) {
+            auto name = typeDef.name.getSource();
+            if (name in nameToTypeDef) {
+                throw new SourceException(format("Cannot re-declare type %s", name), typeDef);
+            }
+            nameToTypeDef[name] = typeDef;
+        }
+        // Resolve the dependency ordering to figure out in what order to declare the types
+        auto orderedTypeDefs = resolveDependencyOrder(nameToTypeDef);
+        import std.stdio; writeln(orderedTypeDefs);
+        // Now declare the types in the resulting order
+        foreach (typeDef; orderedTypeDefs) {
+            typeDef.interpret(context);
+            nameToTypeDef.remove(typeDef.name.getSource());
+        }
+        // Check if there are any unresolved types, because of cyclical dependencies
+        if (nameToTypeDef.length > 0) {
+            auto badTypeDefs = nameToTypeDef.values();
+            throw new SourceException(format("The following type definitions have cyclical dependencies:\n    %s",
+                    badTypeDefs.join!"    \n"()), badTypeDefs[0]);
+        }
+        return NullNode.INSTANCE;
+    }
+
+    private static TypeDefinition[] resolveDependencyOrder(TypeDefinition[string] nameToTypeDef) {
+        // A helper function to remove strings from a list of srings
+        string[] remove(string[] names, string name) {
+            ptrdiff_t index;
+            while ((index = names.countUntil(name)) >= 0) {
+                names = names[0 .. index] ~ names[index + 1 .. $];
+            }
+            return names;
+        }
+        // First we create a graph of the type names to their dependent type names
+        string[][string] nameToDependencies;
+        foreach (name, typeDef; nameToTypeDef) {
+            auto nameDeps = typeDef.type.getTypeNameDependencies();
+            // Remove any dependencies not in the definitions, since they might already exist
+            for (size_t i = 0; i < nameDeps.length; i++) {
+                if (nameDeps[i] !in nameToTypeDef) {
+                    nameDeps = nameDeps[0 .. i] ~ nameDeps[i + 1 .. $];
+                    i -= 1;
+                }
+            }
+            nameToDependencies[name] = nameDeps;
+        }
+        // Then we find a topological ordering of the graph
+        TypeDefinition[] order;
+        bool changed;
+        do {
+            changed = false;
+            // For every node in the graph
+            foreach (name, type; nameToTypeDef) {
+                auto optDeps = name in nameToDependencies;
+                if (optDeps is null) {
+                    continue;
+                }
+                auto deps = *optDeps;
+                // Check if its dependencies have been resolved
+                if (deps.length <= 0) {
+                    // If so, then it is the next in the order
+                    order ~= type;
+                    nameToDependencies.remove(name);
+                    // Remove it as a dependency in the other nodes
+                    foreach (otherName; nameToDependencies.keys()) {
+                        nameToDependencies[otherName] = remove(nameToDependencies[otherName], name);
+                    }
+                    changed = true;
+                }
+            }
+            // Repeat as long as we are not stuck in a cycle
+        } while (changed);
+        return order;
     }
 }
