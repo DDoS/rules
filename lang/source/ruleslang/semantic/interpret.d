@@ -31,18 +31,15 @@ public immutable class Interpreter {
     private static immutable(Type) interpretNamedType(bool allowRuntimeSize)(Context context, NamedTypeAst namedType,
             out immutable(TypedNode)[] runtimeSizes) {
         auto name = namedType.name;
-        if (name.length != 1) {
-            throw new SourceException("Multi-part type names are not supported right now", namedType);
-        }
         // Get the type from the name by doing a context lookup
-        auto nameSource = name[0].getSource();
+        auto nameSource = name.getSource();
         string exceptionMessage;
         auto type = collectExceptionMessage(context.resolveType(nameSource), exceptionMessage);
         if (exceptionMessage !is null) {
-            throw new SourceException(exceptionMessage, name[0]);
+            throw new SourceException(exceptionMessage, name);
         }
         if (type is null) {
-            throw new SourceException(format("No type for name %s", nameSource), name[0]);
+            throw new SourceException(format("No type for name %s", nameSource), name);
         }
         // Add array dimensions if any
         Rebindable!(immutable Type) wrapped = type;

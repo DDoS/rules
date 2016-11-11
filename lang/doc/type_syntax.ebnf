@@ -1,8 +1,3 @@
-(* Names are just "." separated list of identifiers. They represent packages,
-    class names, fields and/or variables. These need to be disambiguated
-    later. *)
-name = identifierToken, {".", identifierToken} ;
-
 (* Array notation is like D and reversed compared to Java.
     int[1][2] is an array of 2 arrays of 1 integer.
     We can also have unsized arrays which, like int[][2],
@@ -11,8 +6,8 @@ arrayUnsized = "[", "]" ;
 arraySized = "[", expression, "]" ;
 arrayDimension = arrayUnsized | arraySized ;
 
-(* Named types are names with optional array dimensions *)
-namedType = name, {arrayDimension} ;
+(* Named types are identifiers with optional array dimensions *)
+namedType = identifier, {arrayDimension} ;
 
 (* Any type is only {} *)
 anyType = "{", "}" ;

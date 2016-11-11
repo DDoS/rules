@@ -25,17 +25,17 @@ public interface TypeAst {
 }
 
 public class NamedTypeAst : TypeAst {
-    private Identifier[] _name;
+    private Identifier _name;
     private Expression[] _dimensions;
 
-    public this(Identifier[] name, Expression[] dimensions, size_t end) {
+    public this(Identifier name, Expression[] dimensions, size_t end) {
         _name = name;
         _dimensions = dimensions;
-        _start = name[0].start;
+        _start = name.start;
         _end = end;
     }
 
-    @property public Identifier[] name() {
+    @property public Identifier name() {
         return _name;
     }
 
@@ -57,9 +57,8 @@ public class NamedTypeAst : TypeAst {
     }
 
     public override string toString() {
-        auto componentName = _name.join!(".", "a.getSource()")();
         auto dimensionsString = _dimensions.join!("", "\"[\" ~ (a is null ? \"\" : a.toString()) ~ \"]\"");
-        return componentName ~ dimensionsString;
+        return _name.getSource() ~ dimensionsString;
     }
 }
 

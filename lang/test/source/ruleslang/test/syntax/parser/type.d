@@ -13,24 +13,12 @@ unittest {
         parseTestType("Test")
     );
     assertEqual(
-        "ca.sapon.Test",
-        parseTestType("ca.sapon.Test")
-    );
-    assertEqual(
         "Test[]",
         parseTestType("Test[]")
     );
     assertEqual(
-        "ca.sapon.Test[]",
-        parseTestType("ca.sapon.Test[]")
-    );
-    assertEqual(
         "Test[SignedIntegerLiteral(1)]",
         parseTestType("Test[1]")
-    );
-    assertEqual(
-        "ca.sapon.Test[SignedIntegerLiteral(2)]",
-        parseTestType("ca.sapon.Test[2]")
     );
     assertEqual(
         "Test[Multiply(SignedIntegerLiteral(1) * SignedIntegerLiteral(3))]",
@@ -69,14 +57,6 @@ unittest {
         parseTestType("{uint32[]}")
     );
     assertEqual(
-        "{uint32[], ca.sapon.Test}",
-        parseTestType("{uint32[], ca.sapon.Test}")
-    );
-    assertEqual(
-        "{{uint32[] us}, ca.sapon.Test}",
-        parseTestType("{{uint32[] us}, ca.sapon.Test}")
-    );
-    assertEqual(
         "{bool b}",
         parseTestType("{bool b}")
     );
@@ -87,14 +67,6 @@ unittest {
     assertEqual(
         "{uint32[] us}",
         parseTestType("{uint32[] us}")
-    );
-    assertEqual(
-        "{uint32[] us, ca.sapon.Test sap}",
-        parseTestType("{uint32[] us, ca.sapon.Test sap}")
-    );
-    assertEqual(
-        "{{uint32[] us}, {ca.sapon.Test, Hey}}",
-        parseTestType("{{uint32[] us}, {ca.sapon.Test, Hey}}")
     );
     assertParseTypeFail("{bool b, bool}");
     assertParseTypeFail("{bool, bool b}");

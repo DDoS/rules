@@ -8,23 +8,6 @@ import ruleslang.syntax.ast.expression;
 import ruleslang.syntax.parser.expression;
 import ruleslang.util;
 
-public Identifier[] parseName(Tokenizer tokens) {
-    if (tokens.head().getKind() != Kind.IDENTIFIER) {
-        throw new SourceException("Expected an identifier", tokens.head());
-    }
-    Identifier[] name = [tokens.head().castOrFail!Identifier()];
-    tokens.advance();
-    while (tokens.head() == ".") {
-        tokens.advance();
-        if (tokens.head().getKind() != Kind.IDENTIFIER) {
-            throw new SourceException("Expected an identifier", tokens.head());
-        }
-        name ~= tokens.head().castOrFail!Identifier();
-        tokens.advance();
-    }
-    return name;
-}
-
 private Expression parseArrayDimension(Tokenizer tokens, out size_t end) {
     if (tokens.head() != "[") {
         throw new SourceException("Expected '['", tokens.head());
@@ -45,9 +28,13 @@ private Expression parseArrayDimension(Tokenizer tokens, out size_t end) {
 }
 
 public NamedTypeAst parseNamedType(Tokenizer tokens) {
-    auto name = parseName(tokens);
+    if (tokens.head().getKind() != Kind.IDENTIFIER) {
+        throw new SourceException("Expected an identifier", tokens.head());
+    }
+    auto name = tokens.head().castOrFail!Identifier();
+    auto end = name.end;
+    tokens.advance();
     Expression[] dimensions = [];
-    auto end = name[$ - 1].end;
     while (tokens.head() == "[") {
         dimensions ~= parseArrayDimension(tokens, end);
     }

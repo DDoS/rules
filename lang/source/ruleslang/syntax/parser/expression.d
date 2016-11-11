@@ -62,6 +62,23 @@ public CompositeLiteral parseCompositeLiteral(Tokenizer tokens) {
     return new CompositeLiteral(values, start, end);
 }
 
+public Identifier[] parseName(Tokenizer tokens) {
+    if (tokens.head().getKind() != Kind.IDENTIFIER) {
+        throw new SourceException("Expected an identifier", tokens.head());
+    }
+    Identifier[] name = [tokens.head().castOrFail!Identifier()];
+    tokens.advance();
+    while (tokens.head() == ".") {
+        tokens.advance();
+        if (tokens.head().getKind() != Kind.IDENTIFIER) {
+            throw new SourceException("Expected an identifier", tokens.head());
+        }
+        name ~= tokens.head().castOrFail!Identifier();
+        tokens.advance();
+    }
+    return name;
+}
+
 private Expression parseAtom(Tokenizer tokens) {
     if (tokens.head() == "{") {
         // Composite literal

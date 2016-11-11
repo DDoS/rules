@@ -73,6 +73,11 @@ compositeLiteral = "{", [compositeLiteralBody], "}" ;
 (* An initializer for a value is a named type with a composite literal*)
 initializer = namedType, compositeLiteral ;
 
+(* Names are just "." separated list of identifiers. They represent,
+    class names, fields or functions. These need to be disambiguated
+    later. *)
+name = identifierToken, {".", identifierToken} ;
+
 (* an atom is a literal, a name, an initializer or an expression in "()" *)
 atom = ("(", expression, ")") | literalToken | compositeLiteral | name
     | (".", identifierToken) | initializer ;
