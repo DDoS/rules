@@ -3,8 +3,9 @@ module ruleslang.test.semantic.interpret;
 import ruleslang.syntax.source;
 import ruleslang.syntax.token;
 import ruleslang.syntax.tokenizer;
-import ruleslang.syntax.parser.statement;
 import ruleslang.syntax.parser.expression;
+import ruleslang.syntax.parser.statement;
+import ruleslang.syntax.parser.rule;
 import ruleslang.semantic.opexpand;
 import ruleslang.semantic.context;
 import ruleslang.semantic.tree;
@@ -1038,6 +1039,21 @@ unittest {
     );
 }
 
+unittest {
+    assertEqual(
+        "Null()",
+        interpretRule("def float: fp32")
+    );
+    assertEqual(
+        "Null()",
+        interpretRule("def float: fp32\ndef Vec3f: {float, float, float}")
+    );
+    assertEqual(
+        "Null()",
+        interpretRule("def Vec3f: {float, float, float}\ndef float: fp32")
+    );
+}
+
 private string interpretExp(alias info = getAllInfo)(string source, Context context = new Context()) {
     auto tokenizer = new Tokenizer(new DCharReader(source));
     if (tokenizer.head().getKind() == Kind.INDENTATION) {
@@ -1070,6 +1086,22 @@ private string interpretStmt(string source, Context context = new Context()) {
 private void interpretStmtFails(string source, Context context = new Context()) {
     try {
         auto node = source.interpretStmt(context);
+        throw new AssertionError("Expected a source exception, but got node:\n" ~ node);
+    } catch (SourceException exception) {
+        debug (verboseTests) {
+            import std.stdio : stderr;
+            stderr.writeln(exception.getErrorInformation(source).toString());
+        }
+    }
+}
+
+private string interpretRule(string source, Context context = new Context()) {
+    return new Tokenizer(new DCharReader(source)).parseRule().expandOperators().interpret(context).getTreeInfo();
+}
+
+private void interpretRuleFails(string source, Context context = new Context()) {
+    try {
+        auto node = source.interpretRule(context);
         throw new AssertionError("Expected a source exception, but got node:\n" ~ node);
     } catch (SourceException exception) {
         debug (verboseTests) {
