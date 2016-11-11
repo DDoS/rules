@@ -19,6 +19,7 @@ public interface TypeAst {
     @property public size_t end();
     @property public void start(size_t start);
     @property public void end(size_t end);
+    public string[] getTypeNameDependencies();
     public TypeAst map(ExpressionMapper mapper);
     public immutable(Type) interpret(Context context);
     public string toString();
@@ -45,6 +46,10 @@ public class NamedTypeAst : TypeAst {
 
     mixin sourceIndexFields;
 
+    public override string[] getTypeNameDependencies() {
+        return [_name.getSource()];
+    }
+
     public override TypeAst map(ExpressionMapper mapper) {
         foreach (i, dimension; _dimensions) {
             _dimensions[i] = dimension is null ? null : dimension.map(mapper);
@@ -69,6 +74,10 @@ public class AnyTypeAst : TypeAst {
     }
 
     mixin sourceIndexFields;
+
+    public override string[] getTypeNameDependencies() {
+        return [];
+    }
 
     public override TypeAst map(ExpressionMapper mapper) {
         return mapper.mapAnyType(this);
@@ -97,6 +106,14 @@ public class TupleTypeAst : TypeAst {
     }
 
     mixin sourceIndexFields;
+
+    public override string[] getTypeNameDependencies() {
+        string[] deps;
+        foreach (memberType; _memberTypes) {
+            deps ~= memberType.getTypeNameDependencies();
+        }
+        return deps;
+    }
 
     public override TypeAst map(ExpressionMapper mapper) {
         foreach (i, memberType; _memberTypes) {
@@ -135,6 +152,14 @@ public class StructTypeAst : TypeAst {
     }
 
     mixin sourceIndexFields;
+
+    public override string[] getTypeNameDependencies() {
+        string[] deps;
+        foreach (memberType; _memberTypes) {
+            deps ~= memberType.getTypeNameDependencies();
+        }
+        return deps;
+    }
 
     public override TypeAst map(ExpressionMapper mapper) {
         foreach (i, memberType; _memberTypes) {
