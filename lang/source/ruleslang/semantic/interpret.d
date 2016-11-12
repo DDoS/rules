@@ -664,7 +664,7 @@ public immutable class Interpreter {
         return new immutable ConditionalNode(conditionNode, trueNode, falseNode, conditional.start, conditional.end);
     }
 
-    public immutable(FlowNode) interpretTypeDefinition(Context context, TypeDefinition typeDefinition) {
+    public immutable(TypeDefinitionNode) interpretTypeDefinition(Context context, TypeDefinition typeDefinition) {
         auto name = typeDefinition.name.getSource();
         auto type = typeDefinition.type.interpret(context);
         try {
@@ -828,7 +828,8 @@ public immutable class Interpreter {
                 loopStatement.start, loopStatement.end);
     }
 
-    public immutable(FlowNode) interpretFunctionDefinition(Context context, FunctionDefinition functionDefinition) {
+    public immutable(FunctionDefinitionNode) interpretFunctionDefinition(Context context,
+            FunctionDefinition functionDefinition) {
         // Interpret the function signature first
         auto func = interpretFunctionSignature(context, functionDefinition);
         // Then interpret the implementation
@@ -857,8 +858,8 @@ public immutable class Interpreter {
         return func;
     }
 
-    private static immutable(FlowNode) interpretFunctionImplementation(Context context, FunctionDefinition functionDefinition,
-            immutable Function func) {
+    private static immutable(FunctionDefinitionNode) interpretFunctionImplementation(Context context,
+            FunctionDefinition functionDefinition, immutable Function func) {
         // Enter the function body
         context.enterFunctionImpl(func);
         // Define each parameter as a field
@@ -958,7 +959,7 @@ public immutable class Interpreter {
         return statementNodes;
     }
 
-    public immutable(Node) interpretRule(Context context, Rule rule) {
+    public immutable(RuleNode) interpretRule(Context context, Rule rule) {
         // Create a mapping from type names to type defs
         TypeDefinition[string] nameToTypeDef;
         foreach (typeDef; rule.typeDefinitions) {
@@ -971,9 +972,9 @@ public immutable class Interpreter {
         // Resolve the dependency ordering to figure out in what order to declare the types
         auto orderedTypeDefs = resolveDependencyOrder!getTypeNameDependencies(nameToTypeDef);
         // Now declare the types in the resulting order
-        immutable(FlowNode)[] typeDefNodes;
+        immutable(TypeDefinitionNode)[] typeDefNodes;
         foreach (typeDef; orderedTypeDefs) {
-            typeDefNodes ~= typeDef.interpret(context);
+            typeDefNodes ~= interpretTypeDefinition(context, typeDef);
             nameToTypeDef.remove(typeDef.name.getSource());
         }
         // Check if there are any unresolved types, because of cyclical dependencies
@@ -989,7 +990,7 @@ public immutable class Interpreter {
         }
         // Next we actually interpret the function implementation
         // which we did after because of possible mutual dependencies
-        immutable(FlowNode)[] funcDefNodes;
+        immutable(FunctionDefinitionNode)[] funcDefNodes;
         foreach (i, funcDef; rule.functionDefinitions) {
             funcDefNodes ~= interpretFunctionImplementation(context, funcDef, functions[i]);
         }
@@ -1016,9 +1017,11 @@ public immutable class Interpreter {
             varDeclNodeToVarDecl[varDeclNode] = varDecl;
         }
         // Now we need to resolve the dependency ordering amongst variables so we can get a valid evaluation order
-        auto varDeclNodes = resolveDependencyOrder!getFieldDependencies(fieldToVarDeclNode);
+        auto orderedVarDeclNodes = resolveDependencyOrder!getFieldDependencies(fieldToVarDeclNode);
         // Check if there are any unresolved fields, because of cyclical dependencies
-        foreach (varDeclNode; varDeclNodes) {
+        immutable(VariableDeclarationNode)[] varDeclNodes;
+        foreach (varDeclNode; orderedVarDeclNodes) {
+            varDeclNodes ~= varDeclNode;
             varDeclNodeToVarDecl.remove(varDeclNode);
         }
         if (varDeclNodeToVarDecl.length > 0) {
@@ -1026,7 +1029,7 @@ public immutable class Interpreter {
             throw new SourceException(format("The following variable declaration have cyclical dependencies:\n    %s\n",
                     badVarDecls.join!("\n    ", "a.name.getSource()")), badVarDecls[0]);
         }
-        return NullNode.INSTANCE;
+        return new immutable RuleNode(typeDefNodes, funcDefNodes, varDeclNodes, 0, 0);
     }
 
     public static string[] getTypeNameDependencies(TypeDefinition typeDef) {

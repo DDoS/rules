@@ -1041,25 +1041,29 @@ unittest {
 
 unittest {
     assertEqual(
-        "Null()",
+        "Rule(TypeDefinition(def float: fp32))",
         interpretRule("def float: fp32")
     );
     assertEqual(
-        "Null()",
+        "Rule(TypeDefinition(def float: fp32); TypeDefinition(def Vec3f: {fp32, fp32, fp32}))",
         interpretRule(
             "def float: fp32\n" ~
             "def Vec3f: {float, float, float}"
         )
     );
     assertEqual(
-        "Null()",
+        "Rule(TypeDefinition(def float: fp32); TypeDefinition(def Vec3f: {fp32, fp32, fp32}))",
         interpretRule(
             "def Vec3f: {float, float, float}\n" ~
             "def float: fp32"
         )
     );
     assertEqual(
-        "Null()",
+        "Rule(TypeDefinition(def float: fp32); TypeDefinition(def Vec3f: {fp32 x, fp32 y, fp32 z}); "
+            ~ "FunctionDefinition(opAdd({fp32 x, fp32 y, fp32 z} a, {fp32 x, fp32 y, fp32 z} b) {fp32 x, fp32 y, fp32 z}: "
+            ~ "Block(Return(TupleLiteral({FunctionCall(opAdd(MemberAccess(FieldAccess(a).x), MemberAccess(FieldAccess(b).x))), "
+            ~ "FunctionCall(opAdd(MemberAccess(FieldAccess(a).y), MemberAccess(FieldAccess(b).y))), "
+            ~ "FunctionCall(opAdd(MemberAccess(FieldAccess(a).z), MemberAccess(FieldAccess(b).z)))})))))",
         interpretRule(
             "def Vec3f: {float x, float y, float z}\n" ~
             "def float: fp32\n" ~
@@ -1068,7 +1072,17 @@ unittest {
         )
     );
     assertEqual(
-        "Null()",
+        "Rule(TypeDefinition(def float: fp32); TypeDefinition(def Vec3f: {fp32 x, fp32 y, fp32 z}); "
+            ~ "FunctionDefinition(opSubtract({fp32 x, fp32 y, fp32 z} a, {fp32 x, fp32 y, fp32 z} b) {fp32 x, fp32 y, fp32 z}: "
+            ~ "Block(Return(FunctionCall(opAdd(FieldAccess(a), FunctionCall(opNegate(FieldAccess(b)))))))); "
+            ~ "FunctionDefinition(opNegate({fp32 x, fp32 y, fp32 z} a) {fp32 x, fp32 y, fp32 z}: "
+            ~ "Block(Return(TupleLiteral({FunctionCall(opNegate(MemberAccess(FieldAccess(a).x))), "
+            ~ "FunctionCall(opNegate(MemberAccess(FieldAccess(a).y))), "
+            ~ "FunctionCall(opNegate(MemberAccess(FieldAccess(a).z)))})))); "
+            ~ "FunctionDefinition(opAdd({fp32 x, fp32 y, fp32 z} a, {fp32 x, fp32 y, fp32 z} b) {fp32 x, fp32 y, fp32 z}: "
+            ~ "Block(Return(TupleLiteral({FunctionCall(opAdd(MemberAccess(FieldAccess(a).x), MemberAccess(FieldAccess(b).x))), "
+            ~ "FunctionCall(opAdd(MemberAccess(FieldAccess(a).y), MemberAccess(FieldAccess(b).y))), "
+            ~ "FunctionCall(opAdd(MemberAccess(FieldAccess(a).z), MemberAccess(FieldAccess(b).z)))})))))",
         interpretRule(
             "def Vec3f: {float x, float y, float z}\n" ~
             "def float: fp32\n" ~
@@ -1081,7 +1095,20 @@ unittest {
         )
     );
     assertEqual(
-        "Null()",
+        "Rule(TypeDefinition(def float: fp32); TypeDefinition(def Vec3f: {fp32 x, fp32 y, fp32 z}); "
+            ~ "FunctionDefinition(opSubtract({fp32 x, fp32 y, fp32 z} a, {fp32 x, fp32 y, fp32 z} b) {fp32 x, fp32 y, fp32 z}: "
+            ~ "Block(Return(FunctionCall(opAdd(FieldAccess(a), FunctionCall(opNegate(FieldAccess(b)))))))); "
+            ~ "FunctionDefinition(opNegate({fp32 x, fp32 y, fp32 z} a) {fp32 x, fp32 y, fp32 z}: "
+            ~ "Block(Return(TupleLiteral({FunctionCall(opNegate(MemberAccess(FieldAccess(a).x))), "
+            ~ "FunctionCall(opNegate(MemberAccess(FieldAccess(a).y))), "
+            ~ "FunctionCall(opNegate(MemberAccess(FieldAccess(a).z)))})))); "
+            ~ "FunctionDefinition(opAdd({fp32 x, fp32 y, fp32 z} a, {fp32 x, fp32 y, fp32 z} b) {fp32 x, fp32 y, fp32 z}: "
+            ~ "Block(Return(TupleLiteral({FunctionCall(opAdd(MemberAccess(FieldAccess(a).x), MemberAccess(FieldAccess(b).x))), "
+            ~ "FunctionCall(opAdd(MemberAccess(FieldAccess(a).y), MemberAccess(FieldAccess(b).y))), "
+            ~ "FunctionCall(opAdd(MemberAccess(FieldAccess(a).z), MemberAccess(FieldAccess(b).z)))})))); "
+            ~ "VariableDeclaration({fp32 x, fp32 y, fp32 z} X_POS = StructLiteral({x: FloatLiteral(1), y: FloatLiteral(0), "
+            ~ "z: FloatLiteral(0)})); VariableDeclaration({fp32 x, fp32 y, fp32 z} X_NEG = "
+            ~ "FunctionCall(opNegate(FieldAccess(X_POS)))))",
         interpretRule(
             "def Vec3f: {float x, float y, float z}\n" ~
             "def float: fp32\n" ~

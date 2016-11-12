@@ -1507,6 +1507,41 @@ public immutable class ReturnValueNode : FlowNode {
     }
 }
 
+public immutable class RuleNode : Node {
+    public TypeDefinitionNode[] typeDefinitions;
+    public FunctionDefinitionNode[] functionDefinitions;
+    public VariableDeclarationNode[] variableDeclarations;
+
+    public this(immutable(TypeDefinitionNode)[] typeDefinitions, immutable(FunctionDefinitionNode)[] functionDefinitions,
+            immutable(VariableDeclarationNode)[] variableDeclarations, size_t start, size_t end) {
+        this.typeDefinitions = typeDefinitions;
+        this.functionDefinitions = functionDefinitions;
+        this.variableDeclarations = variableDeclarations;
+        _start = start;
+        _end = end;
+    }
+
+    mixin sourceIndexFields!false;
+
+    public override immutable(Node)[] getChildren() {
+        immutable(Node)[] children;
+        foreach (typeDef; typeDefinitions) {
+            children ~= typeDef;
+        }
+        foreach (funcDef; functionDefinitions) {
+            children ~= funcDef;
+        }
+        foreach (varDecl; variableDeclarations) {
+            children ~= varDecl;
+        }
+        return children;
+    }
+
+    public override string toString() {
+        return format("Rule(%s)", getChildren().join!"; "());
+    }
+}
+
 public immutable(Type)[] getTypes(immutable(TypedNode)[] values) {
     immutable(Type)[] valueTypes = [];
     valueTypes.reserve(values.length);
