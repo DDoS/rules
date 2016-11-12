@@ -51,7 +51,7 @@ void main() {
                     expression.evaluate(context, runtime);
                 }
             } else {
-                foreach (statement; tokenizer.parseStatements()) {
+                foreach (statement; tokenizer.parseFlowStatements()) {
                     statement.evaluate(context, runtime);
                 }
             }
