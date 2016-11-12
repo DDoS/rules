@@ -2,7 +2,7 @@ module ruleslang.util;
 
 import std.conv : to;
 import std.range.primitives : isInputRange;
-import std.algorithm.searching : canFind, findAmong;
+import std.algorithm.searching : canFind, findAmong, countUntil;
 import std.algorithm.iteration : map, reduce;
 import std.range : zip;
 import std.ascii : isDigit, isAlphaNum, toLower, toUpper;
@@ -61,6 +61,58 @@ private void reduceGraph(T)(ref T[][T] adjacencies, ref T[][T] result, T indepen
         }
     }
     result[independent] = adjacents;
+}
+
+public T[] resolveDependencyOrder(alias getDependencies, T, S)(T[S] resourceToObject)
+        if (is(ReturnType!getDependencies == S[])) {
+    // A helper function to remove resources from a list
+    S[] remove(S[] resources, S resource) {
+        ptrdiff_t index;
+        while ((index = resources.countUntil(resource)) >= 0) {
+            resources = resources[0 .. index] ~ resources[index + 1 .. $];
+        }
+        return resources;
+    }
+    // First we create a graph of the objects to their resources
+    S[][S] resourceToDependencies;
+    foreach (resource, object; resourceToObject) {
+        auto dependencies = getDependencies(object);
+        // Remove any dependencies not in the resources, since they might already exist
+        for (size_t i = 0; i < dependencies.length; i++) {
+            if (dependencies[i] !in resourceToObject) {
+                dependencies = dependencies[0 .. i] ~ dependencies[i + 1 .. $];
+                i -= 1;
+            }
+        }
+        resourceToDependencies[resource] = dependencies;
+    }
+    // Then we find a topological ordering of the graph
+    T[] order;
+    bool changed;
+    do {
+        changed = false;
+        // For every node in the graph
+        foreach (resource, object; resourceToObject) {
+            auto optDeps = resource in resourceToDependencies;
+            if (optDeps is null) {
+                continue;
+            }
+            auto deps = *optDeps;
+            // Check if its dependencies have been resolved
+            if (deps.length <= 0) {
+                // If so, then it is the next in the order
+                order ~= object;
+                resourceToDependencies.remove(resource);
+                // Remove it as a dependency in the other nodes
+                foreach (otherResource; resourceToDependencies.keys()) {
+                    resourceToDependencies[otherResource] = remove(resourceToDependencies[otherResource], resource);
+                }
+                changed = true;
+            }
+        }
+        // Repeat as long as we are not stuck in a cycle
+    } while (changed);
+    return order;
 }
 
 public void addMissing(T)(ref T[] to, T[] elements) {

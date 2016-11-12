@@ -1080,6 +1080,23 @@ unittest {
             "    return {a.x + b.x, a.y + b.y, a.z + b.z}"
         )
     );
+    assertEqual(
+        "Null()",
+        interpretRule(
+            "def Vec3f: {float x, float y, float z}\n" ~
+            "def float: fp32\n" ~
+            "let Vec3f X_NEG = -X_POS\n" ~
+            "let Vec3f X_POS = {1, 0, 0}\n" ~
+            "func opSubtract(Vec3f a, Vec3f b) Vec3f:\n" ~
+            "    return a + -b\n" ~
+            "func opNegate(Vec3f a) Vec3f:\n" ~
+            "    return {-a.x, -a.y, -a.z}\n" ~
+            "func opAdd(Vec3f a, Vec3f b) Vec3f:\n" ~
+            "    return {a.x + b.x, a.y + b.y, a.z + b.z}"
+        )
+    );
+    interpretRuleFails("let a = 1");
+    interpretRuleFails("var a = 1");
 }
 
 private string interpretExp(alias info = getAllInfo)(string source, Context context = new Context()) {

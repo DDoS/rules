@@ -2,7 +2,7 @@ module ruleslang.semantic.interpret;
 
 import std.format : format;
 import std.typecons : Rebindable;
-import std.algorithm.searching : any, countUntil;
+import std.algorithm.searching : any;
 
 import ruleslang.syntax.source;
 import ruleslang.syntax.token;
@@ -968,7 +968,7 @@ public immutable class Interpreter {
             nameToTypeDef[name] = typeDef;
         }
         // Resolve the dependency ordering to figure out in what order to declare the types
-        auto orderedTypeDefs = resolveDependencyOrder(nameToTypeDef);
+        auto orderedTypeDefs = resolveDependencyOrder!getTypeNameDependencies(nameToTypeDef);
         // Now declare the types in the resulting order
         immutable(FlowNode)[] typeDefNodes;
         foreach (typeDef; orderedTypeDefs) {
@@ -994,7 +994,7 @@ public immutable class Interpreter {
         }
         // Now we do the same with the variable declaration signatures
         immutable(Field)[] fields;
-        bool[] reAssignable;
+        auto reAssignable = new bool[rule.variableDeclarations.length];
         foreach (i, varDecl; rule.variableDeclarations) {
             // Allowing type inference makes the dependency problem a lot harder, so we don't allow it here
             if (varDecl.type is null) {
@@ -1005,64 +1005,30 @@ public immutable class Interpreter {
             assert (value is null);
         }
         // Then we can interpret the variable declaration values, since they depend on other variables or functions
-        immutable(FlowNode)[] varDeclNodes;
+        Rebindable!(immutable FlowNode)[immutable(Field)] fieldToVarDeclNode;
         foreach (i, varDecl; rule.variableDeclarations) {
+            auto field = fields[i];
             Rebindable!(immutable TypedNode) value = null;
-            varDeclNodes ~= interpretVariableDeclarationValue(context, varDecl, fields[i], value, reAssignable[i]);
+            fieldToVarDeclNode[field] = interpretVariableDeclarationValue(context, varDecl, field, value, reAssignable[i]);
         }
         // Now we need to resolve the dependency ordering amongst variables so we can get a valid evaluation order
-
+        auto orderedVarDeclNode = resolveDependencyOrder!getFieldDependencies(fieldToVarDeclNode);
         return NullNode.INSTANCE;
     }
 
-    private static TypeDefinition[] resolveDependencyOrder(TypeDefinition[string] nameToTypeDef) {
-        // A helper function to remove strings from a list of srings
-        string[] remove(string[] names, string name) {
-            ptrdiff_t index;
-            while ((index = names.countUntil(name)) >= 0) {
-                names = names[0 .. index] ~ names[index + 1 .. $];
+    public static string[] getTypeNameDependencies(TypeDefinition typeDef) {
+        return typeDef.type.getTypeNameDependencies();
+    }
+
+    public static immutable(Field)[] getFieldDependencies(immutable Node node) {
+        immutable(Field)[] dependencies;
+        foreach (child; node.getChildren()) {
+            if (auto fieldAccess = cast(immutable FieldAccessNode) child) {
+                dependencies ~= fieldAccess.field;
+            } else {
+                dependencies ~= getFieldDependencies(child);
             }
-            return names;
         }
-        // First we create a graph of the type names to their dependent type names
-        string[][string] nameToDependencies;
-        foreach (name, typeDef; nameToTypeDef) {
-            auto nameDeps = typeDef.type.getTypeNameDependencies();
-            // Remove any dependencies not in the definitions, since they might already exist
-            for (size_t i = 0; i < nameDeps.length; i++) {
-                if (nameDeps[i] !in nameToTypeDef) {
-                    nameDeps = nameDeps[0 .. i] ~ nameDeps[i + 1 .. $];
-                    i -= 1;
-                }
-            }
-            nameToDependencies[name] = nameDeps;
-        }
-        // Then we find a topological ordering of the graph
-        TypeDefinition[] order;
-        bool changed;
-        do {
-            changed = false;
-            // For every node in the graph
-            foreach (name, type; nameToTypeDef) {
-                auto optDeps = name in nameToDependencies;
-                if (optDeps is null) {
-                    continue;
-                }
-                auto deps = *optDeps;
-                // Check if its dependencies have been resolved
-                if (deps.length <= 0) {
-                    // If so, then it is the next in the order
-                    order ~= type;
-                    nameToDependencies.remove(name);
-                    // Remove it as a dependency in the other nodes
-                    foreach (otherName; nameToDependencies.keys()) {
-                        nameToDependencies[otherName] = remove(nameToDependencies[otherName], name);
-                    }
-                    changed = true;
-                }
-            }
-            // Repeat as long as we are not stuck in a cycle
-        } while (changed);
-        return order;
+        return dependencies;
     }
 }
