@@ -1095,8 +1095,11 @@ unittest {
             "    return {a.x + b.x, a.y + b.y, a.z + b.z}"
         )
     );
+    interpretRuleFails("def T: S[]\ndef S: {T}");
+    interpretRuleFails("def T: {T a, T b, sint64 value}");
     interpretRuleFails("let a = 1");
     interpretRuleFails("var a = 1");
+    interpretRuleFails("var bool a = !b\nlet bool b = a || true");
 }
 
 private string interpretExp(alias info = getAllInfo)(string source, Context context = new Context()) {

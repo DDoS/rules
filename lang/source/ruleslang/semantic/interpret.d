@@ -682,7 +682,8 @@ public immutable class Interpreter {
         return new immutable FunctionCallStatementNode(functionCallNode);
     }
 
-    public immutable(FlowNode) interpretVariableDeclaration(Context context, VariableDeclaration variableDeclaration) {
+    public immutable(VariableDeclarationNode) interpretVariableDeclaration(Context context,
+            VariableDeclaration variableDeclaration) {
         // Start by interpreting the signature, which might output the value if type inference is used
         Rebindable!(immutable TypedNode) value;
         bool reAssignable;
@@ -722,7 +723,7 @@ public immutable class Interpreter {
         }
     }
 
-    private static immutable(FlowNode) interpretVariableDeclarationValue(Context context,
+    private static immutable(VariableDeclarationNode) interpretVariableDeclarationValue(Context context,
             VariableDeclaration variableDeclaration, immutable Field field, Rebindable!(immutable TypedNode) value,
             bool reAssignable) {
         // If we don't have the value, but should, we interpret it now
@@ -978,8 +979,8 @@ public immutable class Interpreter {
         // Check if there are any unresolved types, because of cyclical dependencies
         if (nameToTypeDef.length > 0) {
             auto badTypeDefs = nameToTypeDef.values();
-            throw new SourceException(format("The following type definitions have cyclical dependencies:\n    %s",
-                    badTypeDefs.join!"    \n"()), badTypeDefs[0]);
+            throw new SourceException(format("The following type definition have cyclical dependencies:\n    %s\n",
+                    badTypeDefs.join!("\n    ", "a.name.getSource()")), badTypeDefs[0]);
         }
         // Now we interpret only the function signatures, which only depend on the types we just declared
         immutable(Function)[] functions;
@@ -1005,14 +1006,26 @@ public immutable class Interpreter {
             assert (value is null);
         }
         // Then we can interpret the variable declaration values, since they depend on other variables or functions
-        Rebindable!(immutable FlowNode)[immutable(Field)] fieldToVarDeclNode;
+        Rebindable!(immutable VariableDeclarationNode)[immutable(Field)] fieldToVarDeclNode;
+        VariableDeclaration[immutable VariableDeclarationNode] varDeclNodeToVarDecl;
         foreach (i, varDecl; rule.variableDeclarations) {
             auto field = fields[i];
             Rebindable!(immutable TypedNode) value = null;
-            fieldToVarDeclNode[field] = interpretVariableDeclarationValue(context, varDecl, field, value, reAssignable[i]);
+            auto varDeclNode = interpretVariableDeclarationValue(context, varDecl, field, value, reAssignable[i]);
+            fieldToVarDeclNode[field] = varDeclNode;
+            varDeclNodeToVarDecl[varDeclNode] = varDecl;
         }
         // Now we need to resolve the dependency ordering amongst variables so we can get a valid evaluation order
-        auto orderedVarDeclNode = resolveDependencyOrder!getFieldDependencies(fieldToVarDeclNode);
+        auto varDeclNodes = resolveDependencyOrder!getFieldDependencies(fieldToVarDeclNode);
+        // Check if there are any unresolved fields, because of cyclical dependencies
+        foreach (varDeclNode; varDeclNodes) {
+            varDeclNodeToVarDecl.remove(varDeclNode);
+        }
+        if (varDeclNodeToVarDecl.length > 0) {
+            auto badVarDecls = varDeclNodeToVarDecl.values();
+            throw new SourceException(format("The following variable declaration have cyclical dependencies:\n    %s\n",
+                    badVarDecls.join!("\n    ", "a.name.getSource()")), badVarDecls[0]);
+        }
         return NullNode.INSTANCE;
     }
 
