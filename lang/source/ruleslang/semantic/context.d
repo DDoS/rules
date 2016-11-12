@@ -17,13 +17,11 @@ public enum BlockKind {
 }
 
 public class Context {
-    private ForeignNameSpace foreignNames;
     private ImportedNameSpace importedNames;
     private SourceNameSpace sourceNames;
     private IntrinsicNameSpace intrisicNames;
 
     public this(BlockKind topKind = BlockKind.TOP_LEVEL) {
-        foreignNames = new ForeignNameSpace();
         importedNames = new ImportedNameSpace();
         sourceNames = new SourceNameSpace(topKind);
         intrisicNames = new IntrinsicNameSpace();
@@ -246,24 +244,6 @@ public interface NameSpace {
     public immutable(Field) getField(string name);
     public immutable(ApplicableFunction)[] getFunctions(string name, immutable(Type)[] argumentTypes);
     public immutable(Function) getExactFunction(string name, immutable(Type)[] parameterTypes);
-}
-
-public class ForeignNameSpace : NameSpace {
-    public override immutable(Type) getType(string name) {
-        return null;
-    }
-
-    public override immutable(Field) getField(string name) {
-        return null;
-    }
-
-    public override immutable(ApplicableFunction)[] getFunctions(string name, immutable(Type)[] argumentTypes) {
-        return [];
-    }
-
-    public override immutable(Function) getExactFunction(string name, immutable(Type)[] parameterTypes) {
-        return null;
-    }
 }
 
 public class ImportedNameSpace : NameSpace {
