@@ -683,9 +683,18 @@ public immutable class Interpreter {
     }
 
     public immutable(FlowNode) interpretVariableDeclaration(Context context, VariableDeclaration variableDeclaration) {
-        // Get the type and value, which will vary depending on whether or not type inference is used
-        Rebindable!(immutable Type) type;
+        // Start by interpreting the signature, which might output the value if type inference is used
         Rebindable!(immutable TypedNode) value;
+        bool reAssignable;
+        auto field = interpretVariableDeclarationSignature(context, variableDeclaration, value, reAssignable);
+        // Then we can interpret the value
+        return interpretVariableDeclarationValue(context, variableDeclaration, field, value, reAssignable);
+    }
+
+    private static immutable(Field) interpretVariableDeclarationSignature(Context context,
+            VariableDeclaration variableDeclaration, out Rebindable!(immutable TypedNode) value, out bool reAssignable) {
+        // Interpret the explicit type
+        Rebindable!(immutable Type) type;
         if (variableDeclaration.type is null) {
             // Use type inference, the type is the same as the value, but without literals
             value = variableDeclaration.value.interpret(context).reduceLiterals();
@@ -693,33 +702,47 @@ public immutable class Interpreter {
         } else {
             // Use the given type
             type = variableDeclaration.type.interpret(context);
-            // Interpret the value if present
-            if (variableDeclaration.value !is null) {
-                value = variableDeclaration.value.interpret(context).reduceLiterals();
-                // Check if the types are compatible
-                if (!value.getType().specializableTo(type)) {
-                    throw new SourceException(format("Value type %s is not convertible to %s",
-                            value.getType().toString(), type.toString()), variableDeclaration.value);
-                }
-            } else {
-                // TODO: allow later initialization of "let" declarations
-                if (variableDeclaration.kind == VariableDeclaration.Kind.LET) {
-                    throw new SourceException("\"let\" variable declarations must have a value", variableDeclaration);
-                }
-                value = null;
-            }
+            value = null;
+        }
+        // A field is re-assignable if it is a "var" field
+        final switch (variableDeclaration.kind) with (VariableDeclaration.Kind) {
+            case VAR:
+                reAssignable = true;
+                break;
+            case LET:
+                reAssignable = false;
         }
         // Get the field name
         auto name = variableDeclaration.name.getSource();
-        // A field is re-assignable if it is a "var" field
-        auto reAssignable = variableDeclaration.kind == VariableDeclaration.Kind.VAR;
         //  Attempt to declare the field
         try {
-            auto field = context.declareField(name, type, reAssignable);
-            return new immutable VariableDeclarationNode(field, value, variableDeclaration.start, variableDeclaration.end);
+            return context.declareField(name, type, reAssignable);
         } catch (Exception exception) {
             throw new SourceException(exception.msg, variableDeclaration.name);
         }
+    }
+
+    private static immutable(FlowNode) interpretVariableDeclarationValue(Context context,
+            VariableDeclaration variableDeclaration, immutable Field field, Rebindable!(immutable TypedNode) value,
+            bool reAssignable) {
+        // If we don't have the value, but should, we interpret it now
+        if (value is null && variableDeclaration.value !is null) {
+            value = variableDeclaration.value.interpret(context).reduceLiterals();
+        }
+        // If we declared both a type and a value, we also need to check if they are compatible
+        if (variableDeclaration.type !is null && value !is null) {
+            if (!value.getType().specializableTo(field.type)) {
+                throw new SourceException(format("Value type %s is not convertible to %s",
+                        value.getType().toString(), field.type.toString()), variableDeclaration.value);
+            }
+        }
+        // Finally we also need to make sure we have a value if a field is not re-assignable
+        if (value is null && !reAssignable) {
+            // TODO: allow later initialization of "let" declarations
+            throw new SourceException("\"let\" variable declarations must have a value", variableDeclaration);
+        }
+        // Create and return the variable declaration node
+        return new immutable VariableDeclarationNode(field, value, variableDeclaration.start, variableDeclaration.end);
     }
 
     public immutable(FlowNode) interpretAssignment(Context context, Assignment assignment) {
@@ -805,11 +828,16 @@ public immutable class Interpreter {
     }
 
     public immutable(FlowNode) interpretFunctionDefinition(Context context, FunctionDefinition functionDefinition) {
+        // Interpret the function signature first
+        auto func = interpretFunctionSignature(context, functionDefinition);
+        // Then interpret the implementation
+        return interpretFunctionImplementation(context, functionDefinition, func);
+    }
+
+    private static immutable(Function) interpretFunctionSignature(Context context, FunctionDefinition functionDefinition) {
         // Interpret the function parameters
-        immutable(string)[] parameterNames = [];
         immutable(Type)[] parameterTypes = [];
         foreach (parameter; functionDefinition.parameters) {
-            parameterNames ~= parameter.name.getSource();
             parameterTypes ~= parameter.type.interpret(context);
         }
         // The return type is void if missing
@@ -821,17 +849,31 @@ public immutable class Interpreter {
             context.defineFunction(functionDefinition.name.getSource(), parameterTypes, returnType),
             exceptionMessage
         );
+        // Check for an exception when creating the function
         if (exceptionMessage !is null) {
             throw new SourceException(exceptionMessage, functionDefinition);
         }
+        return func;
+    }
+
+    private static immutable(FlowNode) interpretFunctionImplementation(Context context, FunctionDefinition functionDefinition,
+            immutable Function func) {
         // Enter the function body
         context.enterFunctionImpl(func);
         // Define each parameter as a field
         immutable(Field)[] parameters = [];
-        foreach (i, name; parameterNames) {
-            parameters ~= collectExceptionMessage(context.declareField(name, parameterTypes[i], false), exceptionMessage);
+        foreach (i, parameter; functionDefinition.parameters) {
+            auto parameterName = parameter.name.getSource();
+            auto parameterType = func.parameterTypes[i];
+            // Declare the parameter as a field with the same name and type
+            string exceptionMessage;
+            parameters ~= collectExceptionMessage(
+                context.declareField(parameterName, parameterType, false),
+                exceptionMessage
+            );
+            // Check for an exception when declaring the field
             if (exceptionMessage !is null) {
-                throw new SourceException(exceptionMessage, functionDefinition.parameters[i]);
+                throw new SourceException(exceptionMessage, parameter);
             }
         }
         // Interpret the statements
@@ -878,7 +920,8 @@ public immutable class Interpreter {
             returnValue = [new immutable ReturnValueNode(valueNode, valueNode.start, valueNode.end)];
         }
         // Return a block node that exits from the function, which will be inlined later on
-        return new immutable BlockNode(returnValue, blockOffset + 1, BlockLimit.END, returnStatement.start, returnStatement.end);
+        return new immutable BlockNode(returnValue, blockOffset + 1, BlockLimit.END,
+                returnStatement.start, returnStatement.end);
     }
 
     public alias interpretBreakStatement = interpretAbortStatement!BreakStatement;
@@ -926,10 +969,10 @@ public immutable class Interpreter {
         }
         // Resolve the dependency ordering to figure out in what order to declare the types
         auto orderedTypeDefs = resolveDependencyOrder(nameToTypeDef);
-        import std.stdio; writeln(orderedTypeDefs);
         // Now declare the types in the resulting order
+        immutable(FlowNode)[] typeDefNodes;
         foreach (typeDef; orderedTypeDefs) {
-            typeDef.interpret(context);
+            typeDefNodes ~= typeDef.interpret(context);
             nameToTypeDef.remove(typeDef.name.getSource());
         }
         // Check if there are any unresolved types, because of cyclical dependencies
@@ -938,6 +981,37 @@ public immutable class Interpreter {
             throw new SourceException(format("The following type definitions have cyclical dependencies:\n    %s",
                     badTypeDefs.join!"    \n"()), badTypeDefs[0]);
         }
+        // Now we interpret only the function signatures, which only depend on the types we just declared
+        immutable(Function)[] functions;
+        foreach (funcDef; rule.functionDefinitions) {
+            functions ~= interpretFunctionSignature(context, funcDef);
+        }
+        // Next we actually interpret the function implementation
+        // which we did after because of possible mutual dependencies
+        immutable(FlowNode)[] funcDefNodes;
+        foreach (i, funcDef; rule.functionDefinitions) {
+            funcDefNodes ~= interpretFunctionImplementation(context, funcDef, functions[i]);
+        }
+        // Now we do the same with the variable declaration signatures
+        immutable(Field)[] fields;
+        bool[] reAssignable;
+        foreach (i, varDecl; rule.variableDeclarations) {
+            // Allowing type inference makes the dependency problem a lot harder, so we don't allow it here
+            if (varDecl.type is null) {
+                throw new SourceException("Variable declaration type inference is not allowed at the top level", varDecl);
+            }
+            Rebindable!(immutable TypedNode) value;
+            fields ~= interpretVariableDeclarationSignature(context, varDecl, value, reAssignable[i]);
+            assert (value is null);
+        }
+        // Then we can interpret the variable declaration values, since they depend on other variables or functions
+        immutable(FlowNode)[] varDeclNodes;
+        foreach (i, varDecl; rule.variableDeclarations) {
+            Rebindable!(immutable TypedNode) value = null;
+            varDeclNodes ~= interpretVariableDeclarationValue(context, varDecl, fields[i], value, reAssignable[i]);
+        }
+        // Now we need to resolve the dependency ordering amongst variables so we can get a valid evaluation order
+
         return NullNode.INSTANCE;
     }
 

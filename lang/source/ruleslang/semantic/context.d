@@ -295,6 +295,7 @@ public class SourceNameSpace : NameSpace {
 
     public this(SourceNameSpace parent, BlockKind blockKind, string label = null) {
         assert (parent !is null);
+        assert (parent.blockKind != BlockKind.TOP_LEVEL);
         assert (blockKind == BlockKind.CONDITION || blockKind == BlockKind.LOOP);
         assert (label is null || blockKind == BlockKind.LOOP);
         _parent = parent;

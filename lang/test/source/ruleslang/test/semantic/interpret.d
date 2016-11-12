@@ -1046,11 +1046,39 @@ unittest {
     );
     assertEqual(
         "Null()",
-        interpretRule("def float: fp32\ndef Vec3f: {float, float, float}")
+        interpretRule(
+            "def float: fp32\n" ~
+            "def Vec3f: {float, float, float}"
+        )
     );
     assertEqual(
         "Null()",
-        interpretRule("def Vec3f: {float, float, float}\ndef float: fp32")
+        interpretRule(
+            "def Vec3f: {float, float, float}\n" ~
+            "def float: fp32"
+        )
+    );
+    assertEqual(
+        "Null()",
+        interpretRule(
+            "def Vec3f: {float x, float y, float z}\n" ~
+            "def float: fp32\n" ~
+            "func opAdd(Vec3f a, Vec3f b) Vec3f:\n" ~
+            "    return {a.x + b.x, a.y + b.y, a.z + b.z}"
+        )
+    );
+    assertEqual(
+        "Null()",
+        interpretRule(
+            "def Vec3f: {float x, float y, float z}\n" ~
+            "def float: fp32\n" ~
+            "func opSubtract(Vec3f a, Vec3f b) Vec3f:\n" ~
+            "    return a + -b\n" ~
+            "func opNegate(Vec3f a) Vec3f:\n" ~
+            "    return {-a.x, -a.y, -a.z}\n" ~
+            "func opAdd(Vec3f a, Vec3f b) Vec3f:\n" ~
+            "    return {a.x + b.x, a.y + b.y, a.z + b.z}"
+        )
     );
 }
 
