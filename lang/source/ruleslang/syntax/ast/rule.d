@@ -84,7 +84,15 @@ public class Rule {
         _functionDefinitions = functionDefinitions;
         _whenDefinition = whenDefinition;
         _thenDefinition = thenDefinition;
+        _start = size_t.max;
+        _end = size_t.min;
+        updateStartAndEnd(typeDefinitions, _start, _end);
+        updateStartAndEnd(variableDeclarations, _start, _end);
+        updateStartAndEnd(functionDefinitions, _start, _end);
+        updateStartAndEnd([cast(Statement) whenDefinition, cast(Statement) thenDefinition], _start, _end);
     }
+
+    mixin sourceIndexFields;
 
     @property public TypeDefinition[] typeDefinitions() {
         return _typeDefinitions;
@@ -147,5 +155,19 @@ public class Rule {
             stmts ~= thenDefinition.toString();
         }
         return format("Rule(%s)", stmts.join!"; "());
+    }
+
+    private static updateStartAndEnd(SourceIndexed)(SourceIndexed[] elements, ref size_t start, ref size_t end) {
+        foreach (element; elements) {
+            if (element is null) {
+                continue;
+            }
+            if (element.start < start) {
+                start = element.start;
+            }
+            if (element.end > end) {
+                end = element.end;
+            }
+        }
     }
 }

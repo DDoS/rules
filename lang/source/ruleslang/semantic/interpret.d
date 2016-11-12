@@ -1029,7 +1029,7 @@ public immutable class Interpreter {
             throw new SourceException(format("The following variable declaration have cyclical dependencies:\n    %s\n",
                     badVarDecls.join!("\n    ", "a.name.getSource()")), badVarDecls[0]);
         }
-        return new immutable RuleNode(typeDefNodes, funcDefNodes, varDeclNodes, 0, 0);
+        return new immutable RuleNode(typeDefNodes, funcDefNodes, varDeclNodes, rule.start, rule.end);
     }
 
     public static string[] getTypeNameDependencies(TypeDefinition typeDef) {
