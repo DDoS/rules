@@ -1537,6 +1537,10 @@ public immutable class RuleNode : Node {
         return children;
     }
 
+    public void setupRuntime(Runtime runtime) {
+        Evaluator.INSTANCE.setupRuntime(runtime, this);
+    }
+
     public override string toString() {
         return format("Rule(%s)", getChildren().join!"; "());
     }

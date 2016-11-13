@@ -447,6 +447,21 @@ public immutable class Evaluator {
         runtime.returnValue = value;
         return Flow.PROCEED;
     }
+
+    public void setupRuntime(Runtime runtime, immutable RuleNode rule) {
+        // Start by applying the type definitions
+        foreach (typeDef; rule.typeDefinitions) {
+            typeDef.evaluate(runtime);
+        }
+        // Then apply the function definitions
+        foreach (funcDef; rule.functionDefinitions) {
+            funcDef.evaluate(runtime);
+        }
+        // Finally declare the global variables
+        foreach (varDecl; rule.variableDeclarations) {
+            varDecl.evaluate(runtime);
+        }
+    }
 }
 
 public class NotImplementedException : Exception {
