@@ -955,8 +955,9 @@ public immutable class Interpreter {
     private immutable(FunctionDefinitionNode) interpretRulePart(RulePart)(Context context, RulePart rulePart) {
         // Interpret the parameter type
         auto parameterType = rulePart.type.interpret(context);
-        // Check that the parameter type is a struct
-        if (cast(immutable StructureType) parameterType is null) {
+        // Check that the parameter type is a struct or the any type
+        if (cast(immutable StructureType) parameterType is null
+                && parameterType != AnyType.INSTANCE) {
             throw new SourceException("The parameter type of a rule part must be a struct", rulePart.type);
         }
         // Create the function symbol and define it in the context

@@ -1134,11 +1134,31 @@ unittest {
             "    return {a.x + b.x, a.y + b.y, a.z + b.z}"
         )
     );
+    assertEqual(
+        "Rule(TypeDefinition(def AnInt: {sint64 v}); "
+            ~ "FunctionDefinition(rule$when({sint64 v} a) bool: Block(Return(FunctionCall("
+            ~ "opGreaterThan(MemberAccess(FieldAccess(a).v), SignedIntegerLiteral(0)))))); "
+            ~ "FunctionDefinition(rule$then({sint64 v} a) {}: Block(Return(TupleLiteral({"
+            ~ "FunctionCall(opAdd(MemberAccess(FieldAccess(a).v), SignedIntegerLiteral(1)))})))))",
+        interpretRule("def AnInt: {sint64 v}\nwhen (AnInt a):\n return a.v > 0\nthen (AnInt a):\n return {a.v + 1}")
+    );
+    assertEqual(
+        "Rule(TypeDefinition(def AnInt: {sint64 v}); "
+            ~ "FunctionDefinition(rule$when({sint64 v} when$param) bool: Block(Return(BooleanLiteral(true)))); "
+            ~ "FunctionDefinition(rule$then({sint64 v} a) {}: Block(Return(TupleLiteral({"
+            ~ "FunctionCall(opAdd(MemberAccess(FieldAccess(a).v), SignedIntegerLiteral(1)))})))))",
+        interpretRule("def AnInt: {sint64 v}\nthen (AnInt a):\n return {a.v + 1}")
+    );
     interpretRuleFails("def T: S[]\ndef S: {T}");
     interpretRuleFails("def T: {T a, T b, sint64 value}");
     interpretRuleFails("let a = 1");
     interpretRuleFails("var a = 1");
     interpretRuleFails("var bool a = !b\nlet bool b = a || true");
+    interpretRuleFails("when (bool b):\n return b");
+    interpretRuleFails("then (fp32[] fs):\n return {s: fs}");
+    interpretRuleFails("def AnInt: {uint64 v}\nwhen (AnInt a):\n return a.v");
+    interpretRuleFails("def AnInt: {uint64 v}\nthen (AnInt a):\n return a.v");
+    interpretRuleFails("def AnInt: {uint64 v}\ndef Any: {}\nwhen (Any a):\n return true\nthen (AnInt a):\n return a");
 }
 
 private string interpretExp(alias info = getAllInfo)(string source, Context context = new Context()) {
