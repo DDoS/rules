@@ -1041,18 +1041,24 @@ unittest {
 
 unittest {
     assertEqual(
-        "Rule(TypeDefinition(def float: fp32))",
+        "Rule(TypeDefinition(def float: fp32); "
+            ~ "FunctionDefinition(rule$when({} when$param) bool: Block(Return(BooleanLiteral(true)))); "
+            ~ "FunctionDefinition(rule$then({} then$param) {}: Block(Return(FieldAccess(then$param)))))",
         interpretRule("def float: fp32")
     );
     assertEqual(
-        "Rule(TypeDefinition(def float: fp32); TypeDefinition(def Vec3f: {fp32, fp32, fp32}))",
+        "Rule(TypeDefinition(def float: fp32); TypeDefinition(def Vec3f: {fp32, fp32, fp32}); "
+            ~ "FunctionDefinition(rule$when({} when$param) bool: Block(Return(BooleanLiteral(true)))); "
+            ~ "FunctionDefinition(rule$then({} then$param) {}: Block(Return(FieldAccess(then$param)))))",
         interpretRule(
             "def float: fp32\n" ~
             "def Vec3f: {float, float, float}"
         )
     );
     assertEqual(
-        "Rule(TypeDefinition(def float: fp32); TypeDefinition(def Vec3f: {fp32, fp32, fp32}))",
+        "Rule(TypeDefinition(def float: fp32); TypeDefinition(def Vec3f: {fp32, fp32, fp32}); "
+            ~ "FunctionDefinition(rule$when({} when$param) bool: Block(Return(BooleanLiteral(true)))); "
+            ~ "FunctionDefinition(rule$then({} then$param) {}: Block(Return(FieldAccess(then$param)))))",
         interpretRule(
             "def Vec3f: {float, float, float}\n" ~
             "def float: fp32"
@@ -1063,7 +1069,9 @@ unittest {
             ~ "FunctionDefinition(opAdd({fp32 x, fp32 y, fp32 z} a, {fp32 x, fp32 y, fp32 z} b) {fp32 x, fp32 y, fp32 z}: "
             ~ "Block(Return(TupleLiteral({FunctionCall(opAdd(MemberAccess(FieldAccess(a).x), MemberAccess(FieldAccess(b).x))), "
             ~ "FunctionCall(opAdd(MemberAccess(FieldAccess(a).y), MemberAccess(FieldAccess(b).y))), "
-            ~ "FunctionCall(opAdd(MemberAccess(FieldAccess(a).z), MemberAccess(FieldAccess(b).z)))})))))",
+            ~ "FunctionCall(opAdd(MemberAccess(FieldAccess(a).z), MemberAccess(FieldAccess(b).z)))})))); "
+            ~ "FunctionDefinition(rule$when({} when$param) bool: Block(Return(BooleanLiteral(true)))); "
+            ~ "FunctionDefinition(rule$then({} then$param) {}: Block(Return(FieldAccess(then$param)))))",
         interpretRule(
             "def Vec3f: {float x, float y, float z}\n" ~
             "def float: fp32\n" ~
@@ -1082,7 +1090,9 @@ unittest {
             ~ "FunctionDefinition(opAdd({fp32 x, fp32 y, fp32 z} a, {fp32 x, fp32 y, fp32 z} b) {fp32 x, fp32 y, fp32 z}: "
             ~ "Block(Return(TupleLiteral({FunctionCall(opAdd(MemberAccess(FieldAccess(a).x), MemberAccess(FieldAccess(b).x))), "
             ~ "FunctionCall(opAdd(MemberAccess(FieldAccess(a).y), MemberAccess(FieldAccess(b).y))), "
-            ~ "FunctionCall(opAdd(MemberAccess(FieldAccess(a).z), MemberAccess(FieldAccess(b).z)))})))))",
+            ~ "FunctionCall(opAdd(MemberAccess(FieldAccess(a).z), MemberAccess(FieldAccess(b).z)))})))); "
+            ~ "FunctionDefinition(rule$when({} when$param) bool: Block(Return(BooleanLiteral(true)))); "
+            ~ "FunctionDefinition(rule$then({} then$param) {}: Block(Return(FieldAccess(then$param)))))",
         interpretRule(
             "def Vec3f: {float x, float y, float z}\n" ~
             "def float: fp32\n" ~
@@ -1106,6 +1116,8 @@ unittest {
             ~ "Block(Return(TupleLiteral({FunctionCall(opAdd(MemberAccess(FieldAccess(a).x), MemberAccess(FieldAccess(b).x))), "
             ~ "FunctionCall(opAdd(MemberAccess(FieldAccess(a).y), MemberAccess(FieldAccess(b).y))), "
             ~ "FunctionCall(opAdd(MemberAccess(FieldAccess(a).z), MemberAccess(FieldAccess(b).z)))})))); "
+            ~ "FunctionDefinition(rule$when({} when$param) bool: Block(Return(BooleanLiteral(true)))); "
+            ~ "FunctionDefinition(rule$then({} then$param) {}: Block(Return(FieldAccess(then$param)))); "
             ~ "VariableDeclaration({fp32 x, fp32 y, fp32 z} X_POS = StructLiteral({x: FloatLiteral(1), y: FloatLiteral(0), "
             ~ "z: FloatLiteral(0)})); VariableDeclaration({fp32 x, fp32 y, fp32 z} X_NEG = "
             ~ "FunctionCall(opNegate(FieldAccess(X_POS)))))",

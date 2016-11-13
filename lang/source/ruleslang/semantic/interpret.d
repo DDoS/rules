@@ -879,20 +879,26 @@ public immutable class Interpreter {
             }
         }
         // Interpret the statements
-        auto statements = functionDefinition.statements;
-        auto statementNodes = interpretStatements(context, statements);
+        auto blockNode = interpretFunctionStatements(context, func, functionDefinition.statements, functionDefinition.end);
         context.exitBlock();
+        // Create the function definition node
+        return new immutable FunctionDefinitionNode(func, parameters, blockNode,
+                functionDefinition.start, functionDefinition.end);
+    }
+
+    private static immutable(BlockNode) interpretFunctionStatements(Context context, immutable Function func,
+            Statement[] statements, size_t end) {
+        // Interpret the statements
+        auto statementNodes = interpretStatements(context, statements);
         // Create the implementation block
-        auto statementsStart = statements.length <= 0 ? functionDefinition.end : statements[0].start;
-        auto statementsEnd = statements.length <= 0 ? functionDefinition.end : statements[$ - 1].end;
+        auto statementsStart = statements.length <= 0 ? end : statements[0].start;
+        auto statementsEnd = statements.length <= 0 ? end : statements[$ - 1].end;
         auto blockNode = new immutable BlockNode(statementNodes, statementsStart, statementsEnd);
         // Check that the return statements are all there and that no statement is unreachable
         if (!func.returnType.specializableTo(VoidType.INSTANCE)) {
             checkReturns(blockNode);
         }
-        // Create the function definition node
-        return new immutable FunctionDefinitionNode(func, parameters, blockNode,
-                functionDefinition.start, functionDefinition.end);
+        return blockNode;
     }
 
     public immutable(FlowNode) interpretReturnStatement(Context context, ReturnStatement returnStatement) {
@@ -943,12 +949,39 @@ public immutable class Interpreter {
         return new immutable BlockNode([], blockOffset + 1, exit, abortStatement.start, abortStatement.end);
     }
 
-    public immutable(FlowNode) interpretWhenDefinition(Context context, WhenDefinition whenDefinition) {
-        return new immutable BlockNode([], 0, BlockLimit.END, whenDefinition.start, whenDefinition.end);
-    }
+    public alias interpretWhenDefinition = interpretRulePart!WhenDefinition;
+    public alias interpretThenDefinition = interpretRulePart!ThenDefinition;
 
-    public immutable(FlowNode) interpretThenDefinition(Context context, ThenDefinition thenDefinition) {
-        return new immutable BlockNode([], 0, BlockLimit.END, thenDefinition.start, thenDefinition.end);
+    private immutable(FunctionDefinitionNode) interpretRulePart(RulePart)(Context context, RulePart rulePart) {
+        // Interpret the parameter type
+        auto parameterType = rulePart.type.interpret(context);
+        // Check that the parameter type is a struct
+        if (cast(immutable StructureType) parameterType is null) {
+            throw new SourceException("The parameter type of a rule part must be a struct", rulePart.type);
+        }
+        // Create the function symbol and define it in the context
+        enum name = "rule$" ~ (is(RulePart == WhenDefinition) ? "when" : "then");
+        auto returnType = cast(immutable Type) (is(RulePart == WhenDefinition) ? AtomicType.BOOL : AnyType.INSTANCE);
+        string exceptionMessage;
+        auto func = collectExceptionMessage(context.defineFunction(name, [parameterType], returnType), exceptionMessage);
+        // Check for an exception when creating the function
+        if (exceptionMessage !is null) {
+            throw new SourceException(exceptionMessage, rulePart);
+        }
+        // Enter the function body
+        context.enterFunctionImpl(func);
+        // Define the parameter as a field
+        auto parameter = collectExceptionMessage(context.declareField(rulePart.name.getSource(), parameterType, false),
+                exceptionMessage);
+        // Check for an exception when declaring the field
+        if (exceptionMessage !is null) {
+            throw new SourceException(exceptionMessage, rulePart.type.start, rulePart.name.end);
+        }
+        // Interpret the statements
+        auto blockNode = interpretFunctionStatements(context, func, rulePart.statements, rulePart.end);
+        context.exitBlock();
+        // Create the function definition node
+        return new immutable FunctionDefinitionNode(func, [parameter], blockNode, rulePart.start, rulePart.end);
     }
 
     private static immutable(FlowNode)[] interpretStatements(Context context, Statement[] statements) {
@@ -1029,7 +1062,67 @@ public immutable class Interpreter {
             throw new SourceException(format("The following variable declaration have cyclical dependencies:\n    %s\n",
                     badVarDecls.join!("\n    ", "a.name.getSource()")), badVarDecls[0]);
         }
+        // Interpret the "then" rule part
+        Rebindable!(immutable FunctionDefinitionNode) thenFuncDef;
+        if (rule.thenDefinition !is null) {
+            thenFuncDef = interpretThenDefinition(context, rule.thenDefinition);
+        } else {
+            // Use a default no-op function
+            thenFuncDef = createDefaultRulePart!true(context);
+        }
+        // Interpret the "when" rule part
+        Rebindable!(immutable FunctionDefinitionNode) whenFuncDef;
+        if (rule.whenDefinition !is null) {
+            whenFuncDef = interpretWhenDefinition(context, rule.whenDefinition);
+        } else {
+            // Use a default no-op function
+            whenFuncDef = createDefaultRulePart!false(context, thenFuncDef);
+        }
+        // Check that the "then" parameter is the same or a super type of the "when" parameter
+        if (!whenFuncDef.func.parameterTypes[0].convertibleTo(thenFuncDef.func.parameterTypes[0])) {
+            auto start = rule.thenDefinition is null ? size_t.max : rule.thenDefinition.type.start;
+            auto end = rule.thenDefinition is null ? size_t.max : rule.thenDefinition.type.end;
+            throw new SourceException("The \"then\" rule part parameter type must be the same as, or a super type of, "
+                    ~ "the \"when\" rule part parameter type", start, end);
+        }
+        // Add the rule part function definitions to the others
+        funcDefNodes ~= whenFuncDef;
+        funcDefNodes ~= thenFuncDef;
         return new immutable RuleNode(typeDefNodes, funcDefNodes, varDeclNodes, rule.start, rule.end);
+    }
+
+    private static immutable(FunctionDefinitionNode) createDefaultRulePart(bool then)(Context context,
+            immutable FunctionDefinitionNode thenFuncDef = null) {
+        // Create and define the funtion symbol
+        enum name = then ? "rule$then" : "rule$when";
+        static if (then) {
+            auto parameterType = AnyType.INSTANCE;
+        } else {
+            // Use the same parameter type as the "then" function did
+            auto parameterType = thenFuncDef.func.parameterTypes[0];
+        }
+        auto returnType = cast(immutable Type) (then ? AnyType.INSTANCE : AtomicType.BOOL);
+        string exceptionMessage;
+        auto func = collectExceptionMessage(context.defineFunction(name, [parameterType], returnType), exceptionMessage);
+        if (exceptionMessage !is null) {
+            throw new SourceException(exceptionMessage, size_t.max, size_t.max);
+        }
+        // Define the parameter with a name that will never conflict
+        enum paramName = then ? "then$param" : "when$param";
+        auto parameter = collectExceptionMessage(context.declareField(paramName, parameterType, false), exceptionMessage);
+        if (exceptionMessage !is null) {
+            throw new SourceException(exceptionMessage, size_t.max, size_t.max);
+        }
+        static if (then) {
+            // The implementation is just a return statement of the parameter
+            auto valueNode = new immutable FieldAccessNode(parameter, size_t.max, size_t.max);
+        } else {
+            // The implementation just returns true
+            auto valueNode = new immutable BooleanLiteralNode(true, size_t.max, size_t.max);
+        }
+        auto returnValue = new immutable ReturnValueNode(valueNode, size_t.max, size_t.max);
+        auto blockNode = new immutable BlockNode([returnValue], size_t.max, size_t.max);
+        return new immutable FunctionDefinitionNode(func, [parameter], blockNode, size_t.max, size_t.max);
     }
 
     public static string[] getTypeNameDependencies(TypeDefinition typeDef) {
