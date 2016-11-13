@@ -323,7 +323,7 @@ public immutable class Interpreter {
     }
 
     public immutable(TypedNode) interpretContextMemberAccess(Context context, ContextMemberAccess expression) {
-        return NullNode.INSTANCE;
+        throw new SourceException("Not implemented", expression);
     }
 
     public immutable(MemberAccessNode) interpretMemberAccess(Context context, MemberAccess memberAccess) {

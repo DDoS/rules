@@ -94,9 +94,6 @@ private bool endsWithIgnoreWhiteSpace(string s, char c) {
 private void evaluate(Expression expression, Context context, Runtime runtime) {
     stdout.writeln("syntax: ", expression.toString());
     auto node = expression.expandOperators().interpret(context);
-    if (cast(NullNode) node !is null) {
-        return;
-    }
     stdout.writeln("semantic: ", node.toString());
     auto reducedNode = node.reduceLiterals();
     auto type = reducedNode.getType();
@@ -114,9 +111,6 @@ private void evaluate(Expression expression, Context context, Runtime runtime) {
 private void evaluate(Statement statement, Context context, Runtime runtime) {
     stdout.writeln("syntax: ", statement.toString());
     auto node = statement.expandOperators().interpret(context);
-    if (cast(NullNode) node !is null) {
-        return;
-    }
     stdout.writeln("semantic: ", node.toString());
     try {
         Flow flow;

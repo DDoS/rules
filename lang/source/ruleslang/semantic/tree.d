@@ -68,41 +68,6 @@ public immutable interface LiteralNode : TypedNode {
     public immutable(LiteralNode) specializeTo(immutable Type type);
 }
 
-public immutable class NullNode : TypedNode {
-    public static immutable NullNode INSTANCE = new immutable NullNode();
-
-    private this() {
-    }
-
-    @property public override size_t start() {
-        return 0;
-    }
-
-    @property public override size_t end() {
-        return 0;
-    }
-
-    public override immutable(TypedNode)[] getChildren() {
-        return [];
-    }
-
-    public override immutable(Type) getType() {
-        return AtomicType.BOOL;
-    }
-
-    public override bool isIntrinsicEvaluable() {
-        return false;
-    }
-
-    public override void evaluate(Runtime runtime) {
-        assert (0);
-    }
-
-    public override string toString() {
-        return "Null()";
-    }
-}
-
 public immutable class NullLiteralNode : LiteralNode {
     public this(size_t start, size_t end) {
         _start = start;
