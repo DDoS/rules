@@ -1,8 +1,11 @@
 module ruleslang.evaluation.runtime;
 
-import std.format : format;
-import std.variant : Variant;
 import core.memory : GC;
+
+import std.format : format;
+import std.conv : to;
+import std.variant : Variant;
+import std.json;
 
 import ruleslang.semantic.type;
 import ruleslang.semantic.symbol;
@@ -126,6 +129,210 @@ public class Runtime {
 
     @property public Variant returnValue() {
         return _returnValue;
+    }
+
+    private void writeJSONValue(JSONValue value, immutable Type type, void* address) {
+        final switch (value.type) with (JSON_TYPE) {
+            case NULL:
+                writeJSONNull(value, type, address);
+                break;
+            case STRING:
+                writeJSONString(value, type, address);
+                break;
+            case INTEGER:
+                writeJSONInteger(value, type, address);
+                break;
+            case UINTEGER:
+                writeJSONUinteger(value, type, address);
+                break;
+            case FLOAT:
+                writeJSONFloat(value, type, address);
+                break;
+            case OBJECT:
+                writeJSONObject(value, type, address);
+                break;
+            case ARRAY:
+                writeJSONArray(value, type, address);
+                break;
+            case TRUE:
+                writeJSONTrue(value, type, address);
+                break;
+            case FALSE:
+                writeJSONFalse(value, type, address);
+                break;
+        }
+    }
+
+    private void writeJSONNull(JSONValue json, immutable Type type, void* address) {
+        if (NullType.INSTANCE.convertibleTo(type)) {
+            *(cast(void**) address) = null;
+        }
+        throw new Exception(format("Cannot convert JSON %s to type %s", json.toString(), type.toString()));
+    }
+
+    private void writeJSONString(JSONValue json, immutable Type type, void* address) {
+        void writeString(String)(String str, immutable ArrayType arrayType, void* address) {
+
+            if (auto sizedArrayType = cast(immutable SizedArrayType) arrayType) {
+                if (str.length != sizedArrayType.size) {
+                    throw new Exception(format("Cannot convert string of length %d to type %s",
+                            str.length, sizedArrayType.toString()));
+                }
+            }
+
+            auto arrayAddress = allocateArray(arrayType, str.length);
+            auto dataSegment = arrayAddress + TypeIndex.sizeof + size_t.sizeof;
+
+            static if (is(String == string)) {
+                (cast(char*) dataSegment)[0 .. str.length] = str;
+            } else static if (is(String == wstring)) {
+                (cast(wchar*) dataSegment)[0 .. str.length] = str;
+            } else static if (is(String == dstring)) {
+                (cast(dchar*) dataSegment)[0 .. str.length] = str;
+            } else {
+                static assert (0);
+            }
+            *(cast(void**) address) = arrayAddress;
+        }
+
+        if (auto arrayType = cast(immutable ArrayType) type) {
+            if (arrayType.componentType == AtomicType.UINT8) {
+                writeString(json.str, arrayType, address);
+                return;
+            }
+            if (arrayType.componentType == AtomicType.UINT16) {
+                writeString(json.str.to!wstring, arrayType, address);
+                return;
+            }
+            if (arrayType.componentType == AtomicType.UINT32) {
+                writeString(json.str.to!dstring, arrayType, address);
+                return;
+            }
+        }
+        throw new Exception(format("Cannot convert JSON %s to type %s", json.toString(), type.toString()));
+    }
+
+    private void writeJSONInteger(JSONValue json, immutable Type type, void* address) {
+        if (type == AtomicType.SINT8) {
+            *(cast(byte*) address) = cast(byte) json.integer;
+            return;
+        }
+        if (type == AtomicType.SINT16) {
+            *(cast(short*) address) = cast(short) json.integer;
+            return;
+        }
+        if (type == AtomicType.SINT32) {
+            *(cast(int*) address) = cast(int) json.integer;
+            return;
+        }
+        if (type == AtomicType.SINT64) {
+            *(cast(long*) address) = cast(long) json.integer;
+            return;
+        }
+        throw new Exception(format("Cannot convert JSON %s to type %s", json.toString(), type.toString()));
+    }
+
+    private void writeJSONUinteger(JSONValue json, immutable Type type, void* address) {
+        if (type == AtomicType.UINT8) {
+            *(cast(ubyte*) address) = cast(ubyte) json.uinteger;
+            return;
+        }
+        if (type == AtomicType.UINT16) {
+            *(cast(ushort*) address) = cast(ushort) json.uinteger;
+            return;
+        }
+        if (type == AtomicType.UINT32) {
+            *(cast(uint*) address) = cast(uint) json.uinteger;
+            return;
+        }
+        if (type == AtomicType.UINT64) {
+            *(cast(ulong*) address) = cast(ulong) json.uinteger;
+            return;
+        }
+        throw new Exception(format("Cannot convert JSON %s to type %s", json.toString(), type.toString()));
+    }
+
+    private void writeJSONFloat(JSONValue json, immutable Type type, void* address) {
+        if (type == AtomicType.FP32) {
+            *(cast(float*) address) = cast(float) json.floating;
+            return;
+        }
+        if (type == AtomicType.FP64) {
+            *(cast(double*) address) = cast(double) json.floating;
+            return;
+        }
+        throw new Exception(format("Cannot convert JSON %s to type %s", json.toString(), type.toString()));
+    }
+
+    private void writeJSONObject(JSONValue json, immutable Type type, void* address) {
+        auto structType = cast(immutable StructureType) type;
+        if (structType is null) {
+            throw new Exception(format("Cannot convert JSON %s to type %s", json.toString(), type.toString()));
+        }
+
+        auto dataLayout = structType.getDataLayout();
+
+        auto structAddress = allocateComposite(structType);
+        auto dataSegment = structAddress + TypeIndex.sizeof;
+
+        foreach (string memberName, value; json) {
+
+            auto memberType = structType.getMemberType(memberName);
+            if (memberType is null) {
+                throw new Exception(format("Cannot write JSON object member %s to type %s", memberName, structType.toString()));
+            }
+
+            auto memberAddress = dataSegment + dataLayout.memberOffsetByName[memberName];
+
+            writeJSONValue(value, memberType, memberAddress);
+        }
+        *(cast(void**) address) = structAddress;
+    }
+
+    private void writeJSONArray(JSONValue json, immutable Type type, void* address) {
+        auto arrayType = cast(immutable ArrayType) type;
+        if (arrayType is null) {
+            throw new Exception(format("Cannot convert JSON %s to type %s", json.toString(), type.toString()));
+        }
+
+        auto length = json.array.length;
+
+        if (auto sizedArrayType = cast(immutable SizedArrayType) arrayType) {
+            if (length != sizedArrayType.size) {
+                throw new Exception(format("Cannot convert array of length %d to type %s", length, sizedArrayType.toString()));
+            }
+        }
+
+        auto dataLayout = arrayType.getDataLayout();
+
+        auto arrayAddress = allocateArray(arrayType, length);
+        auto dataSegment = arrayAddress + TypeIndex.sizeof + size_t.sizeof;
+
+        auto componentType = arrayType.componentType;
+
+        foreach (size_t index, value; json) {
+
+            auto valueAddress = dataSegment + index * dataLayout.componentSize;
+
+            writeJSONValue(value, componentType, valueAddress);
+        }
+        *(cast(void**) address) = arrayAddress;
+    }
+
+    private void writeJSONTrue(JSONValue json, immutable Type type, void* address) {
+        if (type == AtomicType.BOOL) {
+            *(cast(bool*) address) = true;
+            return;
+        }
+        throw new Exception(format("Cannot convert JSON %s to type %s", json.toString(), type.toString()));
+    }
+
+    private void writeJSONFalse(JSONValue json, immutable Type type, void* address) {
+        if (type == AtomicType.BOOL) {
+            *(cast(bool*) address) = false;
+            return;
+        }
+        throw new Exception(format("Cannot convert JSON %s to type %s", json.toString(), type.toString()));
     }
 }
 
