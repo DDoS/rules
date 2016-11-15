@@ -1476,6 +1476,8 @@ public immutable class RuleNode : Node {
     public TypeDefinitionNode[] typeDefinitions;
     public FunctionDefinitionNode[] functionDefinitions;
     public VariableDeclarationNode[] variableDeclarations;
+    public Function whenFunction;
+    public Function thenFunction;
 
     public this(immutable(TypeDefinitionNode)[] typeDefinitions, immutable(FunctionDefinitionNode)[] functionDefinitions,
             immutable(VariableDeclarationNode)[] variableDeclarations, size_t start, size_t end) {
@@ -1484,6 +1486,22 @@ public immutable class RuleNode : Node {
         this.variableDeclarations = variableDeclarations;
         _start = start;
         _end = end;
+
+        Rebindable!(immutable Function) whenFunction = null;
+        Rebindable!(immutable Function) thenFunction = null;
+        foreach (funcDef; functionDefinitions) {
+            if (funcDef.func.name == "rule$when") {
+                assert (whenFunction is null);
+                whenFunction = funcDef.func;
+            } else if (funcDef.func.name == "rule$then") {
+                assert (thenFunction is null);
+                thenFunction = funcDef.func;
+            }
+        }
+        assert (whenFunction !is null);
+        this.whenFunction = whenFunction;
+        assert (thenFunction !is null);
+        this.thenFunction = thenFunction;
     }
 
     mixin sourceIndexFields!false;

@@ -1,5 +1,9 @@
 import std.stdio;
 import std.conv : to;
+import std.getopt : getopt;
+import std.path : buildNormalizedPath, absolutePath, expandTilde;
+import std.file : readText;
+import std.json : parseJSON;
 
 import ruleslang.syntax.dchars;
 import ruleslang.syntax.source;
@@ -9,6 +13,7 @@ import ruleslang.syntax.ast.expression;
 import ruleslang.syntax.ast.statement;
 import ruleslang.syntax.parser.expression;
 import ruleslang.syntax.parser.statement;
+import ruleslang.syntax.parser.rule;
 import ruleslang.semantic.opexpand;
 import ruleslang.semantic.type;
 import ruleslang.semantic.tree;
@@ -16,13 +21,60 @@ import ruleslang.semantic.context;
 import ruleslang.semantic.interpret;
 import ruleslang.evaluation.runtime;
 import ruleslang.evaluation.evaluate;
+import ruleslang.util;
 
-void main() {
-    /*
-        TODO:
-            Function definition evaluation
-            Add break and continue statements to loops
-    */
+void main(string[] arguments) {
+    string file = null;
+    string input = null;
+    getopt(
+        arguments,
+        "f|file", &file,
+        "i|input", &input
+    );
+
+    if (file is null) {
+        shell();
+        return;
+    }
+
+    if (input is null) {
+        throw new Exception("Input argument is missing");
+    }
+
+    auto jsonInput = parseJSON(input);
+
+    file = buildNormalizedPath(absolutePath(expandTilde(file)));
+    auto source = readText(file);
+
+    auto context = new Context();
+    auto ruleNode = new Tokenizer(new DCharReader(source)).parseRule().expandOperators().interpret(context);
+    auto inputType = ruleNode.whenFunction.parameterTypes[0].castOrFail!(immutable StructureType);
+
+    auto runtime = new Runtime();
+    ruleNode.setupRuntime(runtime);
+
+    void* inputStruct;
+    runtime.writeJSONObject(jsonInput, inputType, &inputStruct);
+    writeln("Input struct: ", runtime.asString(inputType, &inputStruct));
+
+    runtime.stack.push(inputStruct);
+    runtime.call(ruleNode.whenFunction);
+
+    auto whenReturnType = ruleNode.whenFunction.returnType;
+    auto whenReturnAddress = runtime.stack.peekAddress(whenReturnType);
+    writeln("When result: ", runtime.asString(whenReturnType, whenReturnAddress));
+
+    if (*(cast(bool*) whenReturnAddress)) {
+        runtime.stack.push(inputStruct);
+        runtime.call(ruleNode.thenFunction);
+
+        auto thenReturnType = ruleNode.thenFunction.returnType;
+        auto outputAddress = runtime.stack.peekAddress(thenReturnType);
+        writeln("Output struct: ", runtime.asString(thenReturnType, outputAddress));
+    }
+}
+
+private void shell() {
     auto context = new Context(BlockKind.SHELL);
     auto runtime = new Runtime();
     bool expressionMode = false;

@@ -133,7 +133,7 @@ public class Rule {
         return mapper.mapRule(this);
     }
 
-    public immutable(Node) interpret(Context context) {
+    public immutable(RuleNode) interpret(Context context) {
         return Interpreter.INSTANCE.interpretRule(context, this);
     }
 

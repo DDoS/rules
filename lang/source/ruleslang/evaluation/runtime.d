@@ -264,7 +264,7 @@ public class Runtime {
         throw new Exception(format("Cannot convert JSON %s to type %s", json.toString(), type.toString()));
     }
 
-    private void writeJSONObject(JSONValue json, immutable Type type, void* address) {
+    public void writeJSONObject(JSONValue json, immutable Type type, void* address) {
         auto structType = cast(immutable StructureType) type;
         if (structType is null) {
             throw new Exception(format("Cannot convert JSON %s to type %s", json.toString(), type.toString()));
