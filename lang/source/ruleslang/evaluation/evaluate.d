@@ -409,6 +409,8 @@ public immutable class Evaluator {
             }
 
             public override void call(Runtime runtime, immutable Function func) {
+                // Create a new frame for the call
+                runtime.newFrame();
                 // Map the arguments of the caller to the function parameters
                 ptrdiff_t stackOffset = 0;
                 foreach (parameter; parameters) {
@@ -430,6 +432,10 @@ public immutable class Evaluator {
                 }
                 // Push the return value on the stack
                 runtime.stack.push(func.returnType, runtime.returnValue);
+                // Clear the return value to make sure we're not keeping memory from being GC'd
+                runtime.returnValue = Variant(0);
+                // Discard the frame used for the call
+                runtime.discardFrame();
             }
         }
         // We simply have to register the function implementation to the runtime

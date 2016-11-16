@@ -19,16 +19,22 @@ public interface FunctionImpl {
 }
 
 public class Runtime {
+    private struct Frame {
+        private void*[string] fieldsByName;
+        private FunctionImpl[string] functionImplsByName;
+        private Variant returnValue;
+    }
+
     private Stack _stack;
     private Heap _heap;
     private immutable(ReferenceType)[] types;
-    private void*[string] fieldsByName;
-    private FunctionImpl[string] functionImplsByName;
-    private Variant _returnValue;
+    private Frame[] frames;
 
     public this() {
         _stack = new Stack(4 * 1024);
         _heap = new Heap();
+        frames.reserve(128);
+        frames.length = 1;
     }
 
     @property public Stack stack() {
@@ -56,24 +62,70 @@ public class Runtime {
         return types[index];
     }
 
+    public void newFrame() {
+        frames.length++;
+    }
+
+    public void discardFrame() {
+        assert (frames.length > 0);
+        frames.length--;
+    }
+
     public void registerField(immutable Field field, void* address) {
-        fieldsByName[field.symbolicName] = address;
+        frames[$ - 1].fieldsByName[field.symbolicName] = address;
     }
 
     public void* getField(immutable Field field) {
-        return fieldsByName[field.symbolicName];
+        void** fieldAddress;
+        size_t i = frames.length;
+        // Go down the call frames to search for the field address
+        do {
+            i -= 1;
+            fieldAddress = field.symbolicName in frames[i].fieldsByName;
+        } while (fieldAddress is null && i > 0);
+        // Make sure we found a field address
+        assert (fieldAddress !is null);
+        return *fieldAddress;
     }
 
     public void deleteField(immutable Field field) {
-        fieldsByName.remove(field.symbolicName);
+        frames[$ - 1].fieldsByName.remove(field.symbolicName);
     }
 
     public void registerFunctionImpl(immutable Function func, FunctionImpl impl) {
-        functionImplsByName[func.symbolicName] = impl;
+        frames[$ - 1].functionImplsByName[func.symbolicName] = impl;
+    }
+
+    public void call(immutable Function func) {
+        auto symbolicName = func.symbolicName;
+        if (func.prefix == IntrinsicNameSpace.PREFIX) {
+            auto impl = symbolicName in IntrinsicNameSpace.FUNCTION_IMPLEMENTATIONS;
+            assert (impl !is null);
+            (*impl)(this, func);
+        } else {
+            FunctionImpl* impl;
+            size_t i = frames.length;
+            // Go down the call frames to search for the function implementation
+            do {
+                i -= 1;
+                impl = symbolicName in frames[i].functionImplsByName;
+            } while (impl is null && i > 0);
+            // Make sure we found a function implementation
+            assert (impl !is null);
+            (*impl).call(this, func);
+        }
     }
 
     public void deleteFunctionImpl(immutable Function func) {
-        functionImplsByName.remove(func.symbolicName);
+        frames[$ - 1].functionImplsByName.remove(func.symbolicName);
+    }
+
+    @property public void returnValue(Variant value) {
+        frames[$ - 1].returnValue = value;
+    }
+
+    @property public Variant returnValue() {
+        return frames[$ - 1].returnValue;
     }
 
     public void* allocateComposite(immutable ReferenceType type) {
@@ -108,27 +160,6 @@ public class Runtime {
         // Finally set the length field
         *(cast (size_t*) (address + TypeIndex.sizeof)) = length;
         return address;
-    }
-
-    public void call(immutable Function func) {
-        auto symbolicName = func.symbolicName;
-        if (func.prefix == IntrinsicNameSpace.PREFIX) {
-            auto impl = symbolicName in IntrinsicNameSpace.FUNCTION_IMPLEMENTATIONS;
-            assert (impl !is null);
-            (*impl)(this, func);
-        } else {
-            auto impl = symbolicName in functionImplsByName;
-            assert (impl !is null);
-            impl.call(this, func);
-        }
-    }
-
-    @property public void returnValue(Variant value) {
-        _returnValue = value;
-    }
-
-    @property public Variant returnValue() {
-        return _returnValue;
     }
 
     private void writeJSONValue(JSONValue value, immutable Type type, void* address) {
