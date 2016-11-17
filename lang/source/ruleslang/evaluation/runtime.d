@@ -312,7 +312,6 @@ public class Runtime {
         auto dataSegment = structAddress + TypeIndex.sizeof;
 
         foreach (string memberName, value; json) {
-
             auto memberType = structType.getMemberType(memberName);
             if (memberType is null) {
                 return false;
@@ -348,7 +347,6 @@ public class Runtime {
         auto componentType = arrayType.componentType;
 
         foreach (size_t index, value; json) {
-
             auto valueAddress = dataSegment + index * dataLayout.componentSize;
 
             writeJSONValue(value, componentType, valueAddress);
@@ -371,6 +369,82 @@ public class Runtime {
             return true;
         }
         return false;
+    }
+
+    public JSONValue readJSONValue(immutable Type type, void* address) {
+        if (type == AtomicType.BOOL) {
+            return JSONValue(*(cast(bool*) address));
+        }
+        if (type == AtomicType.SINT8) {
+            return JSONValue(*(cast(byte*) address));
+        }
+        if (type == AtomicType.UINT8) {
+            return JSONValue(*(cast(ubyte*) address));
+        }
+        if (type == AtomicType.SINT16) {
+            return JSONValue(*(cast(short*) address));
+        }
+        if (type == AtomicType.UINT16) {
+            return JSONValue(*(cast(ushort*) address));
+        }
+        if (type == AtomicType.SINT32) {
+            return JSONValue(*(cast(int*) address));
+        }
+        if (type == AtomicType.UINT32) {
+            return JSONValue(*(cast(uint*) address));
+        }
+        if (type == AtomicType.SINT64) {
+            return JSONValue(*(cast(long*) address));
+        }
+        if (type == AtomicType.UINT64) {
+            return JSONValue(*(cast(ulong*) address));
+        }
+        if (type == AtomicType.FP32) {
+            return JSONValue(*(cast(float*) address));
+        }
+        if (type == AtomicType.FP64) {
+            return JSONValue(*(cast(double*) address));
+        }
+
+        auto referenceAddress = *(cast(void**) address);
+        if (referenceAddress is null) {
+            return JSONValue(null);
+        }
+
+        auto referenceType = getType(*(cast(TypeIndex*) referenceAddress));
+
+        if (auto arrayType = cast(immutable ArrayType) referenceType) {
+            auto dataLayout = arrayType.getDataLayout();
+            auto length = *(cast(size_t*) (referenceAddress + TypeIndex.sizeof));
+            auto dataSegment = referenceAddress + TypeIndex.sizeof + size_t.sizeof;
+
+            auto componentType = arrayType.componentType;
+            if (componentType == AtomicType.UINT8) {
+                return JSONValue((cast(char*) dataSegment)[0 .. length]);
+            }
+
+            JSONValue[] values;
+            foreach (index; 0 .. length) {
+                auto valueAddress = dataSegment + index * dataLayout.componentSize;
+                values ~= readJSONValue(componentType, valueAddress);
+            }
+            return JSONValue(values);
+        }
+
+        if (auto structType = cast(immutable StructureType) referenceType) {
+            auto dataLayout = structType.getDataLayout();
+            auto dataSegment = referenceAddress + TypeIndex.sizeof;
+
+            JSONValue[string] values;
+            foreach (memberName; structType.memberNames) {
+                auto memberType = structType.getMemberType(memberName);
+                auto memberAddress = dataSegment + dataLayout.memberOffsetByName[memberName];
+                values[memberName] = readJSONValue(memberType, memberAddress);
+            }
+            return JSONValue(values);
+        }
+
+        throw new Exception(format("Invalid output type: %s", referenceType));
     }
 }
 

@@ -71,6 +71,9 @@ void main(string[] arguments) {
         auto thenReturnType = ruleNode.thenFunction.returnType;
         auto outputAddress = runtime.stack.peekAddress(thenReturnType);
         writeln("Output struct: ", runtime.asString(thenReturnType, outputAddress));
+
+        auto jsonOutput = runtime.readJSONValue(thenReturnType, outputAddress);
+        writeln("Output json: ", jsonOutput);
     }
 }
 
