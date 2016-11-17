@@ -49,7 +49,7 @@ void main(string[] arguments) {
     auto context = new Context();
     auto ruleNode = new Tokenizer(new DCharReader(source)).parseRule().expandOperators().interpret(context);
 
-    auto jsonOutput = runRule(ruleNode, jsonInput);
+    auto jsonOutput = ruleNode.runRule(jsonInput);
     if (jsonOutput.isNull) {
         writeln("Rule not applicable");
     } else {
