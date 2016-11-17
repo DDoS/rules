@@ -319,7 +319,9 @@ public class Runtime {
 
             auto memberAddress = dataSegment + dataLayout.memberOffsetByName[memberName];
 
-            writeJSONValue(value, memberType, memberAddress);
+            if (!writeJSONValue(value, memberType, memberAddress)) {
+                return false;
+            }
         }
         *(cast(void**) address) = structAddress;
         return true;
@@ -349,7 +351,9 @@ public class Runtime {
         foreach (size_t index, value; json) {
             auto valueAddress = dataSegment + index * dataLayout.componentSize;
 
-            writeJSONValue(value, componentType, valueAddress);
+            if (!writeJSONValue(value, componentType, valueAddress)) {
+                return false;
+            }
         }
         *(cast(void**) address) = arrayAddress;
         return true;
