@@ -249,6 +249,14 @@ public class Runtime {
             *(cast(long*) address) = cast(long) json.integer;
             return true;
         }
+        if (type == AtomicType.FP32) {
+            *(cast(float*) address) = cast(float) json.integer;
+            return true;
+        }
+        if (type == AtomicType.FP64) {
+            *(cast(double*) address) = cast(double) json.integer;
+            return true;
+        }
         return false;
     }
 
@@ -267,6 +275,14 @@ public class Runtime {
         }
         if (type == AtomicType.UINT64) {
             *(cast(ulong*) address) = cast(ulong) json.uinteger;
+            return true;
+        }
+        if (type == AtomicType.FP32) {
+            *(cast(float*) address) = cast(float) json.uinteger;
+            return true;
+        }
+        if (type == AtomicType.FP64) {
+            *(cast(double*) address) = cast(double) json.uinteger;
             return true;
         }
         return false;
