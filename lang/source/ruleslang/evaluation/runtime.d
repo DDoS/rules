@@ -5,11 +5,13 @@ import core.memory : GC;
 import std.format : format;
 import std.conv : to;
 import std.variant : Variant;
+import std.typecons : Nullable;
 import std.json;
 
 import ruleslang.semantic.type;
 import ruleslang.semantic.symbol;
 import ruleslang.semantic.context;
+import ruleslang.semantic.tree;
 import ruleslang.util;
 
 public alias TypeIndex = size_t;
@@ -450,6 +452,31 @@ public class Runtime {
 
         throw new Exception(format("Invalid output type: %s", referenceType));
     }
+}
+
+public Nullable!JSONValue runRule(immutable RuleNode rule, JSONValue jsonInput) {
+    // Create and setup the runtime
+    auto runtime = new Runtime();
+    rule.setupRuntime(runtime);
+    // Write the JSON to a struct
+    auto inputType = rule.whenFunction.parameterTypes[0].castOrFail!(immutable StructureType);
+    void* inputStruct;
+    if (!runtime.writeJSONObject(jsonInput, inputType, &inputStruct)) {
+        return Nullable!JSONValue();
+    }
+    // Push the struct on the stach and call the "when" part
+    runtime.stack.push(inputStruct);
+    runtime.call(rule.whenFunction);
+    // Check the results of the "when"
+    if (!runtime.stack.pop!bool()) {
+        return Nullable!JSONValue();
+    }
+    // If the condition passes, call the "then" part
+    runtime.stack.push(inputStruct);
+    runtime.call(rule.thenFunction);
+    // Convert the output struct to JSON
+    auto thenReturnType = rule.thenFunction.returnType;
+    return Nullable!JSONValue(runtime.readJSONValue(thenReturnType, runtime.stack.peekAddress(thenReturnType)));
 }
 
 public class Stack {

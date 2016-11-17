@@ -48,32 +48,12 @@ void main(string[] arguments) {
 
     auto context = new Context();
     auto ruleNode = new Tokenizer(new DCharReader(source)).parseRule().expandOperators().interpret(context);
-    auto inputType = ruleNode.whenFunction.parameterTypes[0].castOrFail!(immutable StructureType);
 
-    auto runtime = new Runtime();
-    ruleNode.setupRuntime(runtime);
-
-    void* inputStruct;
-    runtime.writeJSONObject(jsonInput, inputType, &inputStruct);
-    writeln("Input struct: ", runtime.asString(inputType, &inputStruct));
-
-    runtime.stack.push(inputStruct);
-    runtime.call(ruleNode.whenFunction);
-
-    auto whenReturnType = ruleNode.whenFunction.returnType;
-    auto whenReturnAddress = runtime.stack.peekAddress(whenReturnType);
-    writeln("When result: ", runtime.asString(whenReturnType, whenReturnAddress));
-
-    if (*(cast(bool*) whenReturnAddress)) {
-        runtime.stack.push(inputStruct);
-        runtime.call(ruleNode.thenFunction);
-
-        auto thenReturnType = ruleNode.thenFunction.returnType;
-        auto outputAddress = runtime.stack.peekAddress(thenReturnType);
-        writeln("Output struct: ", runtime.asString(thenReturnType, outputAddress));
-
-        auto jsonOutput = runtime.readJSONValue(thenReturnType, outputAddress);
-        writeln("Output json: ", jsonOutput);
+    auto jsonOutput = runRule(ruleNode, jsonInput);
+    if (jsonOutput.isNull) {
+        writeln("Rule not applicable");
+    } else {
+        writeln("Rule output: ", jsonOutput);
     }
 }
 
