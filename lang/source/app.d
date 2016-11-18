@@ -49,6 +49,8 @@ void main(string[] arguments) {
     auto context = new Context();
     auto ruleNode = new Tokenizer(new DCharReader(source)).parseRule().expandOperators().interpret(context);
 
+    writeln("Rule input format: ", ruleNode.getRuleJSONInputFormat());
+
     auto jsonOutput = ruleNode.runRule(jsonInput);
     if (jsonOutput.isNull) {
         writeln("Rule not applicable");

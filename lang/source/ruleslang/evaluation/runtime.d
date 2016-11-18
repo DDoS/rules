@@ -454,6 +454,70 @@ public class Runtime {
     }
 }
 
+public JSONValue getRuleJSONInputFormat(immutable RuleNode rule) {
+    auto structInputType = rule.whenFunction.parameterTypes[0].castOrFail!(immutable StructureType);
+    JSONValue[] memberFormats;
+    foreach (memberName; structInputType.memberNames) {
+        auto memberType = structInputType.getMemberType(memberName);
+        memberFormats ~= memberType.getTypeJSONInputFormat(memberName);
+    }
+    return JSONValue(memberFormats);
+}
+
+private JSONValue getTypeJSONInputFormat(immutable Type type, string name) {
+    if (auto atomicType = cast(immutable AtomicType) type) {
+        string[] acceptedTypes;
+        if (atomicType.isBoolean()) {
+            acceptedTypes = ["true", "false"];
+        } else if (atomicType.isFloat()) {
+            acceptedTypes = ["int", "uint", "float"];
+        } else if (atomicType.isInteger()) {
+            acceptedTypes = [atomicType.isSigned() ? "int" : "uint"];
+        } else {
+            assert (0);
+        }
+
+        JSONValue[string] atomicFormat = [
+            "Name": JSONValue(name),
+            "Type": JSONValue(acceptedTypes)
+        ];
+        return JSONValue(atomicFormat);
+    }
+
+    if (auto arrayType = cast(immutable ArrayType) type) {
+        auto allowString = false;
+        if (auto atomicComponentType = cast(immutable AtomicType) arrayType.componentType) {
+            allowString = atomicComponentType.isInteger() && !atomicComponentType.isSigned();
+        }
+        auto acceptedTypes = ["null", "array"] ~ (allowString ? ["string"] : []);
+
+        JSONValue[string] arrayFormat = [
+            "Name": JSONValue(name),
+            "Type": JSONValue(acceptedTypes),
+            "SubObjects": arrayType.componentType.getTypeJSONInputFormat("*")
+        ];
+        return JSONValue(arrayFormat);
+    }
+
+    if (auto structType = cast(immutable StructureType) type) {
+
+        JSONValue[] memberFormats;
+        foreach (memberName; structType.memberNames) {
+            auto memberType = structType.getMemberType(memberName);
+            memberFormats ~= memberType.getTypeJSONInputFormat(memberName);
+        }
+
+        JSONValue[string] structFormat = [
+            "Name": JSONValue(name),
+            "Type": JSONValue(["null", "object"]),
+            "SubObjects": JSONValue(memberFormats)
+        ];
+        return JSONValue(structFormat);
+    }
+
+    throw new Exception(format("Invalid input type %s for field %s", type.toString(), name));
+}
+
 public Nullable!JSONValue runRule(immutable RuleNode rule, JSONValue jsonInput) {
     // Create and setup the runtime
     auto runtime = new Runtime();
