@@ -6,11 +6,12 @@ import (
 	"encoding/json"
 	"github.com/stretchr/testify/require"
 	"github.com/michael-golfi/rules/server/inference"
+	"bytes"
 )
 
 var (
 	idTypeObj = []inference.Field{{Name: "id", Type: "string"}, {Name: "type", Type: "string"}}
-	val = []inference.Field{
+	expected = []inference.Field{
 		{Name: "id", Type: "string"},
 		{
 			Name: "batters", Type: "object",
@@ -26,7 +27,9 @@ var (
 
 			},
 		},
-		{Name: "ppu", Type: "number"},
+		{Name: "ppu", Type: "float"},
+		{Name: "ppu2", Type: "float"},
+		{Name: "ppu3", Type: "int"},
 		{
 			Name: "topping", Type: "array",
 			SubObject: []inference.Field{{Name: "0", Type: "object", SubObject: idTypeObj}},
@@ -42,10 +45,16 @@ func TestParser_Parse(t *testing.T) {
 	require.NoError(t, err)
 
 	var data interface{}
-	err = json.Unmarshal(b, &data)
-	fields := p.Parse(data)
 
-	eq := p.DeepEqual(val, fields)
+	d := json.NewDecoder(bytes.NewReader(b))
+	d.UseNumber()
+	d.Decode(&data)
+
+	require.NotNil(t, data, "Check the json file")
+
+	actual := p.Parse(data)
+
+	eq := p.FuzzyEqual(expected, actual)
 	require.True(t, eq)
 }
 
@@ -81,24 +90,24 @@ func TestParser_Parse_Err(t *testing.T) {
 
 func TestParser_DeepEqual_True(t *testing.T) {
 	p := inference.Parser{}
-	eq := p.DeepEqual(val, val)
+	eq := p.FuzzyEqual(expected, expected)
 	require.True(t, eq)
 }
 
 func TestParser_DeepEqual_False(t *testing.T) {
 	p := inference.Parser{}
-	eq := p.DeepEqual(val, nil)
+	eq := p.FuzzyEqual(expected, nil)
 	require.False(t, eq)
 
-	wrongName := make([]inference.Field, len(val))
-	copy(wrongName[:], val)
+	wrongName := make([]inference.Field, len(expected))
+	copy(wrongName[:], expected)
 	wrongName[0].Name = "WrongName"
-	eq = p.DeepEqual(val, wrongName)
+	eq = p.FuzzyEqual(expected, wrongName)
 	require.False(t, eq)
 
-	nilSubObject := make([]inference.Field, len(val))
-	copy(nilSubObject[:], val)
+	nilSubObject := make([]inference.Field, len(expected))
+	copy(nilSubObject[:], expected)
 	nilSubObject[1].SubObject = nil
-	eq = p.DeepEqual(val, nilSubObject)
+	eq = p.FuzzyEqual(expected, nilSubObject)
 	require.False(t, eq)
 }

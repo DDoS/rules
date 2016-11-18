@@ -2,6 +2,8 @@
   "id": "0001",
   "type": "donut",
   "ppu": 0.55,
+  "ppu2": 55,
+  "ppu3": 5,
   "batters": {
     "batter": [
       {
