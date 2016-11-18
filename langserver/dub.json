@@ -1,15 +1,16 @@
 {
+	"authors": [
+		"Michael Golfi"
+	],
+	"description": "Serving the P* language",
 	"name": "langserver",
-	"targetType": "none",
 	"dependencies": {
-		"langserver:ruleslang": "*"
+		"vibe-d": "~master",
+		"rules-lang": "~master"
 	},
-	"subPackages": [
-		{
-			"name": "ruleslang",
-			"targetType": "library",
-			"sourcePaths": ["../../lang/source"],
-			"importPaths": ["../../lang/source"]
-		}
+	"license": "MIT",
+	"copyright": "Copyright 2016,Michael Golfi",
+	"versions": [
+		"VibeDefaultMain"
 	]
 }
