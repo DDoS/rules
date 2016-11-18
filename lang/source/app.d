@@ -46,8 +46,7 @@ void main(string[] arguments) {
     file = buildNormalizedPath(absolutePath(expandTilde(file)));
     auto source = readText(file);
 
-    auto context = new Context();
-    auto ruleNode = new Tokenizer(new DCharReader(source)).parseRule().expandOperators().interpret(context);
+    auto ruleNode = new Tokenizer(new DCharReader(source)).parseRule().expandOperators().interpret();
 
     writeln("Rule input format: ", ruleNode.getRuleJSONInputFormat());
 

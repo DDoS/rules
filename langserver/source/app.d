@@ -40,12 +40,11 @@ void interpret(HTTPServerRequest req, HTTPServerResponse res)
 {
 	auto input = req.json["input"].get!string;
 	auto rules = req.json["rules"].get!string;
-	
+
     auto jsonInput = parseJSON(input);
     auto source = rules;
 
-    auto context = new Context();
-    auto ruleNode = new Tokenizer(new DCharReader(source)).parseRule().expandOperators().interpret(context);
+    auto ruleNode = new Tokenizer(new DCharReader(source)).parseRule().expandOperators().interpret();
     auto jsonOutput = ruleNode.runRule(jsonInput);
     if (jsonOutput.isNull) {
         writeln("Rule not applicable");
