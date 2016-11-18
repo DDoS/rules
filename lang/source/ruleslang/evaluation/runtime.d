@@ -313,12 +313,14 @@ public class Runtime {
         auto structAddress = allocateComposite(structType);
         auto dataSegment = structAddress + TypeIndex.sizeof;
 
-        foreach (string memberName, value; json) {
-            auto memberType = structType.getMemberType(memberName);
-            if (memberType is null) {
+        foreach (memberName; structType.memberNames) {
+            auto optValue = memberName in json;
+            if (optValue is null) {
                 return false;
             }
+            auto value = *optValue;
 
+            auto memberType = structType.getMemberType(memberName);
             auto memberAddress = dataSegment + dataLayout.memberOffsetByName[memberName];
 
             if (!writeJSONValue(value, memberType, memberAddress)) {
