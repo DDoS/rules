@@ -1,12 +1,12 @@
-# dub run --  -f test/resource/increment.p -i "{\"anInt\": {\"i\": 2}, \"aFloat\": {\"f\": 7.5}}"
+# dub run -- -f test/resource/increment.p -i "{\"anInt\": {\"i\": 2}, \"floats\": {\"fs\": [4, 7]}}"
 
-def Numbers: {AnInt anInt, AFloat aFloat}
+def Numbers: {AnInt anInt, Floats floats}
 
 def AnInt: {sint64 i}
-def AFloat: {fp32 f}
+def Floats: {fp32[] fs}
 
 when (Numbers numbers):
-    return numbers.anInt.i != numbers.aFloat.f;
+    return numbers.floats.fs.len() > 1;
 
 then (Numbers numbers):
-    return {anInt: {i: numbers.anInt.i + sint64(numbers.aFloat.f)}, aFloat: numbers.aFloat}
+    return {anInt: {i: numbers.anInt.i + numbers.floats.fs[1]}, floats: numbers.floats}
