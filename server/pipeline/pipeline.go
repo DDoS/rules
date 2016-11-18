@@ -3,22 +3,26 @@ package pipeline
 import (
 	"github.com/michael-golfi/log4go"
 	"errors"
-	"github.com/michael-golfi/rules/server/pipeline/process"
 	"fmt"
+	"github.com/michael-golfi/rules/server/pipeline/config"
+)
+
+type State int
+const (
+	RUNNING State = 1
+	STOPPED State = 2
 )
 
 type Pipeline struct {
-	Name      string
 	state     State
+	config    *config.Config
 	pipeInput *PipeInput
-	process   *process.Process
 }
 
-func NewPipeline(name string, process *process.Process, in *PipeInput) *Pipeline {
+func NewPipeline(config *config.Config, in *PipeInput) *Pipeline {
 	return &Pipeline{
-		Name: name,
+		config: config,
 		state: STOPPED,
-		process: process,
 		pipeInput: in,
 	}
 }
@@ -35,10 +39,11 @@ func (p *Pipeline) Start() error {
 			select {
 			case input := <-pipe.pipeInput.Input:
 				fmt.Println(input)
-			//pipe.process(input)
+
+
 
 			case <-pipe.pipeInput.Quit:
-				log4go.Info("Pipeline %s: Stopping", pipe.Name)
+				log4go.Info("Pipeline %s: Stopping", pipe.config.Name)
 				pipe.state = STOPPED
 				return
 			}
@@ -55,6 +60,10 @@ func (p *Pipeline) Input(input interface{}) error {
 	} else {
 		return errors.New("Pipeline is not running")
 	}
+}
+
+func (p *Pipeline) Config() *config.Config {
+	return p.config
 }
 
 func (p *Pipeline) State() State {

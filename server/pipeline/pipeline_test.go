@@ -4,11 +4,20 @@ import (
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+	"github.com/michael-golfi/rules/server/pipeline/config"
+	"github.com/michael-golfi/rules/server/rule"
+	"github.com/michael-golfi/rules/server/inference"
 )
+
+var conf = config.Config{
+	Name: "Default",
+	Schema: []inference.Field{},
+	Rules: rule.RuleRepository{},
+}
 
 func TestNewPipeline(t *testing.T) {
 	in := CreateInput()
-	p := NewPipeline("Default", nil, in)
+	p := NewPipeline(&conf, in)
 
 	assert.NotNil(t, in)
 	assert.NotNil(t, p)
@@ -17,25 +26,25 @@ func TestNewPipeline(t *testing.T) {
 
 func TestPipeline_Start(t *testing.T) {
 	in := CreateInput()
-	p := NewPipeline("Default", nil, in)
+	p := NewPipeline(&conf, in)
 
 	assert.NotNil(t, in)
 	assert.NotNil(t, p)
 	assert.Equal(t, STOPPED, p.State())
 
-	p.Start(func(i interface{}) {})
+	p.Start()
 	assert.Equal(t, RUNNING, p.State())
 }
 
 func TestPipeline_Stop(t *testing.T) {
 	in := CreateInput()
-	p := NewPipeline("Default", nil, in)
+	p := NewPipeline(&conf, in)
 
 	assert.NotNil(t, in)
 	assert.NotNil(t, p)
 	assert.Equal(t, STOPPED, p.State())
 
-	p.Start(func(i interface{}) {})
+	p.Start()
 	assert.Equal(t, RUNNING, p.State())
 	p.Stop()
 
