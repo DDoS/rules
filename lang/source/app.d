@@ -46,15 +46,19 @@ void main(string[] arguments) {
     file = buildNormalizedPath(absolutePath(expandTilde(file)));
     auto source = readText(file);
 
-    auto ruleNode = new Tokenizer(new DCharReader(source)).parseRule().expandOperators().interpret();
+    try {
+        auto ruleNode = new Tokenizer(new DCharReader(source)).parseRule().expandOperators().interpret();
 
-    writeln("Rule input format: ", ruleNode.getRuleJSONInputFormat());
+        writeln("Rule input format: ", ruleNode.getRuleJSONInputFormat());
 
-    auto jsonOutput = ruleNode.runRule(jsonInput);
-    if (jsonOutput.isNull) {
-        writeln("Rule not applicable");
-    } else {
-        writeln("Rule output: ", jsonOutput);
+        auto jsonOutput = ruleNode.runRule(jsonInput);
+        if (jsonOutput.isNull) {
+            writeln("Rule not applicable");
+        } else {
+            writeln("Rule output: ", jsonOutput);
+        }
+    } catch (SourceException exception) {
+        writeln(exception.getErrorInformation(source).toString());
     }
 }
 

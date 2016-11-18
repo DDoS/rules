@@ -44,12 +44,16 @@ void interpret(HTTPServerRequest req, HTTPServerResponse res)
     auto jsonInput = parseJSON(input);
     auto source = rules;
 
-    auto ruleNode = new Tokenizer(new DCharReader(source)).parseRule().expandOperators().interpret();
-    auto jsonOutput = ruleNode.runRule(jsonInput);
-    if (jsonOutput.isNull) {
-        writeln("Rule not applicable");
-    } else {
-		auto output = jsonOutput.get();
-		res.writeJsonBody(output.toString);
+    try {
+        auto ruleNode = new Tokenizer(new DCharReader(source)).parseRule().expandOperators().interpret();
+        auto jsonOutput = ruleNode.runRule(jsonInput);
+        if (jsonOutput.isNull) {
+            writeln("Rule not applicable");
+        } else {
+    		auto output = jsonOutput.get();
+    		res.writeJsonBody(output.toString);
+        }
+    } catch (SourceException exception) {
+        writeln(exception.getErrorInformation(source).toString());
     }
 }
