@@ -956,8 +956,7 @@ public immutable class Interpreter {
         // Interpret the parameter type
         auto parameterType = rulePart.type.interpret(context);
         // Check that the parameter type is a struct or the any type
-        if (cast(immutable StructureType) parameterType is null
-                && parameterType != AnyType.INSTANCE) {
+        if (cast(immutable StructureType) parameterType is null) {
             throw new SourceException("The parameter type of a rule part must be a struct", rulePart.type);
         }
         // Create the function symbol and define it in the context
@@ -1062,6 +1061,10 @@ public immutable class Interpreter {
             auto badVarDecls = varDeclNodeToVarDecl.values();
             throw new SourceException(format("The following variable declaration have cyclical dependencies:\n    %s\n",
                     badVarDecls.join!("\n    ", "a.name.getSource()")), badVarDecls[0]);
+        }
+        // Either a "when" or "then" part must be defined
+        if (rule.whenDefinition is null && rule.thenDefinition is null) {
+            throw new SourceException("A rule must have at least a \"when\" or a \"then\" part", rule);
         }
         // Interpret the "then" rule part
         Rebindable!(immutable FunctionDefinitionNode) thenFuncDef;
