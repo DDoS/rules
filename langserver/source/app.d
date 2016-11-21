@@ -24,36 +24,34 @@ import ruleslang.util;
 
 shared static this()
 {
-	auto router = new URLRouter;
-	router.post("/interpret", &interpret);
+    auto router = new URLRouter;
+    router.post("/api/v1/rules/:ruleset", &interpret);
 
-	auto settings = new HTTPServerSettings;
-	settings.port = 8080;
-	settings.bindAddresses = ["::1", "127.0.0.1"];
+    auto settings = new HTTPServerSettings;
+    settings.port = 8080;
+    settings.bindAddresses = ["::1", "127.0.0.1"];
 
-	listenHTTP(settings, router);
+    listenHTTP(settings, router);
 
-	logInfo("Please open http://127.0.0.1:8080/ in your browser.");
+    logInfo("Please open http://127.0.0.1:8080/ in your browser.");
 }
 
 void interpret(HTTPServerRequest req, HTTPServerResponse res)
 {
-	auto input = req.json["input"].get!string;
-	auto rules = req.json["rules"].get!string;
-
+    auto input = req.json["input"].get!string;
+    auto rules = req.json["source"].get!string;
+    
     auto jsonInput = parseJSON(input);
     auto source = rules;
 
-    try {
-        auto ruleNode = new Tokenizer(new DCharReader(source)).parseRule().expandOperators().interpret();
-        auto jsonOutput = ruleNode.runRule(jsonInput);
-        if (jsonOutput.isNull) {
-            writeln("Rule not applicable");
-        } else {
-    		auto output = jsonOutput.get();
-    		res.writeJsonBody(output.toString);
-        }
-    } catch (SourceException exception) {
-        writeln(exception.getErrorInformation(source).toString());
+    auto context = new Context();
+    auto ruleNode = new Tokenizer(new DCharReader(source)).parseRule().expandOperators().interpret(context);
+    auto jsonOutput = ruleNode.runRule(jsonInput);
+    if (jsonOutput.isNull) {
+        writeln("Rule not applicable");
+        writeBody("Rule not applicable","application/json; charset=UTF-8");
+    } else {
+        auto output = jsonOutput.get();
+        res.writeBody(output.toString(),"application/json; charset=UTF-8");
     }
 }
