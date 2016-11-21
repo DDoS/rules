@@ -22,10 +22,14 @@ import ruleslang.evaluation.runtime;
 import ruleslang.evaluation.evaluate;
 import ruleslang.util;
 
+shared static RuleNode[string] rulesSets;
+
 shared static this()
 {
 	auto router = new URLRouter;
-	router.post("/interpret", &interpret);
+	router
+		.post("/rules/:ruleset", &newRuleSet)
+		.put("/rules/:ruleset", &interpret);		
 
 	auto settings = new HTTPServerSettings;
 	settings.port = 8080;
@@ -36,21 +40,34 @@ shared static this()
 	logInfo("Please open http://127.0.0.1:8080/ in your browser.");
 }
 
-void interpret(HTTPServerRequest req, HTTPServerResponse res)
+void newRuleSet(HTTPServerRequest req, HTTPServerResponse res)
 {
-	auto input = req.json["input"].get!string;
-	auto rules = req.json["rules"].get!string;
+	writeln("New RuleSet: "~req.params["ruleset"]);
 	
-    auto jsonInput = parseJSON(input);
-    auto source = rules;
-
+	auto ruleName = req.params["ruleset"];
+	auto source = req.json["rules"].get!string;
     auto context = new Context();
     auto ruleNode = new Tokenizer(new DCharReader(source)).parseRule().expandOperators().interpret(context);
-    auto jsonOutput = ruleNode.runRule(jsonInput);
-    if (jsonOutput.isNull) {
+	
+	writeln("Saving Rules... "~req.params["ruleset"]);
+	rulesSets[ruleName] = cast(shared RuleNode)ruleNode;	
+	writeln("Saved Rules... "~req.params["ruleset"]);
+}
+
+void interpret(HTTPServerRequest req, HTTPServerResponse res)
+{
+	writeln("Interpret: "~req.params["ruleset"]);
+	
+	auto ruleName = req.params["ruleset"];
+	auto ruleSet = cast(immutable RuleNode)rulesSets[ruleName];
+	auto input = req.json["input"].get!string;
+	auto jsonInput = parseJSON(input);
+    auto jsonOutput = ruleSet.runRule(jsonInput);
+    
+	if (jsonOutput.isNull) {
         writeln("Rule not applicable");
     } else {
 		auto output = jsonOutput.get();
-		res.writeJsonBody(output.toString);
+		res.writeBody(output.toString(),"application/json; charset=UTF-8");
     }
 }
