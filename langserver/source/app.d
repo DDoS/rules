@@ -1,57 +1,65 @@
-import vibe.d;
 import std.stdio;
 import std.json;
+import std.typecons : Rebindable;
 
-import ruleslang.syntax.dchars;
-import ruleslang.syntax.tokenizer;
-import ruleslang.semantic.context;
+import vibe.d;
 
-/* 	Remove this once I find out which ones are specifically needed */
 import ruleslang.syntax.source;
-import ruleslang.syntax.token;
-import ruleslang.syntax.ast.expression;
-import ruleslang.syntax.ast.statement;
-import ruleslang.syntax.parser.expression;
-import ruleslang.syntax.parser.statement;
+import ruleslang.syntax.tokenizer;
 import ruleslang.syntax.parser.rule;
 import ruleslang.semantic.opexpand;
-import ruleslang.semantic.type;
-import ruleslang.semantic.tree;
 import ruleslang.semantic.interpret;
+import ruleslang.semantic.tree;
 import ruleslang.evaluation.runtime;
-import ruleslang.evaluation.evaluate;
 import ruleslang.util;
 
-shared static this()
-{
-    auto router = new URLRouter;
-    router.post("/api/v1/rules/:ruleset", &interpret);
+shared static this() {
+    RuleManager manager;
 
-    auto settings = new HTTPServerSettings;
+    auto router = new URLRouter();
+    router.post("/api/v1/rules/add", &manager.addRule);
+    router.post("/api/v1/rules/run", &manager.runRule);
+
+    auto settings = new HTTPServerSettings();
     settings.port = 8080;
     settings.bindAddresses = ["::1", "127.0.0.1"];
 
     listenHTTP(settings, router);
-
-    logInfo("Please open http://127.0.0.1:8080/ in your browser.");
 }
 
-void interpret(HTTPServerRequest req, HTTPServerResponse res)
-{
-    auto input = req.json["input"].get!string;
-    auto rules = req.json["source"].get!string;
-    
-    auto jsonInput = parseJSON(input);
-    auto source = rules;
+/*
+curl -X POST -d $'name=test&source=def R: {sint64 i}\nthen(R r):\n return r' http://127.0.0.1:8080/api/v1/rules/add
+curl -X POST -d $'name=test&input={"i": 1}' http://127.0.0.1:8080/api/v1/rules/run
+*/
 
-    auto context = new Context();
-    auto ruleNode = new Tokenizer(new DCharReader(source)).parseRule().expandOperators().interpret(context);
-    auto jsonOutput = ruleNode.runRule(jsonInput);
-    if (jsonOutput.isNull) {
-        writeln("Rule not applicable");
-        writeBody("Rule not applicable","application/json; charset=UTF-8");
-    } else {
-        auto output = jsonOutput.get();
-        res.writeBody(output.toString(),"application/json; charset=UTF-8");
+private struct RuleManager {
+    private Rebindable!(immutable RuleNode)[string] rulesByName;
+
+    void addRule(HTTPServerRequest req, HTTPServerResponse res) {
+    	writeln("Adding rule: " ~ req.form["name"]);
+
+    	auto ruleName = req.form["name"];
+    	auto ruleSource = req.form["source"];
+        auto ruleNode = new Tokenizer(new DCharReader(ruleSource)).parseRule().expandOperators().interpret();
+    	rulesByName[ruleName] = ruleNode;
+
+        res.writeBody("");
+    }
+
+    void runRule(HTTPServerRequest req, HTTPServerResponse res) {
+        writeln("Running rule: " ~ req.form["name"]);
+
+    	auto ruleName = req.form["name"];
+    	auto ruleNode = rulesByName[ruleName];
+    	auto inputString = req.form["input"];
+    	auto jsonInput = parseJSON(inputString);
+
+        auto jsonOutput = ruleNode.runRule(jsonInput);
+    	if (jsonOutput.isNull) {
+            res.writeBody("Rule not applicable");
+        } else {
+    		auto output = jsonOutput.get();
+    		res.writeBody(output.toString(), "application/json; charset=UTF-8");
+        }
     }
 }
