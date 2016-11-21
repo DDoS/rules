@@ -7,32 +7,19 @@ import (
 	"fmt"
 	"github.com/michael-golfi/rules/server/inference"
 	"errors"
-	"github.com/coreos/etcd/client"
 	"github.com/michael-golfi/rules/server/rule"
 )
-
-func CreateEtcdClient(host string) (*client.Client, error) {
-	cfg := client.Config{
-		Endpoints:               []string{host},
-		Transport:               client.DefaultTransport,
-		HeaderTimeoutPerRequest: time.Second,
-	}
-
-	c, err := client.New(cfg)
-	return &c, err
-}
 
 func CreateViperConfig(host, path string) *viper.Viper {
 	cache := viper.New()
 	cache.AddRemoteProvider("etcd", host, path)
 	cache.SetConfigType("yaml")
-	return cache
-}
 
-func LoadCache(cache *viper.Viper) {
 	if err := cache.ReadRemoteConfig(); err != nil {
 		log4go.Crashf("Cannot read from etcd: %s", err.Error())
 	}
+
+	return cache
 }
 
 func WatchConfig(cache *viper.Viper, config map[string]Config) {

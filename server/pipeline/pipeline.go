@@ -3,11 +3,13 @@ package pipeline
 import (
 	"github.com/michael-golfi/log4go"
 	"errors"
-	"fmt"
 	"github.com/michael-golfi/rules/server/pipeline/config"
+	"github.com/michael-golfi/rules/server/interpreter"
+	"encoding/json"
 )
 
 type State int
+
 const (
 	RUNNING State = 1
 	STOPPED State = 2
@@ -34,13 +36,33 @@ func (p *Pipeline) Start() error {
 
 	p.state = RUNNING
 
-	go func(pipe *Pipeline) {
+	client, err := interpreter.NewHandler("127.0.0.1:9090/api/v1/rules/default")
+	if err != nil {
+		log4go.Error("Couldn't connect to interpreter... %s", err.Error())
+		return err
+	}
+
+	go func(pipe *Pipeline, client *interpreter.Handler) {
+
 		for {
 			select {
 			case input := <-pipe.pipeInput.Input:
-				fmt.Println(input)
 
 
+
+				source := pipe.config.Rules.ToString()
+				b, err := json.Marshal(input)
+
+				if err != nil {
+					log4go.Error("Could not serialize input: %s", err.Error())
+				}
+
+				resp, err := client.Evaluate(source, string(b))
+				if err != nil {
+					log4go.Error("Cannot execute rule: %s", err.Error())
+				}
+
+				log4go.Info("Response: %s", resp)
 
 			case <-pipe.pipeInput.Quit:
 				log4go.Info("Pipeline %s: Stopping", pipe.config.Name)
@@ -48,7 +70,7 @@ func (p *Pipeline) Start() error {
 				return
 			}
 		}
-	}(p)
+	}(p, client)
 
 	return nil
 }

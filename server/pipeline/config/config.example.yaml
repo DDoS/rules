@@ -8,17 +8,15 @@ schema:
     type: string
 rules:
   - id: 0
-    when: example 1
-    then: example 1
+    setup: >
+      def Numbers: {AnInt anInt, AFloat aFloat}
+      def AnInt: {sint64 i}
+      def AFloat: {fp32 f}"
 
-  - id: 1
-    when: example 2
-    then: example 2
+    when: >
+      when (Numbers numbers):
+      return numbers.anInt.i != numbers.aFloat.f;
 
-  - id: 2
-    when: example 3
-    then: example 3
-
-  - id: 3
-    when: example 4
-    then: example 4
+    then: >
+      then (Numbers numbers):
+      return {anInt: {i: numbers.anInt.i + sint64(numbers.aFloat.f)}, aFloat: numbers.aFloat}

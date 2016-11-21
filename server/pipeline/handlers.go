@@ -9,53 +9,84 @@ import (
 	"github.com/spf13/viper"
 	_ "github.com/spf13/viper/remote"
 	"github.com/michael-golfi/rules/server/inference"
-	"github.com/coreos/etcd/client"
 	"github.com/michael-golfi/rules/server/pipeline/config"
-	"github.com/michael-golfi/rules/server/rule"
+	"github.com/coreos/etcd/clientv3"
+	"github.com/fsnotify/fsnotify"
+	"io/ioutil"
+	"gopkg.in/yaml.v2"
+	"sync"
+	"github.com/davecgh/go-spew/spew"
 )
 
 type PipelineHandler struct {
 	Parser    inference.Parser
-	etcd      *client.Client
+	etcd      *clientv3.Client
 	viper     *viper.Viper
 	conf      map[string]config.Config
 	pipelines map[string]*Pipeline
+	sync.RWMutex
 }
 
 func NewPipelineHandler(etcd, path string) *PipelineHandler {
-	c, err := config.CreateEtcdClient(etcd)
-	if err != nil {
-		log4go.Crashf("Cannot connect with ETCD: %s", err.Error())
-	}
-
-	// Create local cache
-	cache := config.CreateViperConfig(etcd, path)
 
 	conf := make(map[string]config.Config)
 
-	config.LoadCache(cache)
-
-	name := cache.GetString("name")
-	var rules rule.RuleRepository
-	var schema []inference.Field
-	cache.UnmarshalKey("rules", &rules)
-	cache.UnmarshalKey("schema", &schema)
-
-	conf[name] = config.Config{
-		Name: name,
-		Rules: rules,
-		Schema: schema,
-	}
-
-	// Watch remote config async
-	go config.WatchConfig(cache, conf)
-
-	return &PipelineHandler{
-		etcd: c,
+	h := &PipelineHandler{
 		Parser: inference.Parser{},
-		viper: cache,
 		conf: conf,
 	}
+
+	go func(filename string, h *PipelineHandler) {
+		watcher, err := fsnotify.NewWatcher()
+		if err != nil {
+			log4go.Error(err.Error())
+		}
+		defer watcher.Close()
+
+		err = watcher.Add(path)
+		if err != nil {
+			log4go.Error(err.Error())
+		}
+
+		watcher.Events <- fsnotify.Event{
+			Op: fsnotify.Write,
+		}
+
+		for {
+			select {
+			case event := <-watcher.Events:
+				log4go.Info("event:", event)
+				if event.Op & fsnotify.Write == fsnotify.Write {
+					log4go.Info("%s modified:", filename)
+
+					b, err := ioutil.ReadFile(filename)
+					if err != nil {
+						log4go.Error("Cannot read file: %s", err.Error())
+						break
+					}
+
+					var conf config.Config
+					if err := yaml.Unmarshal(b, &conf); err != nil {
+						log4go.Error("Cannot read yaml: %s", err.Error())
+						break
+					}
+
+					h.Lock()
+					// Reconfigure pipeline handler
+					h.conf[conf.Name] = conf
+					h.Unlock()
+
+					log4go.Info("Updated pipeline: %s", conf.Name)
+					spew.Dump(conf)
+				}
+
+			case err := <-watcher.Errors:
+				log4go.Error("Watcher Error: %s", err)
+			}
+		}
+	}(path, h)
+
+	return h
 }
 
 func (p *PipelineHandler) SetRoutes(r *mux.Router) {
@@ -77,12 +108,18 @@ func (p *PipelineHandler) NewPipeline(w http.ResponseWriter, r *http.Request) {
 	}
 
 	pipeline := NewPipeline(config, in)
+
+	p.Lock()
 	p.pipelines[config.Name] = pipeline
+	p.Unlock()
 }
 
 func (p *PipelineHandler) ReadPipelineConfig(w http.ResponseWriter, r *http.Request) {
 	name := mux.Vars(r)["name"]
+
+	p.RLock()
 	conf := p.conf[name]
+	p.RUnlock()
 
 	if err := json.NewEncoder(w).Encode(conf); err != nil {
 		message := fmt.Sprintf("Could not encode Pipeline: %s", err.Error())
@@ -103,8 +140,12 @@ func (p *PipelineHandler) Evaluate(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(message))
 	}
 
+	p.RLock()
+	conf := p.conf
+	p.RUnlock()
+
 	fields := p.Parser.Parse(data)
-	pipeName, err := config.FindConf(&p.Parser, fields, p.conf)
+	pipeName, err := config.FindConf(&p.Parser, fields, conf)
 
 	if err != nil {
 		message := fmt.Sprintf("Could not find matching pipeline: %s", err.Error())
@@ -113,7 +154,11 @@ func (p *PipelineHandler) Evaluate(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(message))
 	}
 
+	p.RLock()
 	pipeline := p.pipelines[pipeName]
-	pipeline.Input(data)
+	p.RUnlock()
 
+	p.Lock()
+	pipeline.Input(data)
+	p.Unlock()
 }

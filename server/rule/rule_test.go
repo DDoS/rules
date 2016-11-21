@@ -111,3 +111,34 @@ func yamlEqual(t *testing.T, expected, actual string) {
 
 	require.EqualValues(t, expectedStruct, actualStruct)
 }
+
+func TestRuleRepository_ToString(t *testing.T) {
+	var rules rule.RuleRepository = make([]rule.Rule, 1)
+	rules[0].Setup =
+`def Numbers: {AnInt anInt, AFloat aFloat}
+
+def AnInt: {sint64 i}
+def AFloat: {fp32 f}`
+	rules[0].When =
+`when (Numbers numbers):
+return numbers.anInt.i != numbers.aFloat.f;`
+
+	rules[0].Then =
+`then (Numbers numbers):
+return {anInt: {i: numbers.anInt.i + sint64(numbers.aFloat.f)}, aFloat: numbers.aFloat}`
+
+	expected :=
+`def Numbers: {AnInt anInt, AFloat aFloat}
+
+def AnInt: {sint64 i}
+def AFloat: {fp32 f}
+
+when (Numbers numbers):
+return numbers.anInt.i != numbers.aFloat.f;
+
+then (Numbers numbers):
+return {anInt: {i: numbers.anInt.i + sint64(numbers.aFloat.f)}, aFloat: numbers.aFloat}`
+
+	actual := rules.ToString()
+	require.Equal(t, expected, actual)
+}
