@@ -1,6 +1,6 @@
 import std.stdio;
 import std.json;
-import std.typecons : Rebindable;
+import std.typecons : Rebindable, Nullable;
 
 import vibe.d;
 
@@ -40,8 +40,14 @@ private struct RuleManager {
 
     	auto ruleName = req.form["name"];
     	auto ruleSource = req.form["source"];
-        auto ruleNode = new Tokenizer(new DCharReader(ruleSource)).parseRule().expandOperators().interpret();
-    	rulesByName[ruleName] = ruleNode;
+
+        try {
+            auto ruleNode = new Tokenizer(new DCharReader(ruleSource)).parseRule().expandOperators().interpret();
+            rulesByName[ruleName] = ruleNode;
+        } catch (SourceException exception) {
+            auto errorMessage = exception.getErrorInformation(ruleSource).toString();
+            // TODO: handle compile error caused by bad rule source code
+        }
 
         res.writeBody("");
     }
@@ -54,7 +60,16 @@ private struct RuleManager {
     	auto inputString = req.form["input"];
     	auto jsonInput = parseJSON(inputString);
 
-        auto jsonOutput = ruleNode.runRule(jsonInput);
+        Nullable!(JSONValue) jsonOutput;
+        try {
+            jsonOutput = ruleNode.runRule(jsonInput);
+        } catch (SourceException exception) {
+            auto errorMessage = exception.msg;
+            auto startSourceIndex = exception.start;
+            auto endSourceIndex = exception.end;
+            // TODO: handle runtime error caused by rule
+        }
+
     	if (jsonOutput.isNull) {
             res.writeBody("Rule not applicable");
         } else {
