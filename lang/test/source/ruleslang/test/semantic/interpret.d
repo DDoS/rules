@@ -1041,27 +1041,25 @@ unittest {
 
 unittest {
     assertEqual(
-        "Rule(TypeDefinition(def float: fp32); "
-            ~ "FunctionDefinition(rule$when({} when$param) bool: Block(Return(BooleanLiteral(true)))); "
-            ~ "FunctionDefinition(rule$then({} then$param) {}: Block(Return(FieldAccess(then$param)))))",
-        interpretRule("def float: fp32")
-    );
-    assertEqual(
-        "Rule(TypeDefinition(def float: fp32); TypeDefinition(def Vec3f: {fp32, fp32, fp32}); "
-            ~ "FunctionDefinition(rule$when({} when$param) bool: Block(Return(BooleanLiteral(true)))); "
-            ~ "FunctionDefinition(rule$then({} then$param) {}: Block(Return(FieldAccess(then$param)))))",
+        "Rule(TypeDefinition(def float: fp32); TypeDefinition(def Vec3f: {fp32 x, fp32 y, fp32 z}); "
+            ~ "FunctionDefinition(rule$when({fp32 x, fp32 y, fp32 z} when$param) bool: Block(Return(BooleanLiteral(true)))); "
+            ~ "FunctionDefinition(rule$then({fp32 x, fp32 y, fp32 z} v) {}: Block(Return(FieldAccess(v)))))",
         interpretRule(
             "def float: fp32\n" ~
-            "def Vec3f: {float, float, float}"
+            "def Vec3f: {float x, float y, float z}\n" ~
+            "then (Vec3f v):\n" ~
+            "    return v"
         )
     );
     assertEqual(
-        "Rule(TypeDefinition(def float: fp32); TypeDefinition(def Vec3f: {fp32, fp32, fp32}); "
-            ~ "FunctionDefinition(rule$when({} when$param) bool: Block(Return(BooleanLiteral(true)))); "
-            ~ "FunctionDefinition(rule$then({} then$param) {}: Block(Return(FieldAccess(then$param)))))",
+        "Rule(TypeDefinition(def float: fp32); TypeDefinition(def Vec3f: {fp32 x, fp32 y, fp32 z}); "
+            ~ "FunctionDefinition(rule$when({fp32 x, fp32 y, fp32 z} when$param) bool: Block(Return(BooleanLiteral(true)))); "
+            ~ "FunctionDefinition(rule$then({fp32 x, fp32 y, fp32 z} v) {}: Block(Return(FieldAccess(v)))))",
         interpretRule(
-            "def Vec3f: {float, float, float}\n" ~
-            "def float: fp32"
+            "def Vec3f: {float x, float y, float z}\n" ~
+            "def float: fp32\n" ~
+            "then (Vec3f v):\n" ~
+            "    return v"
         )
     );
     assertEqual(
@@ -1070,13 +1068,15 @@ unittest {
             ~ "Block(Return(TupleLiteral({FunctionCall(opAdd(MemberAccess(FieldAccess(a).x), MemberAccess(FieldAccess(b).x))), "
             ~ "FunctionCall(opAdd(MemberAccess(FieldAccess(a).y), MemberAccess(FieldAccess(b).y))), "
             ~ "FunctionCall(opAdd(MemberAccess(FieldAccess(a).z), MemberAccess(FieldAccess(b).z)))})))); "
-            ~ "FunctionDefinition(rule$when({} when$param) bool: Block(Return(BooleanLiteral(true)))); "
-            ~ "FunctionDefinition(rule$then({} then$param) {}: Block(Return(FieldAccess(then$param)))))",
+            ~ "FunctionDefinition(rule$when({fp32 x, fp32 y, fp32 z} when$param) bool: Block(Return(BooleanLiteral(true)))); "
+            ~ "FunctionDefinition(rule$then({fp32 x, fp32 y, fp32 z} v) {}: Block(Return(FieldAccess(v)))))",
         interpretRule(
             "def Vec3f: {float x, float y, float z}\n" ~
             "def float: fp32\n" ~
             "func opAdd(Vec3f a, Vec3f b) Vec3f:\n" ~
-            "    return {a.x + b.x, a.y + b.y, a.z + b.z}"
+            "    return {a.x + b.x, a.y + b.y, a.z + b.z}\n" ~
+            "then (Vec3f v):\n" ~
+            "    return v"
         )
     );
     assertEqual(
@@ -1091,8 +1091,8 @@ unittest {
             ~ "Block(Return(TupleLiteral({FunctionCall(opAdd(MemberAccess(FieldAccess(a).x), MemberAccess(FieldAccess(b).x))), "
             ~ "FunctionCall(opAdd(MemberAccess(FieldAccess(a).y), MemberAccess(FieldAccess(b).y))), "
             ~ "FunctionCall(opAdd(MemberAccess(FieldAccess(a).z), MemberAccess(FieldAccess(b).z)))})))); "
-            ~ "FunctionDefinition(rule$when({} when$param) bool: Block(Return(BooleanLiteral(true)))); "
-            ~ "FunctionDefinition(rule$then({} then$param) {}: Block(Return(FieldAccess(then$param)))))",
+            ~ "FunctionDefinition(rule$when({fp32 x, fp32 y, fp32 z} when$param) bool: Block(Return(BooleanLiteral(true)))); "
+            ~ "FunctionDefinition(rule$then({fp32 x, fp32 y, fp32 z} v) {}: Block(Return(FieldAccess(v)))))",
         interpretRule(
             "def Vec3f: {float x, float y, float z}\n" ~
             "def float: fp32\n" ~
@@ -1101,7 +1101,9 @@ unittest {
             "func opNegate(Vec3f a) Vec3f:\n" ~
             "    return {-a.x, -a.y, -a.z}\n" ~
             "func opAdd(Vec3f a, Vec3f b) Vec3f:\n" ~
-            "    return {a.x + b.x, a.y + b.y, a.z + b.z}"
+            "    return {a.x + b.x, a.y + b.y, a.z + b.z}\n" ~
+            "then (Vec3f v):\n" ~
+            "    return v"
         )
     );
     assertEqual(
@@ -1116,8 +1118,8 @@ unittest {
             ~ "Block(Return(TupleLiteral({FunctionCall(opAdd(MemberAccess(FieldAccess(a).x), MemberAccess(FieldAccess(b).x))), "
             ~ "FunctionCall(opAdd(MemberAccess(FieldAccess(a).y), MemberAccess(FieldAccess(b).y))), "
             ~ "FunctionCall(opAdd(MemberAccess(FieldAccess(a).z), MemberAccess(FieldAccess(b).z)))})))); "
-            ~ "FunctionDefinition(rule$when({} when$param) bool: Block(Return(BooleanLiteral(true)))); "
-            ~ "FunctionDefinition(rule$then({} then$param) {}: Block(Return(FieldAccess(then$param)))); "
+            ~ "FunctionDefinition(rule$when({fp32 x, fp32 y, fp32 z} when$param) bool: Block(Return(BooleanLiteral(true)))); "
+            ~ "FunctionDefinition(rule$then({fp32 x, fp32 y, fp32 z} v) {}: Block(Return(FieldAccess(v)))); "
             ~ "VariableDeclaration({fp32 x, fp32 y, fp32 z} X_POS = StructLiteral({x: FloatLiteral(1), y: FloatLiteral(0), "
             ~ "z: FloatLiteral(0)})); VariableDeclaration({fp32 x, fp32 y, fp32 z} X_NEG = "
             ~ "FunctionCall(opNegate(FieldAccess(X_POS)))))",
@@ -1131,7 +1133,9 @@ unittest {
             "func opNegate(Vec3f a) Vec3f:\n" ~
             "    return {-a.x, -a.y, -a.z}\n" ~
             "func opAdd(Vec3f a, Vec3f b) Vec3f:\n" ~
-            "    return {a.x + b.x, a.y + b.y, a.z + b.z}"
+            "    return {a.x + b.x, a.y + b.y, a.z + b.z}\n" ~
+            "then (Vec3f v):\n" ~
+            "    return v"
         )
     );
     assertEqual(
@@ -1149,11 +1153,11 @@ unittest {
             ~ "FunctionCall(opAdd(MemberAccess(FieldAccess(a).v), SignedIntegerLiteral(1)))})))))",
         interpretRule("def AnInt: {sint64 v}\nthen (AnInt a):\n return {a.v + 1}")
     );
-    interpretRuleFails("def T: S[]\ndef S: {T}");
-    interpretRuleFails("def T: {T a, T b, sint64 value}");
-    interpretRuleFails("let a = 1");
-    interpretRuleFails("var a = 1");
-    interpretRuleFails("var bool a = !b\nlet bool b = a || true");
+    interpretRuleFails("def T: S[]\ndef S: {T}\ndef R: {uint8 a}\nthen(R r):\n return r");
+    interpretRuleFails("def T: {T a, T b, sint64 value}\ndef R: {uint8 a}\nthen(R r):\n return r");
+    interpretRuleFails("let a = 1\ndef R: {uint8 a}\nthen(R r):\n return r");
+    interpretRuleFails("var a = 1\ndef R: {uint8 a}\nthen(R r):\n return r");
+    interpretRuleFails("var bool a = !b\nlet bool b = a || true\ndef R: {uint8 a}\nthen(R r):\n return r");
     interpretRuleFails("when (bool b):\n return b");
     interpretRuleFails("then (fp32[] fs):\n return {s: fs}");
     interpretRuleFails("def AnInt: {uint64 v}\nwhen (AnInt a):\n return a.v");
@@ -1202,13 +1206,13 @@ private void interpretStmtFails(string source, Context context = new Context()) 
     }
 }
 
-private string interpretRule(string source, Context context = new Context()) {
-    return new Tokenizer(new DCharReader(source)).parseRule().expandOperators().interpret(context).getTreeInfo();
+private string interpretRule(string source) {
+    return new Tokenizer(new DCharReader(source)).parseRule().expandOperators().interpret().getTreeInfo();
 }
 
-private void interpretRuleFails(string source, Context context = new Context()) {
+private void interpretRuleFails(string source) {
     try {
-        auto node = source.interpretRule(context);
+        auto node = source.interpretRule();
         throw new AssertionError("Expected a source exception, but got node:\n" ~ node);
     } catch (SourceException exception) {
         debug (verboseTests) {
