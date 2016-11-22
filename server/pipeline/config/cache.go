@@ -48,7 +48,7 @@ func WatchConfig(cache *viper.Viper, config map[string]Config) {
 }
 
 // Finds name of pipeline with matching field schema
-func FindConf(p *inference.Parser, field []inference.Field, conf map[string]Config) (string, error) {
+func FindConf(p *inference.Parser, field []inference.Field, conf map[string]*Config) (string, error) {
 	for k, v := range conf {
 		if p.FuzzyEqual(v.Schema, field) {
 			return k, nil

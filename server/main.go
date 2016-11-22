@@ -9,14 +9,14 @@ import (
 )
 
 const (
-	etcd = "http://52.229.124.202:2379"
+	rulesUri = "http://127.0.0.1:9090/api/v1/rules"
 	file = "pipeline/config/config.example.yaml"
 )
 
 func main() {
 	router := mux.NewRouter()
 
-	pipeline := pipeline.NewPipelineHandler(etcd, file)
+	pipeline := pipeline.NewPipelineHandler(rulesUri, file)
 	pipeline.SetRoutes(router)
 
 	handler := cors.Default().Handler(router)

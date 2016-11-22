@@ -21,13 +21,13 @@ type Pipeline struct {
 	pipeInput *PipeInput
 }
 
-func NewPipeline(config *config.Config, in *PipeInput, client *interpreter.Handler) *Pipeline {
+func NewPipeline(config *config.Config, client *interpreter.Handler) *Pipeline {
 	client.AddRule(config.Name, config.Rules.ToString())
 
 	return &Pipeline{
 		config: config,
 		state: STOPPED,
-		pipeInput: in,
+		pipeInput: CreateInput(),
 	}
 }
 

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"strings"
 	"io"
+	"github.com/davecgh/go-spew/spew"
 )
 
 type Field struct {
@@ -52,6 +53,7 @@ func (p *Parser) ParseReader(r io.Reader) ([]Field, error) {
 
 func (j *Parser) Parse(msg interface{}) ([]Field, error) {
 	data, _ := parse(msg)
+	spew.Dump(data)
 	return data, nil
 }
 
@@ -132,8 +134,6 @@ func parse(in interface{}) ([]Field, string) {
 
 	case json.Number:
 
-		log4go.Info("Parsing Number: %v", in)
-
 		if _, err := t.Int64(); err == nil {
 			return nil, "int"
 		}
@@ -141,7 +141,7 @@ func parse(in interface{}) ([]Field, string) {
 		if _, err := t.Float64(); err == nil {
 			return nil, "float"
 		}
-		
+
 	}
 
 	return nil, ""

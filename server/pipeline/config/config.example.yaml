@@ -3,12 +3,12 @@ schema:
   - name: anInt
     type: object
     subObject:
-      name: i
+    - name: i
       type: float
   - name: anInt
     type: object
     subObject:
-      name: i
+    - name: i
       type: int
 rules:
   - id: 0
