@@ -35,7 +35,7 @@ type Rule struct {
 func (r *RuleRepository) ToString() string {
 	var s string
 	for _, rule := range *r {
-		ruleStr := fmt.Sprintf("%s\n\n%s\n\n%s", rule.Setup, rule.When, rule.Then)
+		ruleStr := fmt.Sprintf("%s\n%s\n%s", rule.Setup, rule.When, rule.Then)
 		s += (ruleStr + "\n")
 	}
 	return strings.Trim(s, "\n")

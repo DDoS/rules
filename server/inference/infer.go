@@ -6,6 +6,8 @@ import (
 	"github.com/michael-golfi/log4go"
 	"reflect"
 	"encoding/json"
+	"strings"
+	"io"
 )
 
 type Field struct {
@@ -18,11 +20,42 @@ type Parser struct {
 
 }
 
-func (j *Parser) Parse(msg interface{}) []Field {
-	data, _ := parse(msg)
-	return data
+// Force use of json number type
+func (j *Parser) ParseString(js string) ([]Field, error) {
+	var data interface{}
+	d := json.NewDecoder(strings.NewReader(js))
+	d.UseNumber()
+
+	err := d.Decode(&data)
+	if err != nil {
+		return nil, err
+	}
+
+	fields, _ := parse(data)
+	return fields, nil
 }
 
+func (p *Parser) ParseReader(r io.Reader) ([]Field, error) {
+	var data interface{}
+	d := json.NewDecoder(r)
+	d.UseNumber()
+
+	err := d.Decode(&data)
+	if err != nil {
+		return nil, err
+	}
+
+	fields, _ := parse(data)
+
+	return fields, nil
+}
+
+func (j *Parser) Parse(msg interface{}) ([]Field, error) {
+	data, _ := parse(msg)
+	return data, nil
+}
+
+// Checks if the actual fields tree is a superset of the expected fields
 func (p *Parser) FuzzyEqual(expected, actual []Field) bool {
 	for _, exp := range expected {
 		var actualVal Field
@@ -96,13 +129,19 @@ func parse(in interface{}) ([]Field, string) {
 
 	case string:
 		return nil, "string"
+
 	case json.Number:
+
+		log4go.Info("Parsing Number: %v", in)
 
 		if _, err := t.Int64(); err == nil {
 			return nil, "int"
-		} else if _, err := t.Float64(); err == nil {
+		}
+
+		if _, err := t.Float64(); err == nil {
 			return nil, "float"
 		}
+		
 	}
 
 	return nil, ""

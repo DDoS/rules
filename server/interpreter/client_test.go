@@ -14,8 +14,8 @@ func TestNewHandler(t *testing.T) {
 	path := "/api/v1/rules/default"
 
 	handler, err := interpreter.NewHandler(host + path)
-	require.Equal(t, "localhost:8080", handler.Uri.Host)
-	require.Equal(t, path, handler.Uri.Path)
+	require.Equal(t, "localhost:8080", handler.Run.Host)
+	require.Equal(t, path, handler.Run.Path)
 	require.NoError(t, err)
 }
 

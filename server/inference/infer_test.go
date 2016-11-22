@@ -111,3 +111,44 @@ func TestParser_DeepEqual_False(t *testing.T) {
 	eq = p.FuzzyEqual(expected, nilSubObject)
 	require.False(t, eq)
 }
+
+func TestParser_Parse2(t *testing.T) {
+	p := inference.Parser{}
+
+	expected := []inference.Field{
+		{
+			Name: "anInt",
+			Type: "object",
+			SubObject: []inference.Field{
+				{
+					Name: "i",
+					Type: "int",
+				},
+			},
+		},
+		{
+			Name: "aFloat",
+			Type: "object",
+			SubObject: []inference.Field{
+				{
+					Name: "f",
+					Type: "float",
+				},
+			},
+		},
+	}
+
+	jsonStr :=
+		`{
+			  "anInt": {
+				"i": 2
+			  },
+			  "aFloat": {
+				"f": 7.5
+			  }
+		}`
+
+	actual := p.ParseString(jsonStr)
+	eq := p.FuzzyEqual(expected, actual)
+	require.True(t, eq)
+}

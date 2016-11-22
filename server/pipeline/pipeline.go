@@ -21,7 +21,9 @@ type Pipeline struct {
 	pipeInput *PipeInput
 }
 
-func NewPipeline(config *config.Config, in *PipeInput) *Pipeline {
+func NewPipeline(config *config.Config, in *PipeInput, client *interpreter.Handler) *Pipeline {
+	client.AddRule(config.Name, config.Rules.ToString())
+
 	return &Pipeline{
 		config: config,
 		state: STOPPED,
@@ -29,37 +31,30 @@ func NewPipeline(config *config.Config, in *PipeInput) *Pipeline {
 	}
 }
 
-func (p *Pipeline) Start() error {
+func (p *Pipeline) Start(client *interpreter.Handler) error {
 	if p.State() == RUNNING {
 		return errors.New("Pipeline is already running")
 	}
 
 	p.state = RUNNING
 
-	client, err := interpreter.NewHandler("127.0.0.1:9090/api/v1/rules/default")
-	if err != nil {
-		log4go.Error("Couldn't connect to interpreter... %s", err.Error())
-		return err
-	}
-
 	go func(pipe *Pipeline, client *interpreter.Handler) {
 
 		for {
 			select {
 			case input := <-pipe.pipeInput.Input:
-
-
-
-				source := pipe.config.Rules.ToString()
 				b, err := json.Marshal(input)
 
 				if err != nil {
 					log4go.Error("Could not serialize input: %s", err.Error())
+					continue
 				}
 
-				resp, err := client.Evaluate(source, string(b))
+				log4go.Debug("Evaluating: %s", string(b))
+				resp, err := client.Evaluate(pipe.config.Name, string(b))
 				if err != nil {
 					log4go.Error("Cannot execute rule: %s", err.Error())
+					continue
 				}
 
 				log4go.Info("Response: %s", resp)

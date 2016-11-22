@@ -1,22 +1,26 @@
 name: Default
 schema:
-  - name: Name
-    type: string
-  - name: Age
-    type: number
-  - name: Gender
-    type: string
+  - name: anInt
+    type: object
+    subObject:
+      name: i
+      type: float
+  - name: anInt
+    type: object
+    subObject:
+      name: i
+      type: int
 rules:
   - id: 0
-    setup: >
+    setup: |
       def Numbers: {AnInt anInt, AFloat aFloat}
       def AnInt: {sint64 i}
-      def AFloat: {fp32 f}"
+      def AFloat: {fp32 f}
 
-    when: >
+    when: |
       when (Numbers numbers):
-      return numbers.anInt.i != numbers.aFloat.f;
+        return numbers.anInt.i != numbers.aFloat.f;
 
-    then: >
+    then: |
       then (Numbers numbers):
-      return {anInt: {i: numbers.anInt.i + sint64(numbers.aFloat.f)}, aFloat: numbers.aFloat}
+        return {anInt: {i: numbers.anInt.i + sint64(numbers.aFloat.f)}, aFloat: numbers.aFloat}

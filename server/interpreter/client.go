@@ -3,13 +3,13 @@ package interpreter
 import (
 	"net/url"
 	"net/http"
-	"bytes"
 	"io/ioutil"
-	"encoding/json"
+	"github.com/michael-golfi/log4go"
 )
 
 type Handler struct {
-	Uri url.URL
+	Run url.URL
+	Add url.URL
 }
 
 type Message struct {
@@ -17,28 +17,42 @@ type Message struct {
 	Input  string `json:"input"`
 }
 
-func NewHandler(uri string) (*Handler, error) {
-	u, err := url.Parse(uri)
+// Creates a new instance of a http client for langserver
+// Requires the baseUrl to be of the form: http://$host:$port/$basePath/[add|run]
+func NewHandler(baseUrl string) (*Handler, error) {
+	add, err := url.Parse(baseUrl + "/add")
+	if err != nil {
+		return nil, err
+	}
+
+	run, err := url.Parse(baseUrl + "/run")
+	if err != nil {
+		return nil, err
+	}
 
 	return &Handler{
-		Uri: *u,
+		Run: *run,
+		Add: *add,
 	}, err
 }
 
-func (h *Handler) Evaluate(source, input string) (string, error) {
+func (h *Handler) AddRule(name, source string) (string, error) {
+	return request(name, h.Add.String(), "source", source)
+}
 
-	msg, err := json.Marshal(&Message{
-		Source: source,
-		Input: input,
-	})
+func (h *Handler) Evaluate(name, input string) (string, error) {
+	return request(name, h.Run.String(), "input", input)
+}
 
-	req, err := http.NewRequest("POST", h.Uri.String(), bytes.NewBuffer(msg))
+func request(name, uri, key, val string) (string, error) {
+	form := url.Values{}
+	form.Add("name", name)
+	form.Add(key, val)
 
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	log4go.Debug("Form Data: %s", form.Encode())
+	resp, err := http.PostForm(uri, form)
 	if err != nil {
+		log4go.Error("Could not evaluate input: %s", err.Error())
 		return "", err
 	}
 

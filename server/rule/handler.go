@@ -7,7 +7,6 @@ import (
 	"github.com/michael-golfi/log4go"
 	"strconv"
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
 )
 
 type Handler struct {
@@ -44,7 +43,7 @@ func (h *Handler) Add(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	spew.Dump(vars)
+
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
 		message := fmt.Sprintf("Could not decode rule id: %s", err.Error())
