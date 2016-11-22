@@ -10,13 +10,13 @@ import (
 
 const (
 	rulesUri = "http://127.0.0.1:9090/api/v1/rules"
-	file = "pipeline/config/config.example.yaml"
+	dir = "config/"
 )
 
 func main() {
 	router := mux.NewRouter()
 
-	pipeline := pipeline.NewPipelineHandler(rulesUri, file)
+	pipeline := pipeline.NewPipelineHandler(rulesUri, dir)
 	pipeline.SetRoutes(router)
 
 	handler := cors.Default().Handler(router)
