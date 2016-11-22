@@ -21,8 +21,8 @@ shared static this() {
     router.post("/api/v1/rules/run", &manager.runRule);
 
     auto settings = new HTTPServerSettings();
-    settings.port = 8080;
-    settings.bindAddresses = ["::1", "127.0.0.1"];
+    settings.port = 9090;
+    settings.bindAddresses = ["127.0.0.1"];
 
     listenHTTP(settings, router);
 }
@@ -46,7 +46,8 @@ private struct RuleManager {
             rulesByName[ruleName] = ruleNode;
         } catch (SourceException exception) {
             auto errorMessage = exception.getErrorInformation(ruleSource).toString();
-            // TODO: handle compile error caused by bad rule source code
+            res.writeBody(errorMessage);
+            writeln(errorMessage);
         }
 
         res.writeBody("");
