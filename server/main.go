@@ -7,6 +7,7 @@ import (
 	"github.com/michael-golfi/log4go"
 	"github.com/michael-golfi/rules/server/pipeline"
 	"github.com/rs/cors"
+	"os"
 )
 
 const (
@@ -17,7 +18,12 @@ const (
 func main() {
 	router := mux.NewRouter()
 
-	pipeline := pipeline.NewPipelineHandler(rulesURI, dir)
+	val, err := os.LookupEnv("RULES_BASE_URI"
+	if err != nil {
+		log4go.Crash("Cannot parse rules uri")
+	}
+
+	pipeline := pipeline.NewPipelineHandler(val, dir)
 	pipeline.SetRoutes(router)
 
 	handler := cors.Default().Handler(router)
