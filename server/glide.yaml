@@ -1,0 +1,29 @@
+package: github.com/michael-golfi/rules/server
+import:
+- package: github.com/coreos/etcd
+  version: v3.1.0-rc.1
+  subpackages:
+  - pkg/fileutil
+- package: github.com/davecgh/go-spew
+  version: v1.1.0
+  subpackages:
+  - spew
+- package: github.com/fsnotify/fsnotify
+  version: v1.4.2
+- package: github.com/ghodss/yaml
+- package: github.com/gorilla/mux
+  version: v1.1
+- package: github.com/michael-golfi/log4go
+- package: github.com/rs/cors
+  version: v1.0
+- package: github.com/spf13/viper
+- package: github.com/square/go-jose
+  version: v2.0.1
+  subpackages:
+  - json
+testImport:
+- package: github.com/stretchr/testify
+  version: v1.1.4
+  subpackages:
+  - assert
+  - require
