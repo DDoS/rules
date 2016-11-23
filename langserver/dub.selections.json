@@ -7,6 +7,6 @@
 		"memutils": "0.4.8",
 		"openssl": "1.1.5+1.0.1g",
 		"rules-lang": "~master",
-		"vibe-d": "~master"
+		"vibe-d": "0.7.30"
 	}
 }
