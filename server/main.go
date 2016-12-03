@@ -23,6 +23,8 @@ func main() {
 		log4go.Crash("Cannot parse rules uri")
 	}
 
+	log4go.Info("Rules URI: %s", val)
+
 	pipeline := pipeline.NewPipelineHandler(val, dir)
 	pipeline.SetRoutes(router)
 
