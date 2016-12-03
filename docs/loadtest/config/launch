@@ -1,0 +1,4 @@
+#!/bin/bash
+
+kubectl create -f combined.yaml
+kubectl expose rc server --type="LoadBalancer"

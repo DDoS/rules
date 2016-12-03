@@ -1,0 +1,29 @@
+read config file error: open /.sniperc: The system cannot find the file specified. use default setting.
+This is Sniper ,version 1.0 
+Copyright (C) 2013 by Lubia Yang, et al.
+This is free software; open source on github.com/lubia/sniper.
+
+The server is now under snipe ...
+
+Completed 1000 requests
+Completed 2000 requests
+Completed 3000 requests
+Completed 4000 requests
+Completed 5000 requests
+Completed 6000 requests
+Completed 7000 requests
+Completed 8000 requests
+Completed 9000 requests
+Transactions:                   10000 hits
+Availability:                   100.00 %
+Elapsed time:                  18.95 secs
+Document length:               149 Bytes
+TotalTransfer:                  1.42 MB
+Transaction rate:             527.83 trans/sec
+Throughput:                     0.08 MB/sec
+Successful:                     10000 hits
+Failed:                           0 hits
+TransactionTime:             193.736 ms(mean)
+ConnectionTime:               75.960 ms(mean)
+ProcessTime:                 117.775 ms(mean)
+StateCode:                    10000(code 200)

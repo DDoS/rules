@@ -1,0 +1,24 @@
+#!/bin/bash
+
+echo "This load test uses the sniper tools found at https://github.com/btfak/sniper"
+
+mkdir 	10users100requests \
+	100users100requests \
+	100users1000requests \
+	100users10000requests 
+	
+sniper -c 10 -n 100 -p body.json http://104.196.23.214:8080/pipeline > output10
+mv plot.html 10users100requests
+mv output10 10users100requests
+
+sniper -c 100 -n 100 -p body.json http://104.196.23.214:8080/pipeline > output100
+mv plot.html 100users100requests
+mv output100 100users100requests
+
+sniper -c 100 -n 1000 -p body.json http://104.196.23.214:8080/pipeline > output1000
+mv plot.html 100users1000requests
+mv output1000 100users1000requests
+
+sniper -c 100 -n 10000 -p body.json http://104.196.23.214:8080/pipeline > output10000
+mv plot.html 100users10000requests
+mv output10000 100users10000requests
