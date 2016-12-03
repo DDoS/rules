@@ -18,7 +18,7 @@ const (
 func main() {
 	router := mux.NewRouter()
 
-	val, err := os.LookupEnv("RULES_BASE_URI"
+	val, err := os.LookupEnv("RULES_BASE_URI")
 	if err != nil {
 		log4go.Crash("Cannot parse rules uri")
 	}
